@@ -1,0 +1,27 @@
+{
+  "name": "@alan-ai/alan-sdk-web",
+  "version": "1.0.0",
+  "description": "Alan Web SDK",
+  "keywords": [
+    "alan sdk web",
+    "voice ai",
+    "conversational ai",
+    "chatbot",
+    "voice",
+    "ai",
+    "conversational",
+    "nlp",
+    "natural language",
+    "dialogs",
+    "dialog flow",
+    "enterprise ai",
+    "voice assistant",
+    "voice development",
+    "add voice to your app",
+    "voice interface",
+    "alan voice",
+    "alan ai"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/alan-ai/alan-sdk-web"
+}
