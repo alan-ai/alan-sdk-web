@@ -1,0 +1,64 @@
+/* You can add global styles to this file, and also import other style files */
+@import "./variables";
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-color: $content-background-color;
+}
+
+// override styles for material components
+.mat-card {
+  background-color: $content-background-color;
+}
+
+.mat-horizontal-stepper-header-container {
+  background-color: $default-el-background-color;
+  border-radius: $border-radius $border-radius 0 0;
+}
+
+.mat-stepper-horizontal-line {
+  display: none;
+}
+
+.mat-horizontal-stepper-header {
+  height: 64px !important;
+  padding: 20px 0;
+  color: $brown-color;
+  background-color: $default-el-background-color;
+  width: 33%;
+
+  &.mat-step-header {
+    &[ng-reflect-selected="true"] {
+      background-color: $active-el-background-color;
+    }
+  }
+
+  &:first-of-type {
+    border-radius: $border-radius 0 0 0;
+  }
+
+  &:last-of-type {
+    border-radius: 0 $border-radius 0 0;
+  }
+
+  .mat-step-label.mat-step-label-active {
+    color: $brown-color;
+  }
+
+  .mat-step-icon-state-number.mat-step-icon {
+    background-color: $brown-color !important;
+    font-size: 16px;
+    font-weight: bold;
+    color: $white-color;
+
+    &.mat-step-icon-selected {
+      background-color: $brown-color !important;
+    }
+  }
+}

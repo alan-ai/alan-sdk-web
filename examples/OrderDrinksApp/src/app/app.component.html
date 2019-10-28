@@ -1,0 +1,69 @@
+<header>
+    Order Drinks
+</header>
+<div class="content">
+    <mat-horizontal-stepper [linear]="isLinear" #stepper>
+        <mat-step label="Drink">
+            <div class="preview-area columns" *ngIf="stepper.selectedIndex === 0">
+                <div id="americano" class="can-be-highlighted" [ngClass]="{'selected': selectedDrink === 'americano'}"
+                    (click)="selectDrink('americano')">
+                    <div class="item-title">Americano</div>
+                    <img class="item-img" src="../assets/drinks-americano.jpg" />
+                </div>
+                <div id="cappuccino" class="can-be-highlighted" [ngClass]="{'selected': selectedDrink === 'cappuccino'}"
+                    (click)="selectDrink('cappuccino')">
+                    <div class="item-title">Cappuccino</div>
+                    <img class="item-img" src="../assets/drinks-cappuccino.jpg" />
+                </div>
+                <div id="latte" class="can-be-highlighted" [ngClass]="{'selected': selectedDrink === 'latte'}"
+                    (click)="selectDrink('latte')">
+                    <div class="item-title">Latte</div>
+                    <img class="item-img" src="../assets/drinks-latte.jpg" />
+                </div>
+            </div>
+            <div class="columns">
+                <button mat-button matStepperNext>Next</button>
+            </div>
+        </mat-step>
+        <mat-step label="Dessert">
+            <div class="preview-area columns" *ngIf="stepper.selectedIndex === 1">
+                <div id="apple pie" class="can-be-highlighted" [ngClass]="{'selected': selectedDessert === 'apple pie'}"
+                    (click)="selectDessert('apple pie')">
+                    <div class="item-title">Apple pie</div>
+                    <img class="item-img" src="../assets/dessert-apple-pie.jpg" />
+                </div>
+                <div id="cheesecake" class="can-be-highlighted"
+                    [ngClass]="{'selected': selectedDessert === 'cheesecake'}" (click)="selectDessert('cheesecake')">
+                    <div class="item-title">Cheesecake</div>
+                    <img class="item-img" src="../assets/dessert-cheesecake.jpg" />
+                </div>
+            </div>
+            <div class="columns">
+                <button mat-button matStepperPrevious>Back</button>
+                <button mat-button matStepperNext color="primary">Purchase</button>
+            </div>
+        </mat-step>
+        <mat-step label="Done">
+            <div class="preview-area">
+                <div class="order-details">
+                    {{this.getOrderDetailsText()}}
+                </div>
+                <div class="order-preview columns" *ngIf="stepper.selectedIndex === 2">
+                    <div id="{{selectedDrink}}" class="can-be-highlighted">
+                        <img *ngIf="selectedDrink" class="item-img" src="{{getImgPath('drinks',selectedDrink)}}" />
+                    </div>
+                    <div id="{{selectedDessert}}" class="can-be-highlighted">
+                        <img *ngIf="selectedDessert" class="item-img" src="{{getImgPath('dessert',selectedDessert)}}" />
+                    </div>
+                </div>
+            </div>
+            <div class="columns">
+                <button mat-button matStepperPrevious>Back</button>
+                <button mat-button color="primary" (click)="makeNewOrder()" #btn>
+                    Make new order
+                </button>
+            </div>
+        </mat-step>
+    </mat-horizontal-stepper>
+</div>
+<router-outlet></router-outlet>

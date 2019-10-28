@@ -1,0 +1,149 @@
+@import "../variables";
+
+header {
+  padding-top: 58px;
+  margin-bottom: 24px;
+  color: $brown-color;
+  font-size: 42px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.content {
+  background-color: $content-background-color;
+  padding: 24px 12px;
+  max-width: 1024px;
+  margin: auto;
+}
+
+.preview-area {
+  text-align: center;
+  position: relative;
+  padding-top: 40px;
+  padding-bottom: 54px;
+  width: 100%;
+  min-height: 300px;
+}
+
+.columns {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.item-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: $brown-color;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.item-img {
+  border-radius: 30px;
+  max-width: 248px;
+  position: relative;
+  z-index: 2;
+  display: block;
+}
+
+.can-be-highlighted {
+  margin: 24px;
+  display: block;
+  position: relative;
+  cursor: pointer;
+
+  &:before {
+    z-index: 1;
+    content: "";
+    position: absolute;
+    border-radius: 40px;
+    height: calc(100% + 40px);
+    width: calc(100% + 40px);
+    left: -20px;
+    bottom: -20px;
+    transition: opacity 300ms ease-in-out, background-color 300ms ease-in-out;
+  }
+
+  &.highlighted {
+    &:before {
+      background-color: $active-el-background-color;
+      transition: opacity 300ms ease-in-out, background-color 300ms ease-in-out;
+    }
+  }
+
+  &:hover {
+    &:before {
+      background-color: $hover-el-background-color;
+      transition: background-color 300ms ease-in-out;
+    }
+  }
+
+  &.selected {
+    &:before {
+      background-color: $active-el-background-color;
+      transition: background-color 300ms ease-in-out;
+    }
+  }
+}
+
+.order-details {
+  font-size: 26px;
+  line-height: 1.58;
+  color: $brown-color;
+  margin-top: 26px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.order-preview {
+  img {
+    margin: 0 10px;
+  }
+}
+
+// override styles for material components
+
+.mat-stepper-horizontal {
+  border-radius: 30px;
+  background-color: rgb(255, 201, 119, .2);
+}
+
+.mat-horizontal-stepper-header {
+  height: 64px !important;
+  border-radius: 30px;
+  background-color: rgb(255, 201, 119);
+}
+
+.mat-step-header .mat-step-icon-selected {
+  background-color: $brown-color;
+}
+
+.mat-step-header .mat-step-label {
+  color: $brown-color;
+}
+
+button {
+  min-width: 109px;
+  height: 56px;
+  border-radius: 30px;
+  border: solid 3px $brown-color;
+  color: $brown-color;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 0 12px;
+
+  &[type='submit'] {
+    background-color: $brown-color;
+    color: $white-color;
+  }
+
+  &.mat-primary {
+    color: $white-color;
+    border: solid 3px $primary-button-color;
+    background-color: $primary-button-color;
+  }
+}
