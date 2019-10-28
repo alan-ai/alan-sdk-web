@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Alan Web SDK Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1 user-scalable=no"
+        charset="utf-8">
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="https://alan.app/voice/images/favicon/favicon-32x32.png?deployedId=1572027019857">
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="https://alan.app/voice/images/favicon/favicon-16x16.png?deployedId=1572027019857">
+    <link rel="shortcut icon" href="https://alan.app/voice/images/favicon/favicon.ico">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="theme-color" content="#ffffff">
+    <script type="text/javascript" src="https://studio.alan.app/web/lib/alan_lib.js"></script>
+    <style>
+        body {
+            padding: 0 32px;
+        }
+
+        .header-img {
+            border-radius: 24px;
+            width: 100%;
+            max-width: 1024px;
+            height: 300px;
+            object-fit: cover;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
+
+        ul {
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <img src="https://alan.app/voice/images/previews/preview.jpg" class="header-img" />
+    <h1 style="text-align: center;">Alan Web SDK Demo</h1>
+    <ul>
+        <li>Say: "Hi!"</li>
+        <li>Say: "What is Alan Web SDK for?"</li>
+    </ul>
+    <div class="alan-btn"></div>
+    <script>
+        var alanBtnInstance = alanBtn({
+            key: "e3018cc76639126f974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/stage",
+            rootEl: document.getElementById("alan-btn"),
+        });
+    </script>
+
+    <!-- Google Analytics -->
+    <script>
+        // set up google analytics
+        (function (i, s, o, g, r, a, m) {
+            i['GoogleAnalyticsObject'] = r;
+            i[r] = i[r] || function () {
+                (i[r].q = i[r].q || []).push(arguments);
+            }, i[r].l = 1 * new Date();
+            a = s.createElement(o),
+                m = s.getElementsByTagName(o)[0];
+            a.async = 1;
+            a.src = g;
+            m.parentNode.insertBefore(a, m);
+        })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+        ga('create', 'UA-74900552-5', 'auto');
+        window.sendCurrentLocationToGA = function sendCurrentLocationToGA() {
+            if (window.ga) {
+                window.ga('set', 'page', window.location.host + window.location.pathname + window.location.search);
+                window.ga('send', 'pageview');
+            }
+        };
+
+        window.sendCurrentLocationToGA();
+    </script>
+</body>
+
+</html>
