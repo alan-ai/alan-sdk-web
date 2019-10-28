@@ -1,26 +1,54 @@
-
 Alan Web SDK
 ======
-Alan Web SDK allows you to easy add a voice experience into your application. Check out the [demo](https://alan-ai.github.io/alan-sdk-web/) for some examples.
-
 [Use it online](https://alan-ai.github.io/alan-sdk-web/) •
 [Docs](https://alan.app/docs/intro.html) • [FAQ](https://alan.app/docs/additional/faq.html) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
-## Install
-Install `@alan-ai/alan-sdk-web` using npm.
+[![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
+[![npm](https://img.shields.io/npm/l/@alan-ai/alan-sdk-web.svg)]()
 
-```npm install @alan-ai/alan-sdk-web --save```
+A lightweight JavaScript library for adding a voice experience to your wesite or web application. Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
+
+## How to use
+Install `@alan-ai/alan-sdk-web` using [npm](https://www.npmjs.com/package/@alan-ai/alan-sdk-web).
+
+```
+npm install @alan-ai/alan-sdk-web --save
+```
+
+
+```
+import alanBtn from "@alan-ai/alan-sdk-web";
+
+alanBtn({
+   key: "e3018cc76639126f974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/stage",
+   onCommand: function (commandData) {
+      if (commandData.command === "some:command") {
+      //call client code that will react on the received command
+      }
+   },
+  });
+
+```
 
 Or add it to the page via `script` tag:
 
- ```<script type="text/javascript" src="https://studio.alan.app/web/lib/alan_lib.min.js"></script>```
+ ```
+    <script type="text/javascript" src="https://studio.alan.app/web/lib/alan_lib.min.js"></script>
+ ```
+ 
+It will now be available as a global variable named `alanBtn`.
 
-## Usage:
 ```
- alanBtn({
-  key: 'your-project-key'
- });
+alanBtn({
+   key: "e3018cc76639126f974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/stage",
+   onCommand: function (commandData) {
+      if (commandData.command === "some:command") {
+      //call client code that will react on the received command
+      }
+   },
+  });
+
 ```
 
 ## Documentation
