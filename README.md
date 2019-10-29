@@ -7,7 +7,7 @@ Alan Web SDK
 [![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
 [![npm](https://img.shields.io/npm/l/@alan-ai/alan-sdk-web.svg)]()
 
-A lightweight JavaScript library for adding a voice experience to your wesite or web application. Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
+A lightweight JavaScript library for adding a voice experience to your website or web application. Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
 
 ## How to use
 Install `@alan-ai/alan-sdk-web` using [npm](https://www.npmjs.com/package/@alan-ai/alan-sdk-web).
