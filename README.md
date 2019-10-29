@@ -28,13 +28,12 @@ alanBtn({
       }
    },
   });
-
 ```
 
 Or add it to the page via `script` tag:
 
  ```
-    <script type="text/javascript" src="https://studio.alan.app/web/lib/alan_lib.min.js"></script>
+<script type="text/javascript" src="https://studio.alan.app/web/lib/alan_lib.min.js"></script>
  ```
  
 It will now be available as a global variable named `alanBtn`.
@@ -48,7 +47,6 @@ alanBtn({
       }
    },
   });
-
 ```
 
 ## Documentation
