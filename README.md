@@ -13,7 +13,7 @@ Create a voice script for your application in [Alan Studio](https://studio.alan.
 
 ## Getting started
 
-1. Install `@alan-ai/alan-sdk-web` using [npm](https://www.npmjs.com/package/@alan-ai/alan-sdk-web).
+1.Install `@alan-ai/alan-sdk-web` using [npm](https://www.npmjs.com/package/@alan-ai/alan-sdk-web).
 
 ```js
 npm install @alan-ai/alan-sdk-web --save
