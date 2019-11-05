@@ -526,7 +526,7 @@ function alanBtn(options) {
 
             if (window.tutorProject) {
                 window.tutorProject.close();
-                window.tutorProject = alan.project(options.key, data || {}, options.host);
+                window.tutorProject = alan.project(options.key, getAuthData(data), options.host);
                 window.tutorProject.on('connectStatus', onConnectStatusChange);
                 window.tutorProject.on('options', onOptionsReceived);
             }
@@ -1580,7 +1580,7 @@ function alanBtn(options) {
             tryReadSettingsFromLocalStorage();
             switchState(DISCONNECTED);
 
-            window.tutorProject = alan.project(options.key, options.authData || {}, options.host);
+            window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host);
             window.tutorProject.on('connectStatus', onConnectStatusChange);
             window.tutorProject.on('options', onOptionsReceived);
 
@@ -1588,6 +1588,37 @@ function alanBtn(options) {
         } else {
             switchState(DEFAULT);
         }
+    }
+
+    function guid() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                       .toString(16)
+                       .substring(1);
+        }
+    
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+            s4() + '-' + s4() + s4() + s4();
+    }
+
+    function getAuthData(data) {
+        var authData = data || {};
+        var curUuid, uuidKey;
+
+        if (isLocalStorageAvailable && authData) {
+            uuidKey = 'alan-btn-uuid-' + getProjectId();
+            curUuid = localStorage.getItem(uuidKey);
+            if (curUuid) {
+                authData.uuid = curUuid;
+            } else {
+                authData.uuid = guid();
+                localStorage.setItem(uuidKey, authData.uuid);
+            }
+        } else {
+            authData.uuid = guid();
+        }
+
+        return authData;
     }
 
     function getProjectId() {
