@@ -104,7 +104,7 @@ intent("The ticket name is $(I* (.*))", (p)=>{
 });
 ```
 
-### Options
+### Alan Button Parameters
 
 |**Name**  | **Type** | **Description** |
 |--|--|--|
@@ -113,7 +113,7 @@ intent("The ticket name is $(I* (.*))", (p)=>{
 |`onCommand`  | function | Callback for receiving commands from the Alan Studio script. In this callback you can set the reaction of your app on the commands which will be received form the Alan Studio script. [Learn more](https://alan.app/docs/integrations/web.html#example-of-using-the-oncommandcb-callback) |
 |`onConnectionStatus` | function  | Callback for receiving the connection status of the Alan Button. [Learn more](https://alan.app/docs/integrations/web.html#example-of-using-the-onconnectionstatus-callback) |
 
-### Javascript Methods
+### Alan Button Methods
 
 #### setVisualState (visualStateData: object)
 
@@ -130,7 +130,7 @@ Method for setting the visual state
 
 Method for calling a project api that was defined in Alan Studio project’s script
 
-`method` - method name in format "script::funcName"
+`method` - method name
 
 `data` - data that should be passed
 
@@ -143,8 +143,8 @@ Method for calling a project api that was defined in Alan Studio project’s scr
     callback();
   };
 
-  // this is how you can call clientAPI.setClientData function
-  alanBtnInstance.callProjectApi("script::setClientData", {data:"your data"}, function (error, result){
+  // this is how you can call projectAPI.setClientData function
+  alanBtnInstance.callProjectApi("setClientData", {data:"your data"}, function (error, result){
     //handle error and result here
   });
 ```

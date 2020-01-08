@@ -280,7 +280,7 @@
         baseURL: "wss://" +
             ((host.indexOf('$') === 0 || host === '') ? window.location.host : host ),
         codec: 'opus',
-        version: '1.0.6',
+        version: '1.0.7',
         platform: 'web',
     };
 
@@ -387,6 +387,11 @@
     };
 
     function connectProject(projectId, auth, host, mode) {
+        if (!auth) {
+            auth = {};
+        }
+        auth.platform = config.platform;
+        auth.platformVersion = config.version;
         var connect = new ConnectionWrapper();
         if (host)  {
             connect._config.baseURL = "wss://" + host;
@@ -395,7 +400,6 @@
         connect._config.codec     = config.codec;
         connect._config.version   = config.version;
         connect._config.url       = config.baseURL + "/ws_project/" + projectId;
-        auth.platform             = config.platform;
         connect._worker.postMessage(["connectProject", connect._config, auth, mode]);
         function forwardAudioEvent(name) {
             function handler(a1, a2) {
@@ -417,6 +421,11 @@
     }
 
     function connectProjectTest(projectId, auth, host, mode) {
+        if (!auth) {
+            auth = {};
+        }
+        auth.platform = config.platform;
+        auth.platformVersion = config.version;
         var connect = new ConnectionWrapper();
         if (host)  {
             connect._config.baseURL = "wss://" + host;
@@ -425,7 +434,6 @@
         connect._config.codec     = config.codec;
         connect._config.version   = config.version;
         connect._config.url       = config.baseURL + "/ws_project/" + projectId;
-        auth.platform             = config.platform;
         connect._worker.postMessage(["connectProject", connect._config, auth, mode]);
         return connect;
     }
@@ -470,12 +478,20 @@ function alanBtn(options) {
             }
         },
         callProjectApi: function (funcName, data, callback) {
+            var funcNamePrefix = 'script::';
             if (btnDisabled) {
                 return;
             }
+            if (!funcName) {
+                throw 'Function name for callProjectApi must be provided';
+            }
 
             if (window.tutorProject) {
-                window.tutorProject.call(funcName, data, callback);
+                if (funcName.indexOf(funcNamePrefix) === 0) {
+                    window.tutorProject.call(funcName, data, callback);
+                } else {
+                    window.tutorProject.call(funcNamePrefix + funcName, data, callback);
+                }
             }
         },
         playText: function (text) {
