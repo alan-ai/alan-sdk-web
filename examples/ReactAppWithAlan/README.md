@@ -9,7 +9,7 @@ This is an example of using the Alan Web SDK in the React App.
 
 ## Documentation
   
-API documentation available [here](https://alan.app/docs/intro.html)
+API documentation available [here](https://alan.app/docs/integrations/react)
 
 ## Have questions?
 
