@@ -1,4 +1,4 @@
-## React App with Alan
+## Vue App with Alan
 
 This is an example of using the Alan Web SDK in the Vue App.
 
