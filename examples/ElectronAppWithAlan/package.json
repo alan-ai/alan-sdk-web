@@ -1,0 +1,15 @@
+{
+    "name": "ElectronAppWithAlan",
+    "dependencies": {
+        "@alan-ai/alan-sdk-web": "^1.1.2",
+        "electron": "^9.0.0-beta.2"
+    },
+    "scripts": {
+        "start": "electron ."
+    },
+    "main": "main.js",
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Example of using the Alan Button in Electron App",
+    "author": "annamiroshnichenko"
+}
