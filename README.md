@@ -7,11 +7,11 @@
 [![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
 [![npm](https://img.shields.io/npm/l/@alan-ai/alan-sdk-web.svg)]()
 
-A lightweight JavaScript library for adding a voice experience to your website or web application. Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
+Refer to [this](https://alan.app/docs/client-api/web) documentation for details.
+
+Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
 
 Create a voice script for your application in [Alan Studio](https://studio.alan.app/register) and then add it to your app.
-
-Refer to [this](https://alan.app/docs/client-api/web)  documentation for details.
 
 ## Have questions?
 
