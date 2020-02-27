@@ -5,14 +5,12 @@ import {AppComponent} from './app.component';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatCardModule} from '@angular/material/card';
-import {MatStepperModule} from '@angular/material';
-import {MatButtonToggleModule} from '@angular/material';
-import {
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatRippleModule
-} from '@angular/material';
+import {MatStepperModule} from '@angular/material/stepper';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import {MatButtonModule} from '@angular/material/button';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatInputModule} from '@angular/material/input';
+import {MatRippleModule} from '@angular/material/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 
 @NgModule({
