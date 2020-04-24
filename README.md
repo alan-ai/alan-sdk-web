@@ -7,6 +7,9 @@
 [![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
 [![npm](https://img.shields.io/npm/l/@alan-ai/alan-sdk-web.svg)]()
 
+
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/alan-ai/alan-sdk-web)](https://github.com/alan-ai/alan-sdk-web/releases)
+
 Refer to [this](https://alan.app/docs/client-api/web) documentation for details.
 
 Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
