@@ -280,7 +280,7 @@
         baseURL: "wss://" +
             ((host.indexOf('$') === 0 || host === '') ? window.location.host : host ),
         codec: 'opus',
-        version: '1.0.7',
+        version: '1.0.9',
         platform: 'web',
     };
 
@@ -386,12 +386,26 @@
         this._cleanups.push(f);
     };
 
-    function connectProject(projectId, auth, host, mode) {
-        if (!auth) {
-            auth = {};
+    function fillAuth(values, ext) {
+        var auth = {};
+        for (var k in values) {
+            auth[k] = values[k];
         }
-        auth.platform = config.platform;
-        auth.platformVersion = config.version;
+
+        if (!ext || (ext && ext.platform == null)) {
+            auth.platform = config.platform;
+        } else {
+            auth.platform = config.platform + ":" + ext.platform;
+        }
+        if (!ext || (ext && ext.platformVersion == null)) {
+            auth.platformVersion = config.version;
+        } else {
+            auth.platformVersion = config.version + ":" + ext.platformVersion;
+        }
+        return auth;
+    }
+                            
+    function connectProject(projectId, auth,  host, mode, ext) {
         var connect = new ConnectionWrapper();
         if (host)  {
             connect._config.baseURL = "wss://" + host;
@@ -400,7 +414,7 @@
         connect._config.codec     = config.codec;
         connect._config.version   = config.version;
         connect._config.url       = config.baseURL + "/ws_project/" + projectId;
-        connect._worker.postMessage(["connectProject", connect._config, auth, mode]);
+        connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
         function forwardAudioEvent(name) {
             function handler(a1, a2) {
                 if (name === 'frame'  && alanAudio.isPlaying()) {
@@ -420,12 +434,7 @@
         return connect;
     }
 
-    function connectProjectTest(projectId, auth, host, mode) {
-        if (!auth) {
-            auth = {};
-        }
-        auth.platform = config.platform;
-        auth.platformVersion = config.version;
+    function connectProjectTest(projectId, auth,  host, mode, ext) {
         var connect = new ConnectionWrapper();
         if (host)  {
             connect._config.baseURL = "wss://" + host;
@@ -434,7 +443,7 @@
         connect._config.codec     = config.codec;
         connect._config.version   = config.version;
         connect._config.url       = config.baseURL + "/ws_project/" + projectId;
-        connect._worker.postMessage(["connectProject", connect._config, auth, mode]);
+        connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
         return connect;
     }
 
@@ -601,6 +610,7 @@ function alanBtn(options) {
     var DISCONNECTED = 'disconnected';
     var OFFLINE = 'offline';
     var LOW_VOLUME = 'lowVolume';
+    var PERMISSION_DENIED = 'permissionDenied';
 
     // Set default state for btn
     var state = DISCONNECTED;
@@ -1243,8 +1253,8 @@ function alanBtn(options) {
     //#region Add needed styles to the page
     createAlanStyleSheet();
 
-    function getStyleSheetMarker() {
-        return '.alan-' + getProjectId() + ' ';
+    function getStyleSheetMarker(andFlag) {
+        return '.alan-' + getProjectId() + (andFlag ? '' : ' ');
     }
 
     function createAlanStyleSheet(btnOptions) {
@@ -1310,7 +1320,13 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + '.shadow-appear {  opacity: 1 !important;  }\n';
         keyFrames += getStyleSheetMarker() + '.shadow-disappear {  opacity: 0 !important;  transition: all .1s linear !important;  }';
 
-        keyFrames += getStyleSheetMarker() + '.alan-btn-disconnected {  pointer-events:none;  }';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-disconnected .alanBtn {  pointer-events:none;}';
+
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn {  pointer-events:none;}';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
+
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn {  pointer-events:none;}';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
 
         keyFrames += getStyleSheetMarker() + '.alan-btn-low-volume canvas {  opacity: .0 !important;  }';
 
@@ -2058,6 +2074,7 @@ function alanBtn(options) {
     function onMicFail() {
         // console.log('BTN: mic. failed');
         onMicStop();
+        switchState(PERMISSION_DENIED);
     }
 
     function onPlayStart(e) {
@@ -2299,19 +2316,35 @@ function alanBtn(options) {
             }
         }
 
-        if (newState === LOW_VOLUME) {
-            rootEl.classList.add("alan-btn-low-volume");
+        if (newState === LOW_VOLUME || newState === PERMISSION_DENIED) {
+            if (newState === LOW_VOLUME) {
+                rootEl.classList.add("alan-btn-low-volume");
+            }
+            if (newState === PERMISSION_DENIED) {
+                rootEl.classList.add("alan-btn-permission-denied");
+            }
             micIcon.style.opacity = 0;
             micTriangleIcon.style.opacity = 0;
             disconnectedMicLoaderIcon.style.opacity = 0;
             offlineIcon.style.opacity = 0;
             lowVolumeMicIcon.style.opacity = 1;
-        } else if (newState === DISCONNECTED || newState === OFFLINE) {
-            rootEl.classList.add("alan-btn-disconnected");
+            btnOval1.style.animation = '';
+            btnOval2.style.animation = '';
+            btnOval1.style.opacity = 0;
+            btnOval2.style.opacity = 0;
+        } else if (newState === DISCONNECTED || newState === OFFLINE ) {
+            if (newState === DISCONNECTED) {
+                rootEl.classList.add("alan-btn-disconnected");
+            }
+            if (newState === OFFLINE) {
+                rootEl.classList.add("alan-btn-offline");
+            }
             micTriangleIcon.style.opacity = 0;
             lowVolumeMicIcon.style.opacity = 0;
             btnOval1.style.animation = '';
             btnOval2.style.animation = '';
+            btnOval1.style.opacity = 0;
+            btnOval2.style.opacity = 0;
 
             if (newState === DISCONNECTED) {
                 micIcon.style.opacity = .4;
@@ -2326,7 +2359,9 @@ function alanBtn(options) {
             offlineIcon.style.opacity = 0;
             disconnectedMicLoaderIcon.style.opacity = 0;
             rootEl.classList.remove("alan-btn-low-volume");
+            rootEl.classList.remove("alan-btn-permission-denied");
             rootEl.classList.remove("alan-btn-disconnected");
+            rootEl.classList.remove("alan-btn-offline");
         }
 
         state = newState;
