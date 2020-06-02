@@ -16,6 +16,23 @@ Add a voice assistant to your application. With no or minimal changes to the exi
 
 Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
 
+## Downloads
+
+* [Alan package](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
+* [Alan Web SDK releases](https://github.com/alan-ai/alan-sdk-web/releases)
+
+## Example apps
+
+In the [Examples](https://github.com/alan-ai/alan-sdk-web/tree/master/examples) folder, find example web apps created with:
+
+* React
+* Angular 
+* Vue
+* Ember
+* Electron
+
+To install and launch an app, follow the instructions in the README file inside the app folder. Then press the Alan button and ask: "What is Alan Web SDK for?" or "What can I do here?" (for the Order Drinks app).
+
 ## Have questions?
 
 If you have any questions or if something is missing in the documentation, please [contact us](mailto:support@alan.app), or tweet us [@alanvoiceai](https://twitter.com/alanvoiceai). We love hearing from you!)

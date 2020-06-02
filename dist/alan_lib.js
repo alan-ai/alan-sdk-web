@@ -611,6 +611,7 @@ function alanBtn(options) {
     var OFFLINE = 'offline';
     var LOW_VOLUME = 'lowVolume';
     var PERMISSION_DENIED = 'permissionDenied';
+    var MIC_BLOCKED_MSG = 'Access to the microphone was blocked. Please allow it to use Alan';
 
     // Set default state for btn
     var state = DISCONNECTED;
@@ -1320,12 +1321,8 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + '.shadow-appear {  opacity: 1 !important;  }\n';
         keyFrames += getStyleSheetMarker() + '.shadow-disappear {  opacity: 0 !important;  transition: all .1s linear !important;  }';
 
-        keyFrames += getStyleSheetMarker(true) + '.alan-btn-disconnected .alanBtn {  pointer-events:none;}';
-
-        keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn {  pointer-events:none;}';
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
 
-        keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn {  pointer-events:none;}';
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
 
         keyFrames += getStyleSheetMarker() + '.alan-btn-low-volume canvas {  opacity: .0 !important;  }';
@@ -1752,16 +1749,19 @@ function alanBtn(options) {
             hoverShowHintTimeoutId = setTimeout(function () {
                 showHints();
             }, 500);
+        } else if(state === PERMISSION_DENIED){
+            showInfo(MIC_BLOCKED_MSG);
         }
     }
 
     function onBtnMouseLeave() {
-        var diff;
         if (state === DEFAULT) {
             clearTimeout(hoverShowHintTimeoutId);
             hoverHideHintTimeoutId = setTimeout(function () {
                 hideHints();
             }, 600);
+        } else if(state === PERMISSION_DENIED){
+            hideInfo();
         }
     }
 
@@ -1826,7 +1826,7 @@ function alanBtn(options) {
         }
     }
 
-    function hideRecognisedText() {
+    function hideRecognisedText(delay) {
         // console.info('hideRecognisedText');
 
         if (isMobile()) {
@@ -1843,7 +1843,7 @@ function alanBtn(options) {
                 textHolderTextWrapper.innerHTML = '';
                 textHolder.classList.remove('alanBtn-text-holder-long');
                 textHolder.classList.remove('alanBtn-text-holder-super-long');
-            }, 810);
+            }, delay || 810);
         }
     }
 
@@ -1896,6 +1896,14 @@ function alanBtn(options) {
         }
 
         hideRecognisedText();
+    }
+
+    function showInfo(text) {
+        showRecognisedText(null, text);
+    }
+
+    function hideInfo() {
+        hideRecognisedText(200);
     }
 
     function closeHint(event) {
@@ -2128,13 +2136,17 @@ function alanBtn(options) {
 
     function playSoundOn() {
         if (!soundOnAudioDoesNotExist) {
-            soundOnAudio.play();
+            soundOnAudio.play().catch(() => {
+                console.log("No activation sound, because the user didn't interact with the button");
+            });
         }
     }
 
     function playSoundOff() {
         if (!soundOffAudioDoesNotExist) {
-            soundOffAudio.play();
+            soundOffAudio.play().catch(() => {
+                console.log("No deactivation sound, because the user didn't interact with the button");
+            });
         }
     }
 
@@ -2322,6 +2334,7 @@ function alanBtn(options) {
             }
             if (newState === PERMISSION_DENIED) {
                 rootEl.classList.add("alan-btn-permission-denied");
+                showInfo(MIC_BLOCKED_MSG);
             }
             micIcon.style.opacity = 0;
             micTriangleIcon.style.opacity = 0;
