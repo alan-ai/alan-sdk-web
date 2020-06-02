@@ -12,7 +12,7 @@ This is an example of using the Alan Web SDK in an Electron app.
 
 ## Documentation
   
-For details, see [Alan AI documentation](https://alan.app/docs/integrations/electron).
+For details, see [Alan AI documentation](https://alan.app/docs/client-api/web/electron).
 
 ## Have questions?
 

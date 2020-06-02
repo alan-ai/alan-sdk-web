@@ -12,7 +12,7 @@ This is an example of using the Alan Web SDK in a React app.
 
 ## Documentation
   
-For more details, see [Alan AI documentation](https://alan.app/docs/integrations/react).
+For more details, see [Alan AI documentation](https://alan.app/docs/client-api/web/react).
 
 ## Have questions?
 

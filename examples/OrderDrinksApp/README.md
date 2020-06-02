@@ -12,7 +12,7 @@ This example shows how to add a voice experience to a sample drink ordering appl
 
 ## Documentation
   
-For more details, see [Alan AI documentation](https://alan.app/docs/).
+For more details, see [Alan AI documentation](https://alan.app/docs/client-api/web/web-api).
 
 ## Have questions?
 

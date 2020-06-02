@@ -12,7 +12,7 @@ This is an example of using the Alan Web SDK in a Vue app.
 
 ## Documentation
   
-For more details, see [Alan AI documentation](https://alan.app/docs/integrations/vue).
+For more details, see [Alan AI documentation](https://alan.app/docs/client-api/web/vue).
 
 ## Have questions?
 

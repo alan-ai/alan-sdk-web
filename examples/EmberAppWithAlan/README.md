@@ -12,7 +12,7 @@ This is an example of using the Alan Web SDK in an Ember app.
 
 ## Documentation
   
-For details, see [Alan AI documentation](https://alan.app/docs/integrations/ember).
+For details, see [Alan AI documentation](https://alan.app/docs/client-api/web/ember).
 
 ## Have questions?
 
