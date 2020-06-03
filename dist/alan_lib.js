@@ -533,6 +533,9 @@ function alanBtn(options) {
 
             alanAudio.stop();
         },
+        isActive: function () {
+            return isAlanActive;
+        },
         //deprecated
         callClientApi: function (method, data, callback) {
             if (btnDisabled) {
@@ -611,12 +614,21 @@ function alanBtn(options) {
     var OFFLINE = 'offline';
     var LOW_VOLUME = 'lowVolume';
     var PERMISSION_DENIED = 'permissionDenied';
+
+    // Error messages
     var MIC_BLOCKED_MSG = 'Access to the microphone was blocked. Please allow it to use Alan';
+    var NO_VOICE_SUPPORT_IN_BROWSER_MSG = 'Your browser doesn’t support voice input. To use voice, open Alan Tutor in a Chrome, Safari, or Firefox desktop browser window.';
+    var MIC_BLOCKED_CODE = 'microphone-access-blocked';
+    var NO_VOICE_SUPPORT_IN_BROWSER_CODE = 'browser-does-not-support-voice-input';
+    var PREVIEW_MODE_CODE = 'preview-mode';
+    var BTN_IS_DISABLED_CODE = 'btn-is-disabled';
+    var NO_ALAN_AUDIO_INSANCE_WAS_PROVIDED_CODE = 'no-alan-audio-instance-was-provided';
 
     // Set default state for btn
     var state = DISCONNECTED;
     var previousState = null;
     var isAlanSpeaking = false;
+    var isAlanActive = false;
 
     // Set variables for hints and stt
     var hints = [];
@@ -1692,12 +1704,12 @@ function alanBtn(options) {
         var activatePromise = new Promise(function (resolve, reject) {
             
             if (btnDisabled) {
-                reject({err: 'btn-is-disabled'});
+                reject({err: BTN_IS_DISABLED_CODE});
                 return;
             }
 
             if (isPreviewMode()) {
-                reject({err: 'preview-mode'});
+                reject({err: PREVIEW_MODE_CODE});
                 return;
             }
 
@@ -1709,18 +1721,33 @@ function alanBtn(options) {
             }
 
             if (alanAudio) {
-                if (state === 'default') {
-                    try {
-                        _activateAlanButton(resolve);
-                    } catch (e) {
-                        alert("Your browser doesn’t support voice input. To use voice, open Alan Tutor in a Chrome, Safari, or Firefox desktop browser window.");
-                        reject({err:'browser-does-not-support-voice-input'});
-                    }
-                } else {
-                    window.tutorProject.on('connectStatus', waitForConnectionForActivateCall);
+                switch (state) {
+                    case DEFAULT:
+                        try {
+                            _activateAlanButton(resolve);
+                        } catch (e) {
+                            alert(NO_VOICE_SUPPORT_IN_BROWSER_MSG);
+                            reject({ err: NO_VOICE_SUPPORT_IN_BROWSER_CODE });
+                        }
+                        break;
+                    case DISCONNECTED:
+                    case OFFLINE:
+                        window.tutorProject.on('connectStatus', waitForConnectionForActivateCall);
+                        break;
+                    case PERMISSION_DENIED:
+                        reject({ err: MIC_BLOCKED_CODE });
+                        break;
+
+                    case LISTENING:
+                    case SPEAKING:
+                    case INTERMEDIATE:
+                    case UNDERSTOOD:
+                        resolve();
+                        break;
+                    default:
                 }
             } else {
-                reject({err:'no-alan-audio-instance-was-provided'});
+                reject({ err: NO_ALAN_AUDIO_INSANCE_WAS_PROVIDED_CODE });
             }
         });
 
@@ -1983,19 +2010,6 @@ function alanBtn(options) {
         return hintsHtml;
     }
 
-    function onMicStart() {
-        // console.log('BTN: mic. started', new Date());
-        switchState(LISTENING);
-
-        if (window.tutorProject) {
-            window.tutorProject.on('text', onTextCbInMicBtn);
-            window.tutorProject.on('parsed', onParsedCbInMicBtn);
-            window.tutorProject.on('recognized', onRecognizedCbInMicBtn);
-            window.tutorProject.on('connectStatus', onConnectStatusChange);
-            window.tutorProject.on('options', onOptionsReceived);
-        }
-    }
-
     function onOptionsReceived(data) {
         if (data && data.web && data.web.hidden === true) {
             hideAlanBtn();
@@ -2051,6 +2065,20 @@ function alanBtn(options) {
         });
     }
 
+    function onMicStart() {
+        // console.log('BTN: mic. started', new Date());
+        switchState(LISTENING);
+        isAlanActive = true;
+
+        if (window.tutorProject) {
+            window.tutorProject.on('text', onTextCbInMicBtn);
+            window.tutorProject.on('parsed', onParsedCbInMicBtn);
+            window.tutorProject.on('recognized', onRecognizedCbInMicBtn);
+            window.tutorProject.on('connectStatus', onConnectStatusChange);
+            window.tutorProject.on('options', onOptionsReceived);
+        }
+    }
+
     function onMicStop() {
         // console.log('BTN: mic. stopped');
         playSoundOff();
@@ -2065,6 +2093,8 @@ function alanBtn(options) {
         hideRecognisedText();
 
         switchState(DEFAULT);
+
+        isAlanActive = false;
 
         if (window.tutorProject) {
             window.tutorProject.off('text', onTextCbInMicBtn);
@@ -2131,6 +2161,7 @@ function alanBtn(options) {
         if (options.onCommand) {
             options.onCommand(e.data);
         }
+        switchState(LISTENING);
         turnOffVoiceFn();
     }
 
@@ -2213,6 +2244,7 @@ function alanBtn(options) {
                 btnBgUnderstood,
             ]);
         } else if (newState === SPEAKING) {
+            hideRecognisedText();
             btn.style.animation = pulsatingAnimation;
 
             btnBgSpeaking.classList.remove('super-hidden');
