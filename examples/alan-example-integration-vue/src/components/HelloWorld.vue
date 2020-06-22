@@ -3,7 +3,7 @@
     <h1>{{ msg }}</h1>
     <p>
       For a guide and recipes on how to use the Alan Button check out the
-      <a href="https://alan.app/docs/integrations/vue" target="_blank" rel="noopener">Alan Documentation</a>.
+      <a href="https://alan.app/docs/client-api/web/vue" target="_blank" rel="noopener">Alan Documentation</a>.
     </p>
   </div>
 </template>
