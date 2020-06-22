@@ -11,7 +11,7 @@ class App extends React.Component {
 
   componentDidMount() {
     this.alanBtnInstance = alanBtn({ 
-      key: 'e3018cc76639126f974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/stage'
+      key: '314203787ccd9370974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/prod'
      });
   }
 
@@ -22,7 +22,7 @@ class App extends React.Component {
           className="Alan-logo" alt="logo" />
         <ul>
           <li>Say: "Hi!"</li>
-          <li>Say: "What is Alan Web SDK for?"</li>
+          <li>Say: "What is Alan Platform?"</li>
         </ul>
       </header>
     </div>
