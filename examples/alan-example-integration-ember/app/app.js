@@ -13,7 +13,7 @@ const App = Application.extend({
 loadInitializers(App, config.modulePrefix);
 
 alanBtn({ 
-  key: 'e3018cc76639126f974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/stage'
+  key: '314203787ccd9370974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/prod'
  });
 
 export default App;
