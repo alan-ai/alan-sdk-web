@@ -3,12 +3,12 @@
 [Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
-This is an example of using the Alan Web SDK in a React app.
+This is an example of using the Alan Web SDK in a React app. To use this app:
 
-### How to use:
-
-1. Run `npm i`
-2. Run `npm run start`
+1. Clone this repository to your computer. 
+2. Navigate to the example folder.
+3. Run `npm i`.
+4. Run `npm run start`.
 
 ## Documentation
   
