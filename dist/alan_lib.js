@@ -286,7 +286,7 @@
 
     function ConnectionWrapper() {
         var _this = this;
-        this._worker = new Worker(window.URL.createObjectURL(new Blob(["'use strict';importScripts(    'https://studio.alan.app/js/alan_frame.js',    'https://studio.alan.app/js/alan_codec.js',    'https://studio.alan.app/js/libopus.js');var ALAN_OFF       = 'off';var ALAN_SPEAKING  = 'speaking';var ALAN_LISTENING = 'listening';function ConnectionImpl(config, auth, mode) {    var _this = this;    this._config = config;    this._auth = auth;    this._mode = mode;    this._projectId = config.projectId;    this._url = config.url;    this._connected = false;    this._authorized = false;    this._dialogId = null;    this._callId = 1;    this._callSent = {};    this._callWait = [];    this._failed = false;    this._closed = false;    this._reconnectTimeout = 100;    this._cleanups = [];    this._sampleRate = -1;    this._format = null;    this._formatSent = false;    this._frameQueue = [];    this._remoteSentTs = 0;    this._remoteRecvTs = 0;    this._rtt = 25;    this._rttAlpha = 1./16;    this._alanState = ALAN_OFF;    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 100);    this._visualState = {};    this._addCleanup(function() {clearInterval(_this._sendTimer);});    this._connect();    console.log('connection created: ' + this._url);}ConnectionImpl.prototype._addCleanup = function(f) {    this._cleanups.push(f);};ConnectionImpl.prototype._onConnectStatus = function(s) {    console.log('connection status: ' + s);    this._fire('connectStatus', s);};ConnectionImpl.prototype._fire = function(event, object) {    if (event === 'options') {        if (object.versions) {            object.versions['alanbase:web'] = this._config.version;        }    }    postMessage(['fireEvent', event, object]);};ConnectionImpl.prototype._connect = function() {    var _this = this;    if (this._socket) {        console.error('socket is already connected');        return;    }    console.log('connecting to ' + this._url);    this._socket = new WebSocket(this._url);    this._socket.binaryType = 'arraybuffer';    this._decoder = alanCodec.decoder('pcm', 16000);    this._socket.onopen = function(e) {        console.info('connected', e.target === _this._socket);        _this._connected = true;        _this._reconnectTimeout = 100;        _this._fire('connection', {status: 'connected'});        if (_this._auth) {            _this._fire('connection', {status: 'authorizing'});            _this._callAuth();        } else {            _this._callWait.forEach(function(c) {  _this._sendCall(c); });            _this._callWait = [];        }    };    this._socket.onmessage = function(msg) {        if (msg.data instanceof ArrayBuffer) {            var f = alanFrame.parse(msg.data);            if (f.sentTs > 0) {                _this._remoteSentTs = f.sentTs;                _this._remoteRecvTs = Date.now();            } else {                _this._remoteSentTs = null;                _this._remoteRecvTs = null;            }            var rtt = 0;            if (f.remoteTs) {                rtt = Date.now() - f.remoteTs;            }            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;            var frames = _this._decoder(f.audioData);            postMessage(['alanAudio', 'playFrame', frames]);        } else if (typeof(msg.data) === 'string') {            msg = JSON.parse(msg.data);            if (msg.i) {                var c = _this._callSent[msg.i];                delete _this._callSent[msg.i];                if (c && c.callback) {                    c.callback(msg.e, msg.r);                }            } else if (msg.e) {                if (msg.e === 'command') {                    postMessage(['alanAudio', 'playCommand', msg.p]);                } else if (msg.e === 'inactivity') {                    postMessage(['alanAudio', 'stop']);                } else {                    _this._fire(msg.e, msg.p);                }            }        } else {            console.error('invalid message type');        }    };    this._socket.onerror = function(evt) {        console.error('connection closed due to error: ', evt);    };    this._socket.onclose = function(evt) {        console.info('connection closed');        _this._connected = false;        _this._authorized = false;        _this._socket = null;        _this._onConnectStatus('disconnected');        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {            console.log('reconnecting in %s ms.', _this._reconnectTimeout);            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);            if (_this._reconnectTimeout < 3000) {                _this._reconnectTimeout *= 2;            } else {                _this._reconnectTimeout += 500;            }            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);        }    };    this._addCleanup(function() {        if (this._socket) {            this._socket.close();            this._socket = null;        }    });};ConnectionImpl.prototype._callAuth = function() {    var _this = this;    var callback = function(err, r) {        if (!err && r.status === 'authorized') {            _this._authorized = true;            _this._formatSent = false;            if (r.dialogId) {                postMessage(['setDialogId', r.dialogId]);                _this._dialogId = r.dialogId;            }            _this._onAuthorized();            _this._onConnectStatus('authorized');        } else if (err === 'auth-failed') {            _this._onConnectStatus('auth-failed');            if (_this._socket) {                _this._socket.close();                _this._socket = null;                _this._failed = true;            }        } else {            _this._onConnectStatus('invalid-auth-response');            console.log('invalid auth response', err, r);        }    };    var authParam = this._auth;    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;    if (this._dialogId) {        authParam.dialogId = this._dialogId;    }    authParam.mode = this._mode;    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});    return this;};ConnectionImpl.prototype._sendCall = function(call) {    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));    if (call.callback) {        this._callSent[call.cid] = call;    }};ConnectionImpl.prototype._onAuthorized = function() {    console.log('authorized');    if (this._visualState) {        this.call(null, '_visual_', this._visualState);    }    var _this = this;    this._callWait.forEach(function(c) {        _this._sendCall(c);    });    this._callWait = [];};ConnectionImpl.prototype.close = function() {    for (var i = 0; i < this._cleanups.length; i++ ) {        this._cleanups[i]();    }    this._cleanups = [];    this._closed = true;        if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {        this._socket.close();        this._socket = null;    }    console.log('closed connection to: ' + this._url);    close();};ConnectionImpl.prototype.call = function(cid, method, param) {    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {        if (cid) {            postMessage(['callback', cid, err, obj]);        }    }};    if (this._authorized || this._connected && !this._auth) {        this._sendCall(call);    } else {        this._callWait.push(call);    }};ConnectionImpl.prototype.setVisual = function(state) {    this._visualState = state;    this.call(null, '_visual_', state);};ConnectionImpl.prototype._sendFrame = function(frame) {    if (!this._socket) {        console.error('sendFrame to closed socket');        return;    }    frame.sentTs = Date.now();    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;    }    this._socket.send(frame.write());};ConnectionImpl.prototype._listen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'listen'});    this._frameQueue.push(f);    this._alanState = ALAN_LISTENING;};ConnectionImpl.prototype._stopListen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'stopListen'});    this._frameQueue.push(f);    this._alanState = ALAN_OFF;};ConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {    if (this._alanState === ALAN_SPEAKING) {        return;    }    if (this._alanState === ALAN_OFF) {        this._listen();    }    if (this._alanState !== ALAN_LISTENING) {        console.error('invalid alan state: ' + this._alanState);        return;    }    if (this._sampleRate !== sampleRate) {        this._sampleRate = sampleRate;        this._encoder = alanCodec.encoder(this._config.codec, 48000);        this._formatSent = false;        this._format = {            send: {codec: this._config.codec, sampleRate: sampleRate},            recv: {codec: 'pcm_s16le', sampleRate: 16000},            timeout: this._timeout,        };    }    var p = this._encoder(frame);    for (var i = 0; i < p.length; i++ ) {        var f = alanFrame.create();        f.audioData = p[i];        this._frameQueue.push(f);    }};ConnectionImpl.prototype._flushQueue = function() {    if (!this._socket || !this._connected) {        var d = 0;        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {            this._frameQueue.shift();            d++;        }        if (d > 0) {            console.error('dropped: %s, frames', d);        }        return;    }    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {        if (!this._formatSent && this._format) {            var frame = alanFrame.create();            frame.jsonData = JSON.stringify({format: this._format});            this._sendFrame(frame);            this._formatSent = true;        }        this._sendFrame(this._frameQueue.shift());    }};function connectProject(config, auth, mode) {    var c = new ConnectionImpl(config, auth, mode);    c.onAudioEvent = function(event, arg1, arg2) {        if (event === 'frame') {            c._onMicFrame(arg1, arg2);        } else if (event === 'micStop' || event === 'playStart') {            c._stopListen();        } else {            console.error('unknown audio event: ' + event, arg1, arg2);        }    };    return c;}var factories = {    connectProject: connectProject,};var currentConnect = null;onmessage = function(e) {    var name = e.data[0];    try {        if (!currentConnect) {            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));        } else {            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));        }    } catch(e) {        console.error('error calling: ' + name, e);    }};"]),{type: 'text/javascript'}));
+        this._worker = new Worker(window.URL.createObjectURL(new Blob(["'use strict';importScripts(    'https://studio.alan.app/js/alan_frame.js',    'https://studio.alan.app/js/alan_codec.js',    'https://studio.alan.app/js/libopus.js');var ALAN_OFF       = 'off';var ALAN_SPEAKING  = 'speaking';var ALAN_LISTENING = 'listening';function ConnectionImpl(config, auth, mode) {    var _this = this;    this._config = config;    this._auth = auth;    this._mode = mode;    this._projectId = config.projectId;    this._url = config.url;    this._connected = false;    this._authorized = false;    this._dialogId = null;    this._callId = 1;    this._callSent = {};    this._callWait = [];    this._failed = false;    this._closed = false;    this._reconnectTimeout = 100;    this._cleanups = [];    this._sampleRate = -1;    this._format = null;    this._formatSent = false;    this._frameQueue = [];    this._remoteSentTs = 0;    this._remoteRecvTs = 0;    this._rtt = 25;    this._rttAlpha = 1./16;    this._alanState = ALAN_OFF;    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 100);    this._visualState = {};    this._addCleanup(function() {clearInterval(_this._sendTimer);});    this._connect();    console.log('Alan: connection created: ' + this._url);}ConnectionImpl.prototype._addCleanup = function(f) {    this._cleanups.push(f);};ConnectionImpl.prototype._onConnectStatus = function(s) {    console.log('Alan: connection status: ' + s);    this._fire('connectStatus', s);};ConnectionImpl.prototype._fire = function(event, object) {    if (event === 'options') {        if (object.versions) {            object.versions['alanbase:web'] = this._config.version;        }    }    postMessage(['fireEvent', event, object]);};ConnectionImpl.prototype._connect = function() {    var _this = this;    if (this._socket) {        console.error('socket is already connected');        return;    }    console.log('Alan: connecting to ' + this._url);    this._socket = new WebSocket(this._url);    this._socket.binaryType = 'arraybuffer';    this._decoder = alanCodec.decoder('pcm', 16000);    this._socket.onopen = function(e) {        console.info('Alan: connected', e.target === _this._socket);        _this._connected = true;        _this._reconnectTimeout = 100;        _this._fire('connection', {status: 'connected'});        if (_this._auth) {            _this._fire('connection', {status: 'authorizing'});            _this._callAuth();        } else {            _this._callWait.forEach(function(c) {  _this._sendCall(c); });            _this._callWait = [];        }    };    this._socket.onmessage = function(msg) {        if (msg.data instanceof ArrayBuffer) {            var f = alanFrame.parse(msg.data);            if (f.sentTs > 0) {                _this._remoteSentTs = f.sentTs;                _this._remoteRecvTs = Date.now();            } else {                _this._remoteSentTs = null;                _this._remoteRecvTs = null;            }            var rtt = 0;            if (f.remoteTs) {                rtt = Date.now() - f.remoteTs;            }            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;            var frames = _this._decoder(f.audioData);            postMessage(['alanAudio', 'playFrame', frames]);        } else if (typeof(msg.data) === 'string') {            msg = JSON.parse(msg.data);            if (msg.i) {                var c = _this._callSent[msg.i];                delete _this._callSent[msg.i];                if (c && c.callback) {                    c.callback(msg.e, msg.r);                }            } else if (msg.e) {                if (msg.e === 'command') {                    postMessage(['alanAudio', 'playCommand', msg.p]);                } else if (msg.e === 'inactivity') {                    postMessage(['alanAudio', 'stop']);                } else {                    _this._fire(msg.e, msg.p);                }            }        } else {            console.error('invalid message type');        }    };    this._socket.onerror = function(evt) {        console.error('Alan: connection closed due to error: ', evt);    };    this._socket.onclose = function(evt) {        console.info('Alan: connection closed');        _this._connected = false;        _this._authorized = false;        _this._socket = null;        _this._onConnectStatus('disconnected');        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);            if (_this._reconnectTimeout < 3000) {                _this._reconnectTimeout *= 2;            } else {                _this._reconnectTimeout += 500;            }            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);        }    };    this._addCleanup(function() {        if (this._socket) {            this._socket.close();            this._socket = null;        }    });};ConnectionImpl.prototype._callAuth = function() {    var _this = this;    var callback = function(err, r) {        if (!err && r.status === 'authorized') {            _this._authorized = true;            _this._formatSent = false;            if (r.dialogId) {                postMessage(['setDialogId', r.dialogId]);                _this._dialogId = r.dialogId;            }            _this._onAuthorized();            _this._onConnectStatus('authorized');        } else if (err === 'auth-failed') {            _this._onConnectStatus('auth-failed');            if (_this._socket) {                _this._socket.close();                _this._socket = null;                _this._failed = true;            }        } else {            _this._onConnectStatus('invalid-auth-response');            console.log('Alan: invalid auth response', err, r);        }    };    var authParam = this._auth;    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;    if (this._dialogId) {        authParam.dialogId = this._dialogId;    }    authParam.mode = this._mode;    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});    return this;};ConnectionImpl.prototype._sendCall = function(call) {    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));    if (call.callback) {        this._callSent[call.cid] = call;    }};ConnectionImpl.prototype._onAuthorized = function() {    console.log('Alan: authorized');    if (this._visualState) {        this.call(null, '_visual_', this._visualState);    }    var _this = this;    this._callWait.forEach(function(c) {        _this._sendCall(c);    });    this._callWait = [];};ConnectionImpl.prototype.close = function() {    for (var i = 0; i < this._cleanups.length; i++ ) {        this._cleanups[i]();    }    this._cleanups = [];    this._closed = true;        if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {        this._socket.close();        this._socket = null;    }    console.log('Alan: closed connection to: ' + this._url);    close();};ConnectionImpl.prototype.call = function(cid, method, param) {    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {        if (cid) {            postMessage(['callback', cid, err, obj]);        }    }};    if (this._authorized || this._connected && !this._auth) {        this._sendCall(call);    } else {        this._callWait.push(call);    }};ConnectionImpl.prototype.setVisual = function(state) {    this._visualState = state;    this.call(null, '_visual_', state);};ConnectionImpl.prototype._sendFrame = function(frame) {    if (!this._socket) {        console.error('sendFrame to closed socket');        return;    }    frame.sentTs = Date.now();    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;    }    this._socket.send(frame.write());};ConnectionImpl.prototype._listen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'listen'});    this._frameQueue.push(f);    this._alanState = ALAN_LISTENING;};ConnectionImpl.prototype._stopListen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'stopListen'});    this._frameQueue.push(f);    this._alanState = ALAN_OFF;};ConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {    if (this._alanState === ALAN_SPEAKING) {        return;    }    if (this._alanState === ALAN_OFF) {        this._listen();    }    if (this._alanState !== ALAN_LISTENING) {        console.error('invalid alan state: ' + this._alanState);        return;    }    if (this._sampleRate !== sampleRate) {        this._sampleRate = sampleRate;        this._encoder = alanCodec.encoder(this._config.codec, 48000);        this._formatSent = false;        this._format = {            send: {codec: this._config.codec, sampleRate: sampleRate},            recv: {codec: 'pcm_s16le', sampleRate: 16000},            timeout: this._timeout,        };    }    var p = this._encoder(frame);    for (var i = 0; i < p.length; i++ ) {        var f = alanFrame.create();        f.audioData = p[i];        this._frameQueue.push(f);    }};ConnectionImpl.prototype._flushQueue = function() {    if (!this._socket || !this._connected) {        var d = 0;        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {            this._frameQueue.shift();            d++;        }        if (d > 0) {            console.error('dropped: %s, frames', d);        }        return;    }    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {        if (!this._formatSent && this._format) {            var frame = alanFrame.create();            frame.jsonData = JSON.stringify({format: this._format});            this._sendFrame(frame);            this._formatSent = true;        }        this._sendFrame(this._frameQueue.shift());    }};function connectProject(config, auth, mode) {    var c = new ConnectionImpl(config, auth, mode);    c.onAudioEvent = function(event, arg1, arg2) {        if (event === 'frame') {            c._onMicFrame(arg1, arg2);        } else if (event === 'micStop' || event === 'playStart') {            c._stopListen();        } else {            console.error('unknown audio event: ' + event, arg1, arg2);        }    };    return c;}var factories = {    connectProject: connectProject,};var currentConnect = null;onmessage = function(e) {    var name = e.data[0];    try {        if (!currentConnect) {            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));        } else {            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));        }    } catch(e) {        console.error('error calling: ' + name, e);    }};"]),{type: 'text/javascript'}));
         this._worker.onmessage = function(e) {
             if (e.data[0] === 'fireEvent') {
                 _this._fire(e.data[1], e.data[2]);
@@ -474,6 +474,7 @@ function alanBtn(options) {
 
     var btnDisabled = false;
     var hideS2TPanel = false;
+    var pinned = false;
 
     var btnInstance = {
         // Common public API
@@ -492,7 +493,7 @@ function alanBtn(options) {
                 return;
             }
             if (!funcName) {
-                throw 'Function name for callProjectApi must be provided';
+                throw new Error('Function name for callProjectApi must be provided');
             }
 
             if (window.tutorProject) {
@@ -596,8 +597,10 @@ function alanBtn(options) {
 
     if (options.mode === 'tutor') {
         mode = 'tutor';
+        pinned = true;
     } else if (options.mode === 'tutor-preview') {
         mode = 'tutor-preview';
+        pinned = true;
     } else if (options.mode === 'demo') {
         mode = 'demo';
     } else {
@@ -618,8 +621,12 @@ function alanBtn(options) {
     // Error messages
     var MIC_BLOCKED_MSG = 'Access to the microphone was blocked. Please allow it to use Alan';
     var NO_VOICE_SUPPORT_IN_BROWSER_MSG = 'Your browser doesn’t support voice input. To use voice, open Alan Tutor in a Chrome, Safari, or Firefox desktop browser window.';
-    var MIC_BLOCKED_CODE = 'microphone-access-blocked';
+    var LOW_VOLUME_MSG = 'Low volume level';
+    var OFFLINE_MSG = 'You\'re offline';
+
+
     var NO_VOICE_SUPPORT_IN_BROWSER_CODE = 'browser-does-not-support-voice-input';
+    var MIC_BLOCKED_CODE = 'microphone-access-blocked';
     var PREVIEW_MODE_CODE = 'preview-mode';
     var BTN_IS_DISABLED_CODE = 'btn-is-disabled';
     var NO_ALAN_AUDIO_INSANCE_WAS_PROVIDED_CODE = 'no-alan-audio-instance-was-provided';
@@ -629,6 +636,12 @@ function alanBtn(options) {
     var previousState = null;
     var isAlanSpeaking = false;
     var isAlanActive = false;
+
+    // Set btn position flags
+    var isLeftAligned = false;
+    var isRightAligned = true;
+    var isTopAligned = false;
+    var isBottomAligned = false;
 
     // Set variables for hints and stt
     var hints = [];
@@ -689,7 +702,6 @@ function alanBtn(options) {
     var rootEl = options.rootEl || document.createElement('div');
     var body = document.getElementsByTagName('body')[0];
     var btn = document.createElement('div');
-    var panelOvalImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSI3NThweCIgaGVpZ2h0PSIyMTdweCIgdmlld0JveD0iMCAwIDc1OCAyMTciIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+ICAgICAgICA8dGl0bGU+T3ZhbCBDb3B5IDI8L3RpdGxlPiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4gICAgPGRlZnM+ICAgICAgICA8cmFkaWFsR3JhZGllbnQgY3g9IjUwJSIgY3k9IjQxLjA1NjE0NTIlIiBmeD0iNTAlIiBmeT0iNDEuMDU2MTQ1MiUiIHI9IjE2Ni42MjMxMDIlIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDAuNTAwMDAwLDAuNDEwNTYxKSxzY2FsZSgwLjI4NjI4MCwxLjAwMDAwMCkscm90YXRlKDE4MC4wMDAwMDApLHNjYWxlKDEuMDAwMDAwLDAuMjMyODQ2KSx0cmFuc2xhdGUoLTAuNTAwMDAwLC0wLjQxMDU2MSkiIGlkPSJyYWRpYWxHcmFkaWVudC0xIj4gICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjRkZGRkZGIiBvZmZzZXQ9IjAlIj48L3N0b3A+ICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iI0ZGRkZGRiIgb2Zmc2V0PSIzMy42Njc4MzM2JSI+PC9zdG9wPiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiNGRkZGRkYiIHN0b3Atb3BhY2l0eT0iMC4xIiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4gICAgICAgIDwvcmFkaWFsR3JhZGllbnQ+ICAgIDwvZGVmcz4gICAgPGcgaWQ9IkFsYW4tQnV0dG9uIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4gICAgICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi1jaGVja2luZy1kaWZmZXJlbnQtYmctYW5kLWhpbnRzLS0tbGF5ZXJzIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjAyOS4wMDAwMDAsIC00MTguMDAwMDAwKSIgZmlsbD0idXJsKCNyYWRpYWxHcmFkaWVudC0xKSIgZmlsbC1ydWxlPSJub256ZXJvIj4gICAgICAgICAgICA8ZWxsaXBzZSBpZD0iT3ZhbC1Db3B5LTIiIGN4PSIyNDA4IiBjeT0iNTI2LjUiIHJ4PSIzNzkiIHJ5PSIxMDguNSI+PC9lbGxpcHNlPiAgICAgICAgPC9nPiAgICA8L2c+PC9zdmc+';
     var micTriangleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n';
     var micCircleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n';
     var micIcon = document.createElement('div');
@@ -739,8 +751,7 @@ function alanBtn(options) {
 
     // Some variables for setting up right properties for Alan Btn
     var btnSize;
-    var rightBtnPos;
-    var leftBtnPos;
+    var sideBtnPos;
     var bottomBtnPos;
     var topBtnPos;
     var btnZIndex;
@@ -830,13 +841,33 @@ function alanBtn(options) {
     //#region Set styles for base layers
 
     btnSize = btnModes[mode].btnSize;
-    bottomBtnPos = options.bottom || (btnModes[mode].bottomPos + 'px');
-    rightBtnPos = options.right || (btnModes[mode].rightPos + 'px');
+    
     if (options.left) {
-        leftBtnPos = options.left || (btnModes[mode].leftPos + 'px');
+        isLeftAligned = true;
+        isRightAligned = false;
     }
     if (options.top) {
-        topBtnPos = options.top || (btnModes[mode].topPos + 'px');
+        isTopAligned = true;
+        isBottomAligned = false;
+    }
+
+    if (isLeftAligned) {
+        sideBtnPos = setDefautlPositionProps(options.left || btnModes[mode].leftPos);
+    } else {
+        sideBtnPos = setDefautlPositionProps(options.right || btnModes[mode].rightPos);
+    }
+
+    if (isTopAligned) {
+        topBtnPos = setDefautlPositionProps(options.top || btnModes[mode].topPos);
+    } else {
+        bottomBtnPos = setDefautlPositionProps(options.bottom || btnModes[mode].bottomPos);
+    }
+
+    function setDefautlPositionProps(value) {
+        if (/^\d+$/.test(value)) {
+            return value + 'px';
+        }
+        return value;
     }
 
     btnZIndex = options.zIndex || 4;
@@ -845,14 +876,9 @@ function alanBtn(options) {
     btnBgLayerZIndex = btnZIndex - 3;
 
     // Define styles for root element
+    rootEl.style[isLeftAligned ? 'left' : 'right'] = sideBtnPos;
 
-    if (options.left) {
-        rootEl.style.left = leftBtnPos;
-    } else {
-        rootEl.style.right = rightBtnPos;
-    }
-
-    if (options.top) {
+    if (isTopAligned) {
         rootEl.style.top = topBtnPos;
     } else {
         rootEl.style.bottom = bottomBtnPos;
@@ -870,11 +896,12 @@ function alanBtn(options) {
     textHolderTextWrapper.classList.add('alanBtn-text-holder-text-wrapper');
     textHolder.classList.add('alanBtn-text-holder');
     setInnerPositionBasedOnOptions(textHolder, options);
-    if (options.left) {
-        textHolderTextWrapper.style.paddingLeft = btnSize + 32 + 'px';
+    if (isLeftAligned) {
         textHolderTextWrapper.style.textAlign = 'left';
+        textHolder.style.left = '0px';
     } else {
-        textHolderTextWrapper.style.paddingRight = btnSize + 32 + 'px';
+        textHolder.style.right = '0px';
+        textHolder.style.float = 'right';
     }
     
     textHolder.style.height = btnSize + 'px';
@@ -888,7 +915,7 @@ function alanBtn(options) {
 
     // Define styles for block with hints
     hintHolderWrapper.classList.add('alanBtn-hint-holder-wrapper');
-    if (options.left) {
+    if (isLeftAligned) {
         hintHolderWrapper.classList.add('alanBtn-hint-holder-wrapper-left');
         hintHolderWrapper.style.paddingLeft = btnSize + 32 + 'px';
     } else {
@@ -920,15 +947,29 @@ function alanBtn(options) {
     alanBtnDisabledMessage.classList.add("alan-btn-disabled-msg");
 
     function setInnerPositionBasedOnOptions(el, options) {
-        if (options.top) {
+        if (isTopAligned) {
             el.style.top = 0;
         } else {
             el.style.bottom = 0;
         }
-        if (options.left) {
+        if (isLeftAligned) {
             el.style.left = 0;
         } else {
             el.style.right = 0;
+        }
+    }
+
+    function setStylesBasedOnSide() {
+        if (isLeftAligned) {
+            btn.style.left = 0;
+            btn.style.right = '';
+            textHolder.classList.remove('left-side');
+            textHolder.classList.add('right-side');
+        } else {
+            btn.style.right = 0;
+            btn.style.left = '';
+            textHolder.classList.remove('right-side');
+            textHolder.classList.add('left-side');
         }
     }
 
@@ -941,16 +982,12 @@ function alanBtn(options) {
     btn.style.maxHeight = btnSize + 'px';
     btn.style.color = '#fff';
     btn.style.position = 'absolute';
-    if (options.top) {
+    if (isTopAligned) {
         btn.style.top = 0;
     } else {
         btn.style.bottom = 0;
     }
-    if (options.left) {
-        btn.style.left = 0;
-    } else {
-        btn.style.right = 0;
-    }
+    setStylesBasedOnSide();
     btn.style.borderRadius = '50%';
     btn.style.boxShadow = '0 8px 10px 0 rgba(0, 75, 144, 0.35)';
     btn.style.textAlign = 'center';
@@ -991,10 +1028,11 @@ function alanBtn(options) {
             logos[i].style.top = '0%';
             logos[i].style.left = '0%';
             logos[i].style.position = 'absolute';
+            logos[i].style.pointerEvents = 'none';
             logos[i].style.animationIterationCount = 'infinite';
             logos[i].style.animationDuration = '9s';
             logos[i].style.animationTimingFunction = 'ease-in-out';
-            logos[i].style.opacity = (i == 0 ? 1 : 0);
+            logos[i].style.opacity = (i === 0 ? 1 : 0);
             micIcon.appendChild(logos[i]);
         }
     }
@@ -1261,6 +1299,10 @@ function alanBtn(options) {
     btn.appendChild(offlineIcon);
     btn.classList.add("alanBtn");
 
+    if(isMobile()){
+        rootEl.classList.add("mobile");
+    }
+
     //#endregion
 
     //#region Add needed styles to the page
@@ -1296,10 +1338,17 @@ function alanBtn(options) {
 
         keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;}.alanBtn:hover{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
 
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder {overflow:hidden;font-family: \'Lato\', sans-serif; font-size: 20px;line-height: 1.2;   max-width: 0px;  min-height: 40px;  color: #000; position: absolute; text-align: center; font-weight: normal; background-color: rgba(245, 252, 252, 0.8);border-radius:32px 0 0 32px; display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start; background-image: url(' + panelOvalImg + ');background-position: -190px -70px; }';
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-text-wrapper {padding: 12px 8px; text-align: right; width: 100%;min-width:440px;font-size: 20px!important;line-height: 1.2!important;  animation: alan-text-fade-in .4s ease-in-out forwards;}';
+        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder { position:relative; max-width:440px; font-family: \'Lato\', sans-serif; font-size: 20px;line-height: 1.2;     min-height: 40px;  color: #000; font-weight: normal; background-color: rgba(245, 252, 252, 0.8);border-radius:32px 0 0 32px; display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
+        
+        keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-text-holder {max-width: calc(100% - ' + sideBtnPos + ');}';
 
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder {position:relative;font-style: italic; overflow:hidden;font-family: \'Lato\', sans-serif;   width: 0px;  min-width: 0px;  max-width: 0px;  min-height: 40px;  color: #000; position: absolute; font-weight: normal;  background-color: rgba(245, 252, 252, 0.8); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;border-radius:32px 0 0 32px;  background-image: url(' + panelOvalImg + ');background-position: -190px -70px; }';
+        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.left-side { padding-right: ' + btnSize + 'px;}';
+        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.right-side { padding-left: ' + btnSize + 'px;}';
+        
+        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.left-side .alanBtn-text-holder-text-wrapper {padding: 0 12px;}';
+        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.right-side .alanBtn-text-holder-text-wrapper {padding: 0 12px;}';
+        
+        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder {position:relative;font-style: italic; overflow:hidden;font-family: \'Lato\', sans-serif;   width: 0px;  min-width: 0px;   min-height: 40px;  color: #000; position: absolute; font-weight: normal;  background-color: rgba(245, 252, 252, 0.8); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;border-radius:32px 0 0 32px;}';
 
         keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-close {position: absolute;top: 1px;right: ' + (hintCloserRightPos - 10) + 'px;color: #0079e8;font-size: 13px;font-style: normal;font-weight: 500;line-height: 1.54;opacity: 0;transition: opacity 300ms ease-in-out;}';
 
@@ -1309,7 +1358,7 @@ function alanBtn(options) {
 
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder:hover .alanBtn-hint-holder-close {opacity: 1;transition: opacity 300ms ease-in-out;}';
 
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper {width: 100%;height:100%;min-width:440px; display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;justify-content: start;text-align:left;}';
+        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper {width: 100%;height:100%; display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;justify-content: start;text-align:left;}';
 
         keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper .alanBtn-hint-list {padding-top:2px;font-size: 18px;line-height: 1.22; margin-top:0px;font-style:italic;margin-bottom:0px;display:inline-block;vertical-align:middle;width:220px;max-width:220px;min-width:220px;text-align:left;animation: alan-text-fade-in .4s ease-in-out forwards; }';
 
@@ -1321,8 +1370,12 @@ function alanBtn(options) {
 
         keyFrames += getStyleSheetMarker() + '.alanBtn-hint-header {white-space:nowrap;font-size: 14px;font-weight: 400;font-style: italic;font-stretch: normal;line-height: 1.36;letter-spacing: normal;color: rgba(0, 0, 0, 0.6);display:inline-block;vertical-align:middle;padding-right:12px;padding-left:12px;min-width:112px;text-align:center;animation: alan-text-fade-in .4s ease-in-out forwards;}';
 
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-long .alanBtn-text-holder-text-wrapper { font-size: 19px!important;line-height: 1.4!important;}  ';
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-super-long .alanBtn-text-holder-text-wrapper { font-size: 14px!important;line-height: 1.4!important;}  ';
+        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-long  { font-size: 19px!important;line-height: 1.4!important;}  ';
+        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-super-long  { font-size: 14px!important;line-height: 1.4!important;}  ';
+
+        keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-text-holder-long  { font-size: 12px!important;line-height: 1.4!important;}  ';
+        keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-text-holder-super-long  { font-size: 11px!important;line-height: 1.4!important;}  ';
+
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-appearing {  animation: text-holder-appear 800ms ease-in-out forwards;  }';
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-disappearing {  animation: text-holder-disappear 800ms ease-in-out forwards;    }';
 
@@ -1342,8 +1395,9 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + ".alan-btn-disabled-msg:after {content: '';  position: absolute;  bottom: 2px;  right: 0px;  height: 30px;  width: 90px;  background-size: 100% auto;  background-repeat: no-repeat;  background-position: center center;}";
 
 
-        keyFrames += getStyleSheetMarker() + '.triangleMicIconBg {background-image:url(' + micTriangleIconImg + ');}';
-        keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + micCircleIconImg + ');}';
+        keyFrames += getStyleSheetMarker() + '.triangleMicIconBg {background-image:url(' + micTriangleIconImg + '); pointer-events: none;}';
+        keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + micCircleIconImg + '); pointer-events: none;}';
+        keyFrames += getStyleSheetMarker() + ' img {pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + ':hover .triangleMicIconBg-default {opacity:0!important;}';
 
 
@@ -1356,40 +1410,28 @@ function alanBtn(options) {
 
         keyFrames += getStyleSheetMarker() + generateKeyFrame('text-holder-appear',
             '0%{' +
+            'opacity:0; ' +
             'color:transparent; ' +
-            'background-image: none;' +
-            ' background-color:rgba(245, 252, 252, 0.0);' +
+            'background-color:rgba(245, 252, 252, 0.0);' +
             'border: solid 1px transparent; ' +
-            'max-width: 0px;' +
-            'min-width: 0px;' +
-            'width: 0px;' +
-            'right: ' + (btnSize / 2 + rightBtnPos) + 'px;' +
             '}' +
             '100%{' +
+            'opacity:1; ' +
             'color:#000;' +
             'background-color:rgba(245, 252, 252, 0.8);' +
-            'background-image: url(' + panelOvalImg + ');' +
-            ' max-width: ' + textHolderWidth + 'px;' +
-            'width:' + textHolderWidth + 'px;' +
-            'min-width:' + textHolderWidth + 'px;' +
-            'right: ' + rightBtnPos + 'px;' +
             '}');
 
         keyFrames += getStyleSheetMarker() + generateKeyFrame('text-holder-disappear',
             '0%{' +
+            'opacity:1; ' +
             'color:#000;' +
-            'background-image: url(' + panelOvalImg + ');' +
             'background-color:rgba(245, 252, 252, 0.8);  ' +
-            'max-width: ' + textHolderWidth + 'px;' +
-            'right: ' + rightBtnPos + 'px;' +
             '}' +
             '100%{' +
+            'opacity:0; ' +
             'color:transparent;' +
             'background-color:rgba(245, 252, 252, 0.0);' +
-            'max-width: 0px;' +
             'border: solid 1px transparent;' +
-            'background-image:none;' +
-            'right: ' + (btnSize / 2 + rightBtnPos) + 'px;' +
             '}');
 
         keyFrames += getStyleSheetMarker() + generateKeyFrame('hint-holder-appear', '0%{ width: 0px;min-width: 0px;max-width: 0px;border: solid 1px transparent;}100%{border: solid 1px #d5e2ed;width: ' + hintHolderWidth + 'px;min-width: ' + hintHolderWidth + 'px;max-width: ' + hintHolderWidth + 'px;}');
@@ -1572,8 +1614,8 @@ function alanBtn(options) {
                 keyFrames += '}';
             }
 
-            if(tempLayer.hover){
-                keyFrames += getStyleSheetMarker() + '.alanBtn:hover .alanBtn-bg-' + stateNameClass + ':not(.super-hidden) {';
+            if(tempLayer.hover && !isMobile()){
+                keyFrames += getStyleSheetMarker() + `.alanBtn:hover .alanBtn-bg-` + stateNameClass + ':not(.super-hidden) {';
                 keyFrames += 'background-image: linear-gradient(122deg,'+tempLayer.hover.color[0]+','+tempLayer.hover.color[1]+');';
                 keyFrames += '}';
                 keyFrames += getStyleSheetMarker() + '.alanBtn:active .alanBtn-bg-' + stateNameClass + ':not(.super-hidden) {';
@@ -1612,7 +1654,7 @@ function alanBtn(options) {
 
     //#endregion
 
-    //region Connect to the project and add listeners
+    //#region Connect to the project and add listeners
     if (options) {
         if (options.alanAudio) {
             alanAudio = options.alanAudio;
@@ -1621,7 +1663,7 @@ function alanBtn(options) {
             tryReadSettingsFromLocalStorage();
             switchState(DISCONNECTED);
 
-            window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host);
+            window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host, null, { platform: (mode === 'demo' ? 'alanplayground' : null) });
             window.tutorProject.on('connectStatus', onConnectStatusChange);
             window.tutorProject.on('options', onOptionsReceived);
 
@@ -1726,7 +1768,7 @@ function alanBtn(options) {
                         try {
                             _activateAlanButton(resolve);
                         } catch (e) {
-                            alert(NO_VOICE_SUPPORT_IN_BROWSER_MSG);
+                            showInfo(NO_VOICE_SUPPORT_IN_BROWSER_MSG);
                             reject({ err: NO_VOICE_SUPPORT_IN_BROWSER_CODE });
                         }
                         break;
@@ -1755,6 +1797,8 @@ function alanBtn(options) {
     }
 
     btn.addEventListener('click', function (e) {
+        if (afterMouseMove) return;
+        if (!dndBackAnimFinished) return;
         if (alanAudio) {
             if (state === 'default') {
                 activateAlanButton();
@@ -1762,41 +1806,17 @@ function alanBtn(options) {
                 alanAudio.stop();
             }
         } else {
-            throw 'No alan audio instance was provided';
+            throw new Error('No alan audio instance was provided');
         }
         //remove focus state from the btn after click
         this.blur();
     });
 
-    btn.addEventListener("mouseenter", onBtnMouseEnter);
-    btn.addEventListener("mouseleave", onBtnMouseLeave);
-
-    function onBtnMouseEnter() {
-        if (state === DEFAULT) {
-            hoverShowHintTimeoutId = setTimeout(function () {
-                showHints();
-            }, 500);
-        } else if(state === PERMISSION_DENIED){
-            showInfo(MIC_BLOCKED_MSG);
-        }
-    }
-
-    function onBtnMouseLeave() {
-        if (state === DEFAULT) {
-            clearTimeout(hoverShowHintTimeoutId);
-            hoverHideHintTimeoutId = setTimeout(function () {
-                hideHints();
-            }, 600);
-        } else if(state === PERMISSION_DENIED){
-            hideInfo();
-        }
-    }
-
-    function showRecognisedText(e, text) {
+    function showRecognisedText(e, text, forceOnMobile) {
         // console.info('showRecognisedText');
         var recognisedText = '';
 
-        if (isMobile()) {
+        if (isMobile() && forceOnMobile !== true) {
             return;
         }
 
@@ -1807,6 +1827,7 @@ function alanBtn(options) {
         recognisedTextVisible = true;
         if (!options.hideRecognizedText) {
             if (textHolder.classList.value.indexOf('alanBtn-text-appearing') === -1) {
+                textHolder.classList.add('with-text');
                 textHolder.classList.add('alanBtn-text-appearing');
                 textHolder.classList.remove('alanBtn-text-disappearing');
             }
@@ -1853,10 +1874,9 @@ function alanBtn(options) {
         }
     }
 
-    function hideRecognisedText(delay) {
+    function hideRecognisedText(delay, forceOnMobile) {
         // console.info('hideRecognisedText');
-
-        if (isMobile()) {
+        if (isMobile() && forceOnMobile !==true ) {
             return;
         }
 
@@ -1870,6 +1890,7 @@ function alanBtn(options) {
                 textHolderTextWrapper.innerHTML = '';
                 textHolder.classList.remove('alanBtn-text-holder-long');
                 textHolder.classList.remove('alanBtn-text-holder-super-long');
+                textHolder.classList.remove('with-text');
             }, delay || 810);
         }
     }
@@ -1926,11 +1947,11 @@ function alanBtn(options) {
     }
 
     function showInfo(text) {
-        showRecognisedText(null, text);
+        showRecognisedText(null, text, true);
     }
 
     function hideInfo() {
-        hideRecognisedText(200);
+        hideRecognisedText(null, true);
     }
 
     function closeHint(event) {
@@ -2039,7 +2060,7 @@ function alanBtn(options) {
     }
 
     function onConnectStatusChange(res) {
-        // console.info('BTN: connectStatus', res);
+        console.info('BTN: connectStatus', res);
 
         if (options.onConnectionStatus) {
             options.onConnectionStatus(res);
@@ -2184,6 +2205,9 @@ function alanBtn(options) {
     window.switchState = switchState;
 
     function switchState(newState) {
+
+        // console.info('BTN: state', newState);
+
         var tempLogoParts = [],
             i = 0;
 
@@ -2238,7 +2262,6 @@ function alanBtn(options) {
             micTriangleIcon.style.opacity = 1;
 
             hideLayers([
-                // btnBgDefault,
                 btnBgSpeaking,
                 btnBgIntermediate,
                 btnBgUnderstood,
@@ -2363,7 +2386,9 @@ function alanBtn(options) {
         if (newState === LOW_VOLUME || newState === PERMISSION_DENIED) {
             if (newState === LOW_VOLUME) {
                 rootEl.classList.add("alan-btn-low-volume");
+                showInfo(LOW_VOLUME_MSG);
             }
+            
             if (newState === PERMISSION_DENIED) {
                 rootEl.classList.add("alan-btn-permission-denied");
                 showInfo(MIC_BLOCKED_MSG);
@@ -2383,6 +2408,7 @@ function alanBtn(options) {
             }
             if (newState === OFFLINE) {
                 rootEl.classList.add("alan-btn-offline");
+                showInfo(OFFLINE_MSG);
             }
             micTriangleIcon.style.opacity = 0;
             lowVolumeMicIcon.style.opacity = 0;
@@ -2410,11 +2436,9 @@ function alanBtn(options) {
         }
 
         state = newState;
-
-        // console.info('BTN: state', newState);
     }
 
-    //#endregions
+    //#endregion
 
     //#region Helpers
     function applyBgStyles(el, backgroundImage) {
@@ -2607,9 +2631,152 @@ function alanBtn(options) {
         body.appendChild(rootEl);
     }
     // showRecognisedText({})
-    return btnInstance;
 
     //#endregion
+
+    //#region Drag-n-drop btn logic
+    var dndInitialMousePositions = [0, 0];
+    var dndIsDown = false;
+    var afterMouseMove = false;
+    var dndSideBtnPos = null;
+    var dndTopPos;
+    var dndBottomPos;
+    var dndFinalLeftPos;
+    var dndFinalRightPos;
+    var dndAnimDelay = 300;
+    var dndAnimTransition = dndAnimDelay + 'ms';
+    var dndBackAnimFinished = true;
+
+    if (!pinned) {
+        rootEl.addEventListener('mousedown', onMouseDown, true);
+        rootEl.addEventListener('touchstart', onMouseDown, { passive: false });
+
+        document.addEventListener('mouseup', onMouseUp, true);
+        document.addEventListener('touchend', onMouseUp, { passive: false });
+
+        document.addEventListener('mousemove', onMouseMove, true);
+        document.addEventListener('touchmove', onMouseMove, { passive: false });
+    }
+
+    function onMouseDown(e) {
+        var posInfo = e.touches ? e.touches[0] : e;
+        if (!dndBackAnimFinished) return;
+        dndIsDown = true;
+        rootEl.style.transition = '0ms';
+        if (!dndSideBtnPos) {
+            dndSideBtnPos = isLeftAligned ? rootEl.offsetLeft : window.innerWidth - rootEl.offsetLeft;
+        }
+
+        hideInfo();
+        dndInitialMousePositions = [
+            posInfo.clientX,
+            posInfo.clientY
+        ];
+        if (isTopAligned) {
+            dndTopPos = +rootEl.style.top.replace('px', '');
+        } else {
+            dndBottomPos = +rootEl.style.bottom.replace('px', '');
+        }
+    }
+
+    function onMouseUp(e) {
+        var curPos;
+        if (dndIsDown) {
+            dndIsDown = false;
+            rootEl.style.transition = dndAnimTransition;
+            if (isLeftAligned) {
+                curPos = +rootEl.style.left.replace('px', '');
+            } else {
+                curPos = +rootEl.style.right.replace('px', '');
+            }
+            if (curPos <= window.innerWidth / 2) {
+                moveBtnToTheSameSide();
+            } else {
+                moveBtnToTheOppositeSide();
+            }
+
+            setTimeout(function () {
+                afterMouseMove = false;
+            }, 300);
+        }
+    }
+
+    function onMouseMove(e) {
+        var posInfo = e.touches ? e.touches[0] : e;
+
+        if (dndIsDown) {
+            e.preventDefault();
+            afterMouseMove = true;
+
+            if (isLeftAligned) {
+                dndFinalLeftPos = (dndSideBtnPos + posInfo.clientX - dndInitialMousePositions[0]);
+                dndFinalRightPos = window.innerWidth - dndFinalLeftPos;
+                rootEl.style.left = (dndSideBtnPos + posInfo.clientX - dndInitialMousePositions[0]) + 'px';
+            } else {
+                dndFinalRightPos = (dndSideBtnPos - posInfo.clientX + dndInitialMousePositions[0]);
+                dndFinalLeftPos = window.innerWidth - dndFinalRightPos;
+                rootEl.style.right = (dndSideBtnPos - posInfo.clientX + dndInitialMousePositions[0]) + 'px';
+            }
+
+            if (isTopAligned) {
+                rootEl.style.top = correctYPos(dndTopPos + posInfo.clientY - dndInitialMousePositions[1]) + 'px';
+            } else {
+                rootEl.style.bottom = correctYPos(dndBottomPos - posInfo.clientY + dndInitialMousePositions[1]) + 'px';
+            }
+        }
+    }
+
+    function correctYPos(yPos) {
+        var defDelta = 10;
+        if (yPos < 0) {
+            return defDelta;
+        } else if (yPos > window.innerHeight - btnSize - defDelta) {
+            return window.innerHeight - btnSize - defDelta;
+        }
+        return yPos;
+    }
+
+    function changeBtnSide(side) {
+        if (side === 'to-left') {
+            rootEl.style.right = '';
+            isLeftAligned = true;
+            isRightAligned = false;
+        } else {
+            rootEl.style.left = '';
+            isLeftAligned = false;
+            isRightAligned = true;
+        }
+        setStylesBasedOnSide();
+    }
+
+    function moveBtnToTheSameSide() {
+        rootEl.style.transition = dndAnimTransition;
+        rootEl.style[isLeftAligned ? 'left' : 'right'] = dndSideBtnPos + 'px'
+    }
+
+    function moveBtnToTheOppositeSide() {
+        var finalBtnPos = (window.innerWidth - dndSideBtnPos - btnSize) + 'px';
+        dndBackAnimFinished = false;
+        if (isLeftAligned) {
+            rootEl.style.left = finalBtnPos;
+            setTimeout(function () {
+                rootEl.style.right = dndSideBtnPos + 'px';
+                changeBtnSide('to-right');
+                dndBackAnimFinished = true;
+            }, dndAnimDelay);
+        } else {
+            rootEl.style.right = finalBtnPos;
+            setTimeout(function () {
+                rootEl.style.left = dndSideBtnPos + 'px';
+                changeBtnSide('to-left');
+                dndBackAnimFinished = true;
+            }, dndAnimDelay);
+        }
+    }
+
+    //#endregion
+
+    return btnInstance;
 }
 ns.alanBtn = alanBtn;
 
