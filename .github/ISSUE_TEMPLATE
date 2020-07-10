@@ -4,14 +4,14 @@ Please include a simple reproducing example.
 
 ### What is the current behavior?
 
-If the current behavior is a bug, please provide the steps to reproduce and if possible a minimal demo of the problem. 
+If the current behavior is a bug, please provide the steps to reproduce and a minimal demo of the problem (if possible). 
 Your bug will get fixed much faster if we can run your code.
 
 ### What is the expected behavior?
 
-### Which versions of alan-sdk-web you are using, and which browser / OS are affected by this issue? 
+### Which versions of alan-sdk-web are you using, and which browsers / OS's are affected by this issue? 
 Did you use it with some framework (Angular, React, etc)?
-Did this work in previous versions?
+Did it work in the previous versions?
 
 Browser - ???
 OS - ???
@@ -21,13 +21,13 @@ alan-sdk-web - ???
 
 ## Asking a Question?
 
-Please describe you question here or ask it on Stack Overflow: 
+Please describe your question here or ask it on Stack Overflow: 
 http://stackoverflow.com/questions/tagged/alan-ai
 
 ## Feature Request
 
 Provide as much information as possible about your requested feature. Here are a few questions you may consider answering:
 
-* What's your use case? (Tell me about your application and what problem you're trying to solve.)
+* What's your use case? (Tell us about your application and what problem you're trying to solve.)
 * What interface do you have in mind? (What new properties or methods do you think might be helpful?)
 * Can you point to similar functionality with any existing libraries or components? (Working demos can be helpful.)
