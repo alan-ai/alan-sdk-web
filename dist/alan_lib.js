@@ -692,8 +692,6 @@ function alanBtn(options) {
 
     var gradientAnimation = 'alan-gradient 3s ease-in-out infinite';
     var disconnectedLoaderAnimation = 'disconnected-loader-animation 2s linear infinite';
-    var oval1Animation = 'oval1-animation 6s linear infinite';
-    var oval2Animation = 'oval2-animation 6s linear infinite';
 
     // Set alanAudio
     var alanAudio = window.alanAudio;
@@ -702,9 +700,11 @@ function alanBtn(options) {
     var rootEl = options.rootEl || document.createElement('div');
     var body = document.getElementsByTagName('body')[0];
     var btn = document.createElement('div');
+    var defaultStateBtnIconImg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==';
     var micTriangleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n';
     var micCircleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n';
     var micIcon = document.createElement('div');
+    var defaultStateBtnIcon = document.createElement('img');
     var logoState1 = document.createElement('img');
     var logoState2 = document.createElement('img');
     var logoState3 = document.createElement('img');
@@ -1032,7 +1032,7 @@ function alanBtn(options) {
             logos[i].style.animationIterationCount = 'infinite';
             logos[i].style.animationDuration = '9s';
             logos[i].style.animationTimingFunction = 'ease-in-out';
-            logos[i].style.opacity = (i === 0 ? 1 : 0);
+            logos[i].style.opacity = 0;
             micIcon.appendChild(logos[i]);
         }
     }
@@ -1062,6 +1062,19 @@ function alanBtn(options) {
     ]);
 
     // Define base styles for triangle bellow the microphone btn
+    defaultStateBtnIcon.src = defaultStateBtnIconImg;
+    defaultStateBtnIcon.style.minHeight = '100%';
+    defaultStateBtnIcon.style.height = '100%';
+    defaultStateBtnIcon.style.maxHeight = '100%';
+    defaultStateBtnIcon.style.minWidth = '100%';
+    defaultStateBtnIcon.style.width = '100%';
+    defaultStateBtnIcon.style.maxWidth = '100%';
+    defaultStateBtnIcon.style.top = '0%';
+    defaultStateBtnIcon.style.left = '0%';
+    defaultStateBtnIcon.style.position = 'absolute';
+    defaultStateBtnIcon.style.pointerEvents = 'none';
+    micIcon.appendChild(defaultStateBtnIcon);
+
     micTriangleIcon.style.minHeight = '100%';
     micTriangleIcon.style.height = '100%';
     micTriangleIcon.style.maxHeight = '100%';
@@ -1201,8 +1214,6 @@ function alanBtn(options) {
     btnOval1.style.borderRadius = '100px';
     btnOval1.style.transform = 'rotate(-315deg)';
     btnOval1.style.filter = 'blur(' + btnSize / 10 + 'px)';
-    btnOval1.style.animation = oval1Animation;
-    btnOval1.style.animationPlayState = 'paused';
     btnOval1.classList.add('alanBtn-oval-bg-default');
 
 
@@ -1221,8 +1232,6 @@ function alanBtn(options) {
     btnOval2.style.borderRadius = '100px';
     btnOval2.style.transform = 'rotate(-45deg)';
     btnOval2.style.filter = 'blur(' + btnSize / 10 + 'px)';
-    btnOval2.style.animation = oval2Animation;
-    btnOval2.style.animationPlayState = 'paused';
     btnOval2.classList.add('alanBtn-oval-bg-default');
 
     // Define base styles for mic icon in offline state
@@ -1334,7 +1343,7 @@ function alanBtn(options) {
         style.setAttribute('id', 'alan-stylesheet-' + projectId);
         style.type = 'text/css';
 
-        keyFrames += '.alanBtn-root * {  box-sizing: border-box; font-family: \'Lato\', sans-serif; }';
+        keyFrames += '.alanBtn-root * {  box-sizing: border-box; font-family: \'Lato\', sans-serif; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}';
 
         keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;}.alanBtn:hover{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
 
@@ -2251,8 +2260,6 @@ function alanBtn(options) {
             btnBgListening.classList.remove('super-hidden');
             btnBgListening.style.opacity = onOpacity;
 
-            btnOval1.style.animation = oval1Animation;
-            btnOval2.style.animation = oval2Animation;
             btnOval1.style.opacity = 1;
             btnOval2.style.opacity = 1;
 
@@ -2272,8 +2279,6 @@ function alanBtn(options) {
 
             btnBgSpeaking.classList.remove('super-hidden');
             btnBgSpeaking.style.opacity = onOpacity;
-            btnOval1.style.animation = oval1Animation;
-            btnOval2.style.animation = oval2Animation;
             btnOval1.style.opacity = 1;
             btnOval2.style.opacity = 1;
             changeBgColors(SPEAKING);
@@ -2289,8 +2294,6 @@ function alanBtn(options) {
 
             btnBgIntermediate.classList.remove('super-hidden');
             btnBgIntermediate.style.opacity = onOpacity;
-            btnOval1.style.animation = oval1Animation;
-            btnOval2.style.animation = oval2Animation;
             btnOval1.style.opacity = 1;
             btnOval2.style.opacity = 1;
             changeBgColors(INTERMEDIATE);
@@ -2309,8 +2312,6 @@ function alanBtn(options) {
 
             btnBgUnderstood.classList.remove('super-hidden');
             btnBgUnderstood.style.opacity = onOpacity;
-            btnOval1.style.animation = oval1Animation;
-            btnOval2.style.animation = oval2Animation;
             btnOval1.style.opacity = 1;
             btnOval2.style.opacity = 1;
             changeBgColors(UNDERSTOOD);
@@ -2372,13 +2373,11 @@ function alanBtn(options) {
                     tempLogoParts[i].style.animationName = 'logo-state-' + (i + 1) + '-animation';
                 }
             }
+            defaultStateBtnIcon.style.opacity = 0;
         } else {
+            defaultStateBtnIcon.style.opacity = 1;
             for (i = 0; i < tempLogoParts.length; i++) {
-                if (i === 0) {
-                    tempLogoParts[i].style.opacity = 1;
-                } else {
-                    tempLogoParts[i].style.opacity = 0;
-                }
+                tempLogoParts[i].style.opacity = 0;
                 tempLogoParts[i].style.animationName = '';
             }
         }
@@ -2751,7 +2750,7 @@ function alanBtn(options) {
 
     function moveBtnToTheSameSide() {
         rootEl.style.transition = dndAnimTransition;
-        rootEl.style[isLeftAligned ? 'left' : 'right'] = dndSideBtnPos + 'px'
+        rootEl.style[isLeftAligned ? 'left' : 'right'] = dndSideBtnPos + 'px';
     }
 
     function moveBtnToTheOppositeSide() {
