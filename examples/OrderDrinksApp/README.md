@@ -3,7 +3,7 @@
 [Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
-This example shows how to add a voice experience to a sample drink ordering app with Alan. To use this demo:
+This example shows how to add a voice assistant to a sample drink ordering app with Alan. To use this demo:
 
 1. Clone this repository to your computer.
 2. Navigate to the demo folder.

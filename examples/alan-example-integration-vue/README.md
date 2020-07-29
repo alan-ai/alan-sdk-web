@@ -3,7 +3,7 @@
 [Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
-This is an example of using the Alan Web SDK in a Vue app. To use this app:
+This is an example of using the voice assistant SDK for Web in a Vue app. To use this app:
 
 1. Clone this repository to your computer. 
 2. Navigate to the example folder.
