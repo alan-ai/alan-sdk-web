@@ -580,9 +580,6 @@ function alanBtn(options) {
         }
     };
 
-    if (!isAudioSupported()) {
-        return;
-    }
 
     //Host
     var host = 'studio.alan.app';
@@ -617,12 +614,14 @@ function alanBtn(options) {
     var OFFLINE = 'offline';
     var LOW_VOLUME = 'lowVolume';
     var PERMISSION_DENIED = 'permissionDenied';
+    var NO_VOICE_SUPPORT = 'noVoiceSupport';
 
     // Error messages
     var MIC_BLOCKED_MSG = 'Access to the microphone was blocked. Please allow it to use Alan';
     var NO_VOICE_SUPPORT_IN_BROWSER_MSG = 'Your browser doesn’t support voice input. To use voice, open Alan Tutor in a Chrome, Safari, or Firefox desktop browser window.';
     var LOW_VOLUME_MSG = 'Low volume level';
     var OFFLINE_MSG = 'You\'re offline';
+    var currentErrMsg = null;
 
 
     var NO_VOICE_SUPPORT_IN_BROWSER_CODE = 'browser-does-not-support-voice-input';
@@ -719,6 +718,7 @@ function alanBtn(options) {
     var micCircleIcon = document.createElement('div');
     var disconnectedMicLoaderIcon = document.createElement('img');
     var lowVolumeMicIcon = document.createElement('img');
+    var noVoiceSupportMicIcon = document.createElement('img');
     var offlineIcon = document.createElement('img');
     var textHolder = document.createElement('div');
     var textHolderTextWrapper = document.createElement('div');
@@ -775,10 +775,17 @@ function alanBtn(options) {
 
     function updateOnlineStatus() {
         if (navigator.onLine) {
-            switchState(DEFAULT);
+            switchState(getDefaultBtnState());
         } else {
             switchState(OFFLINE);
         }
+    }
+
+    function getDefaultBtnState(state) {
+        if (isAudioSupported()) {
+            return state || DEFAULT;
+        }
+        return NO_VOICE_SUPPORT;
     }
 
     //#endregion
@@ -787,7 +794,7 @@ function alanBtn(options) {
     // For now we have two modes: small - for tutor, and big for demo
     var btnModes = {
         "tutor": {
-            btnSize: 50,
+            btnSize: 44,
             rightPos: 0,
             leftPos: 0,
             bottomPos: 0,
@@ -807,10 +814,10 @@ function alanBtn(options) {
             waveCanvasHeight: 100,
         },
         "demo": {
-            btnSize: 120,
-            rightPos: 40,
-            leftPos: 40,
-            bottomPos: 40,
+            btnSize: 80,
+            rightPos: 36,
+            leftPos: 36,
+            bottomPos: 36,
             topPos: 0,
             waveVerticalPositionRatio: 0.8,
             waveCanvasWidth: 500,
@@ -1139,6 +1146,18 @@ function alanBtn(options) {
     lowVolumeMicIcon.style.opacity = '0';
     lowVolumeMicIcon.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1taWM8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iQWxhbi1CdXR0b24tLy1BbmltYXRpb24tLy1idXR0b24tbm8tbWljIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8ZyBpZD0iaWNvbiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjIuMDAwMDAwLCAxOS4wMDAwMDApIiBmaWxsPSIjRkZGRkZGIiBmaWxsLXJ1bGU9Im5vbnplcm8iPgogICAgICAgICAgICA8cGF0aCBkPSJNMzIsMTguNDczNjg0MiBDMzIsMjUuNzE5NDczNyAyNi43OCwzMS42OTI2MzE2IDIwLDMyLjY5ODQyMTEgTDIwLDQwIEMyMCw0MS4xMDQ1Njk1IDE5LjEwNDU2OTUsNDIgMTgsNDIgQzE2Ljg5NTQzMDUsNDIgMTYsNDEuMTA0NTY5NSAxNiw0MCBMMTYsMzIuNjk4NDIxMSBDOS4yMiwzMS42OTI2MzE2IDQsMjUuNzE5NDczNyA0LDE4LjQ3MzY4NDIgTDQsMTggQzQsMTYuODk1NDMwNSA0Ljg5NTQzMDUsMTYgNiwxNiBDNy4xMDQ1Njk1LDE2IDgsMTYuODk1NDMwNSA4LDE4IEw4LDE4LjQ3MzY4NDIgQzgsMjQuMTQxODY5OCAxMi40NzcxNTI1LDI4LjczNjg0MjEgMTgsMjguNzM2ODQyMSBDMjMuNTIyODQ3NSwyOC43MzY4NDIxIDI4LDI0LjE0MTg2OTggMjgsMTguNDczNjg0MiBMMjgsMTggQzI4LDE2Ljg5NTQzMDUgMjguODk1NDMwNSwxNiAzMCwxNiBDMzEuMTA0NTY5NSwxNiAzMiwxNi44OTU0MzA1IDMyLDE4IEwzMiwxOC40NzM2ODQyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjgiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTE4LC00LjUyNzM3MjYzZS0xNCBDMjEuMzEzNzA4NSwtNC42MTg1Mjc3OGUtMTQgMjQsMi43NTY5ODMzOCAyNCw2LjE1Nzg5NDc0IEwyNCwxOC40NzM2ODQyIEMyNCwyMS44NzQ1OTU2IDIxLjMxMzcwODUsMjQuNjMxNTc4OSAxOCwyNC42MzE1Nzg5IEMxNC42ODYyOTE1LDI0LjYzMTU3ODkgMTIsMjEuODc0NTk1NiAxMiwxOC40NzM2ODQyIEwxMiw2LjE1Nzg5NDc0IEMxMiwyLjc1Njk4MzM4IDE0LjY4NjI5MTUsLTQuNTI3MzcyNjNlLTE0IDE4LC00LjYxODUyNzc4ZS0xNCBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC42Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLjgxLDMuMjcgTDM0LjczLDM0LjE5IEMzNS40MzE0MDE2LDM0Ljg5MTQwMTYgMzUuNDMxNDAxNiwzNi4wMjg1OTg0IDM0LjczLDM2LjczIEMzNC4wMjg1OTg0LDM3LjQzMTQwMTYgMzIuODkxNDAxNiwzNy40MzE0MDE2IDMyLjE5LDM2LjczIEwxLjI3LDUuODEgQzAuNTY4NTk4MzY4LDUuMTA4NTk4MzcgMC41Njg1OTgzNjgsMy45NzE0MDE2MyAxLjI3LDMuMjcgQzEuOTcxNDAxNjMsMi41Njg1OTgzNyAzLjEwODU5ODM3LDIuNTY4NTk4MzcgMy44MSwzLjI3IFoiIGlkPSJQYXRoIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
 
+    // Define base styles for noVoiceSupport icon in low valume state
+    noVoiceSupportMicIcon.style.minHeight = '100%';
+    noVoiceSupportMicIcon.style.height = '100%';
+    noVoiceSupportMicIcon.style.maxHeight = '100%';
+    noVoiceSupportMicIcon.style.top = '0%';
+    noVoiceSupportMicIcon.style.left = '0%';
+    noVoiceSupportMicIcon.style.zIndex = btnIconsZIndex;
+    noVoiceSupportMicIcon.style.position = 'absolute';
+    noVoiceSupportMicIcon.style.transition = 'all 0.4s ease-in-out';
+    noVoiceSupportMicIcon.style.opacity = '0';
+    noVoiceSupportMicIcon.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAIuSURBVHgB7dvxUYMwFAbwpxMwAhvoBtVJygZ1A92gI1Qn6AjoBO0GsEG7wfPlgCtNA7xASzX5fnf5oyThLp+BQDiJAAAAAAAAAAAAAAAAxmHmDyk5n+ykLAn6SUhpHVaXwrQhcBsIr5FTLGSwb1IOmpkj9RnrxXE5+1x+fH7Pwyw0+PKSLLpCrGeq1oFiwNWiUGhCZE8UC22I7IliogmRPVFshkJkTxSjvhDZE8WqJ0QEqNURIgL0MTVEgmkhElTGhkix4WqzoNlYWFp1k1fhvvMHgc9n2cFRPzXAou/8t/JAM7EH/SD66ocM9bfrb+WR7kTGm1iHjqR3HDjXbOYMsLR+p9bvPentr3iuSeYM0B7Uwvr9RXqfA+cqKTRyma2sdSB3tMlZJ7X62Ru3Qa7CiSOIF6uN9pmw4NMuTjYUcDAcM8wEkTjaZdasytm9AfHsOL6lUJkZx5c2yr7a2ZlSyGSAa8egt5qBK0JU/TH+Na7uha4QzLHBm7+0ee8Iz/Sf/XlwtjeRtnq2mVU4dVSXUr6l/NDpccS0e5KSSekKybR9lReQkmLAV9hU7ZiFKcWCq8t5zeOtWfndOWhczcYN6+VSFq2+RfQhGnUYWUeY5ph5m0k6+iHENjs9RXuE2OYbYN3HFeKOYjQmwLrfRYgUo7EB1n2bEM03khXd0F0epDXs0Obaovd1ty39UCDAif5ygO0PRyWBH64eqJuFAP9kAwAAAAAAAAAAAAAAU/wC52820szaQtwAAAAASUVORK5CYII=";
+    
     // Define base st`yles for ovals
     var ovalCoefficient = 2;
     var defaultBtnColorOptions = {
@@ -1270,6 +1289,7 @@ function alanBtn(options) {
         micIcon,
         offlineIcon,
         lowVolumeMicIcon,
+        noVoiceSupportMicIcon,
         logoState1,
         logoState2,
         logoState3,
@@ -1305,6 +1325,7 @@ function alanBtn(options) {
     btn.appendChild(micCircleIcon);
     btn.appendChild(disconnectedMicLoaderIcon);
     btn.appendChild(lowVolumeMicIcon);
+    btn.appendChild(noVoiceSupportMicIcon);
     btn.appendChild(offlineIcon);
     btn.classList.add("alanBtn");
 
@@ -1345,8 +1366,10 @@ function alanBtn(options) {
 
         keyFrames += '.alanBtn-root * {  box-sizing: border-box; font-family: \'Lato\', sans-serif; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}';
 
-        keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;}.alanBtn:hover{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
-
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;} .alanBtn:hover{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
+        }
+        
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder { position:relative; max-width:440px; font-family: \'Lato\', sans-serif; font-size: 20px;line-height: 1.2;     min-height: 40px;  color: #000; font-weight: normal; background-color: rgba(245, 252, 252, 0.8);border-radius:32px 0 0 32px; display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
         
         keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-text-holder {max-width: calc(100% - ' + sideBtnPos + ');}';
@@ -1396,13 +1419,15 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + '.shadow-disappear {  opacity: 0 !important;  transition: all .1s linear !important;  }';
 
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn:hover .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
+
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-no-voice-support .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-no-voice-support .alanBtn:hover .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
 
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
-
-        keyFrames += getStyleSheetMarker() + '.alan-btn-low-volume canvas {  opacity: .0 !important;  }';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn:hover .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
 
         keyFrames += getStyleSheetMarker() + ".alan-btn-disabled-msg:after {content: '';  position: absolute;  bottom: 2px;  right: 0px;  height: 30px;  width: 90px;  background-size: 100% auto;  background-repeat: no-repeat;  background-position: center center;}";
-
 
         keyFrames += getStyleSheetMarker() + '.triangleMicIconBg {background-image:url(' + micTriangleIconImg + '); pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + micCircleIconImg + '); pointer-events: none;}';
@@ -1670,7 +1695,7 @@ function alanBtn(options) {
         }
         if (options.key) {
             tryReadSettingsFromLocalStorage();
-            switchState(DISCONNECTED);
+            switchState(getDefaultBtnState(DISCONNECTED));
 
             window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host, null, { platform: (mode === 'demo' ? 'alanplayground' : null) });
             window.tutorProject.on('connectStatus', onConnectStatusChange);
@@ -1678,7 +1703,7 @@ function alanBtn(options) {
 
             // console.info('BTN: tutorProject', options.key);
         } else {
-            switchState(DEFAULT);
+            switchState(getDefaultBtnState());
         }
     }
 
@@ -1777,7 +1802,7 @@ function alanBtn(options) {
                         try {
                             _activateAlanButton(resolve);
                         } catch (e) {
-                            showInfo(NO_VOICE_SUPPORT_IN_BROWSER_MSG);
+                            currentErrMsg = NO_VOICE_SUPPORT_IN_BROWSER_MSG;
                             reject({ err: NO_VOICE_SUPPORT_IN_BROWSER_CODE });
                         }
                         break;
@@ -1808,6 +1833,10 @@ function alanBtn(options) {
     btn.addEventListener('click', function (e) {
         if (afterMouseMove) return;
         if (!dndBackAnimFinished) return;
+        if (currentErrMsg) {
+            alert(currentErrMsg);
+            return;
+        }
         if (alanAudio) {
             if (state === 'default') {
                 activateAlanButton();
@@ -1911,7 +1940,7 @@ function alanBtn(options) {
             return;
         }
 
-        if (hints.length === 0 || doNotShowHints) {
+        if ((hints && hints.length === 0) || doNotShowHints) {
             return;
         }
 
@@ -1953,14 +1982,6 @@ function alanBtn(options) {
         }
 
         hideRecognisedText();
-    }
-
-    function showInfo(text) {
-        showRecognisedText(null, text, true);
-    }
-
-    function hideInfo() {
-        hideRecognisedText(null, true);
     }
 
     function closeHint(event) {
@@ -2076,23 +2097,25 @@ function alanBtn(options) {
         }
 
         if (res === 'disconnected') {
-            switchState(DISCONNECTED);
+            switchState(getDefaultBtnState(DISCONNECTED));
         } else if (res === 'authorized') {
             if (previousState) {
                 switchState(previousState);
             } else {
-                switchState(DEFAULT);
+                switchState(getDefaultBtnState());
             }
             requestHints();
         }
     }
 
     function requestHints() {
-        window.tutorProject.call('visualHints', {}, function (err, res) {
-            if (res) {
-                setUpHints(res);
-            }
-        });
+        if (window.tutorProject) {
+            window.tutorProject.call('visualHints', {}, function (err, res) {
+                if (res) {
+                    setUpHints(res);
+                }
+            });
+        }
     }
 
     function onMicStart() {
@@ -2142,6 +2165,7 @@ function alanBtn(options) {
     function onMicFail() {
         // console.log('BTN: mic. failed');
         onMicStop();
+        alert(MIC_BLOCKED_MSG);
         switchState(PERMISSION_DENIED);
     }
 
@@ -2229,6 +2253,8 @@ function alanBtn(options) {
                 showHints();
             }, 300);
         }
+
+        currentErrMsg = null;
 
         if (newState === DEFAULT) {
             btn.style.animation = '';
@@ -2382,21 +2408,29 @@ function alanBtn(options) {
             }
         }
 
-        if (newState === LOW_VOLUME || newState === PERMISSION_DENIED) {
+        if (newState === LOW_VOLUME || newState === PERMISSION_DENIED || newState === NO_VOICE_SUPPORT) {
             if (newState === LOW_VOLUME) {
                 rootEl.classList.add("alan-btn-low-volume");
-                showInfo(LOW_VOLUME_MSG);
-            }
-            
-            if (newState === PERMISSION_DENIED) {
+                currentErrMsg = LOW_VOLUME_MSG;
+            } else if (newState === PERMISSION_DENIED) {
                 rootEl.classList.add("alan-btn-permission-denied");
-                showInfo(MIC_BLOCKED_MSG);
+                currentErrMsg = MIC_BLOCKED_MSG;
+            } else if (newState === NO_VOICE_SUPPORT) {
+                rootEl.classList.add("alan-btn-no-voice-support");
+                currentErrMsg = NO_VOICE_SUPPORT_IN_BROWSER_MSG;
+            }
+
+            if (newState === NO_VOICE_SUPPORT) {
+                noVoiceSupportMicIcon.style.opacity = 1;
+                lowVolumeMicIcon.style.opacity = 0;
+            } else {
+                noVoiceSupportMicIcon.style.opacity = 0;
+                lowVolumeMicIcon.style.opacity = 1;
             }
             micIcon.style.opacity = 0;
             micTriangleIcon.style.opacity = 0;
             disconnectedMicLoaderIcon.style.opacity = 0;
             offlineIcon.style.opacity = 0;
-            lowVolumeMicIcon.style.opacity = 1;
             btnOval1.style.animation = '';
             btnOval2.style.animation = '';
             btnOval1.style.opacity = 0;
@@ -2407,7 +2441,7 @@ function alanBtn(options) {
             }
             if (newState === OFFLINE) {
                 rootEl.classList.add("alan-btn-offline");
-                showInfo(OFFLINE_MSG);
+                currentErrMsg = OFFLINE_MSG;
             }
             micTriangleIcon.style.opacity = 0;
             lowVolumeMicIcon.style.opacity = 0;
@@ -2432,6 +2466,7 @@ function alanBtn(options) {
             rootEl.classList.remove("alan-btn-permission-denied");
             rootEl.classList.remove("alan-btn-disconnected");
             rootEl.classList.remove("alan-btn-offline");
+            rootEl.classList.remove("alan-btn-no-voice-support");
         }
 
         state = newState;
@@ -2666,7 +2701,6 @@ function alanBtn(options) {
             dndSideBtnPos = isLeftAligned ? rootEl.offsetLeft : window.innerWidth - rootEl.offsetLeft;
         }
 
-        hideInfo();
         dndInitialMousePositions = [
             posInfo.clientX,
             posInfo.clientY
