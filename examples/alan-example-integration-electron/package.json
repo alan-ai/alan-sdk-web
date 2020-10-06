@@ -2,7 +2,7 @@
     "name": "ElectronAppWithAlan",
     "dependencies": {
         "@alan-ai/alan-sdk-web": "^1.1.2",
-        "electron": "^9.0.0-beta.2"
+        "electron": "^9.3.0"
     },
     "scripts": {
         "start": "electron ."
