@@ -607,6 +607,10 @@ function alanBtn(options) {
         mode = 'component';
     }
 
+    if (options.position === 'absolute') {
+        pinned = true;
+    }
+
     // Btn states
     var DEFAULT = 'default';
     var LISTENING = 'listening';
@@ -867,11 +871,11 @@ function alanBtn(options) {
         rootEl.style.bottom = bottomBtnPos;
     }
 
-    rootEl.style.position = isTutorMode() ? 'absolute' : 'fixed';
     if (options.zIndex !== undefined) {
         rootEl.style.zIndex =  options.zIndex;
     }
-    rootEl.style.position = isTutorMode() ? 'absolute' : 'fixed';
+    
+    rootEl.style.position = options.position ? options.position : 'fixed';
 
     // Define styles for block with recognised text
     var textHolderDefaultBorderColor = '#d5eded';
