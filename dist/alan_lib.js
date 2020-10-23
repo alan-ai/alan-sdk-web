@@ -402,6 +402,9 @@
         } else {
             auth.platformVersion = config.version + ":" + ext.platformVersion;
         }
+        if (ext && ext.appName) {
+            auth.appName = ext.appName;
+        }
         return auth;
     }
                             
@@ -644,24 +647,8 @@ function alanBtn(options) {
     var isTopAligned = false;
     var isBottomAligned = false;
 
-    // Set variables for hints and stt
-    var hints = [];
-    var hintsTimerId = null;
-    var insideHintsAnimationIntervalId = null;
-    var hintsRequestIntervalId = null;
-    var hintAppearTimeoutId = null;
-    var removeTextHintTimeoutId = null;
-    var hoverShowHintTimeoutId = null;
-    var hoverHideHintTimeoutId = null;
-    var doNotShowHints = false;
-    var hintVisible = false;
     var recognisedTextVisible = false;
-    var textHolderWidth = 480;
-    var hintHolderWidth = 480;
-    var hintCloserRightPos;
-    var isHintWasPreviously = false;
-    var defaultHintLabel = 'Click and say';
-    var listeningHintLabel = 'Say';
+
     var turnOffTimeout = 30000;
     var turnOffVoiceFn;
 
@@ -725,8 +712,6 @@ function alanBtn(options) {
     var textHolder = document.createElement('div');
     var textHolderTextWrapper = document.createElement('div');
     var alanBtnDisabledMessage = document.createElement('div');
-    var hintHolder = document.createElement('div');
-    var hintHolderWrapper = document.createElement('div');
     var soundOnAudioDoesNotExist = false;
     var soundOffAudioDoesNotExist = false;
     var soundOnAudio = new Audio(baseUrl + '/resources/sounds/soundOn.m4a');
@@ -737,8 +722,6 @@ function alanBtn(options) {
     soundOffAudio.onerror = function() {
         soundOffAudioDoesNotExist = true;
     };
-
-    textHolder.addEventListener("click", closeHint);
 
     // Specify layers for different statets to make smooth animation
     var btnBgDefault = document.createElement('div');
@@ -804,9 +787,6 @@ function alanBtn(options) {
             leftPos: 0,
             bottomPos: 0,
             topPos: 0,
-            waveVerticalPositionRatio: 0.9,
-            waveCanvasWidth: 250,
-            waveCanvasHeight: 100,
         },
         "tutor-preview": {
             btnSize: 64,
@@ -814,9 +794,6 @@ function alanBtn(options) {
             leftPos: 0,
             bottomPos: 0,
             topPos: 0,
-            waveVerticalPositionRatio: 0.9,
-            waveCanvasWidth: 250,
-            waveCanvasHeight: 100,
         },
         "demo": {
             btnSize: 80,
@@ -824,9 +801,6 @@ function alanBtn(options) {
             leftPos: 36,
             bottomPos: 36,
             topPos: 0,
-            waveVerticalPositionRatio: 0.8,
-            waveCanvasWidth: 500,
-            waveCanvasHeight: 200,
         },
         "component": {
             btnSize: options.size || 64,
@@ -834,9 +808,6 @@ function alanBtn(options) {
             leftPos: 40,
             bottomPos: 40,
             topPos: 0,
-            waveVerticalPositionRatio: 0.8,
-            waveCanvasWidth: 500,
-            waveCanvasHeight: 200,
         }
     };
 
@@ -924,25 +895,6 @@ function alanBtn(options) {
     textHolder.style.zIndex = btnTextPanelsZIndex;
     textHolder.style.borderColor = textHolderDefaultBorderColor;
     textHolder.style.boxShadow = textHolderDefaultBoxShadow;
-
-    // Define styles for block with hints
-    hintHolderWrapper.classList.add('alanBtn-hint-holder-wrapper');
-    if (isLeftAligned) {
-        hintHolderWrapper.classList.add('alanBtn-hint-holder-wrapper-left');
-        hintHolderWrapper.style.paddingLeft = btnSize + 32 + 'px';
-    } else {
-        hintHolderWrapper.classList.add('alanBtn-hint-holder-wrapper-right');
-        hintHolderWrapper.style.paddingRight = btnSize + 32 + 'px';
-    }
-    hintHolder.classList.add('alanBtn-hint-holder');
-    setInnerPositionBasedOnOptions(hintHolder, options);
-    hintCloserRightPos = btnSize / 2 + 32;
-    hintHolder.style.zIndex = btnTextPanelsZIndex;
-    hintHolder.style.borderTopRightRadius = btnSize + 'px';
-    hintHolder.style.borderBottomRightRadius = btnSize + 'px';
-    hintHolder.style.minHeight = btnSize + 'px';
-    hintHolder.style.borderColor = textHolderDefaultBorderColor;
-    hintHolder.style.boxShadow = textHolderDefaultBoxShadow;
 
     // Define styles for message that informs that Alan Btn was disabled
     setInnerPositionBasedOnOptions(alanBtnDisabledMessage, options);
@@ -1385,28 +1337,6 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.left-side .alanBtn-text-holder-text-wrapper {padding: 0 12px;}';
         keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.right-side .alanBtn-text-holder-text-wrapper {padding: 0 12px;}';
         
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder {position:relative;font-style: italic; overflow:hidden;font-family: \'Lato\', sans-serif;   width: 0px;  min-width: 0px;   min-height: 40px;  color: #000; position: absolute; font-weight: normal;  background-color: rgba(245, 252, 252, 0.8); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;border-radius:32px 0 0 32px;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-close {position: absolute;top: 1px;right: ' + (hintCloserRightPos - 10) + 'px;color: #0079e8;font-size: 13px;font-style: normal;font-weight: 500;line-height: 1.54;opacity: 0;transition: opacity 300ms ease-in-out;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-close:hover {color: #ff8800;cursor:pointer;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-close:active {color: #ff6426;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder:hover .alanBtn-hint-holder-close {opacity: 1;transition: opacity 300ms ease-in-out;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper {width: 100%;height:100%; display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;justify-content: start;text-align:left;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper .alanBtn-hint-list {padding-top:2px;font-size: 18px;line-height: 1.22; margin-top:0px;font-style:italic;margin-bottom:0px;display:inline-block;vertical-align:middle;width:220px;max-width:220px;min-width:220px;text-align:left;animation: alan-text-fade-in .4s ease-in-out forwards; }';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper .alanBtn-hint-list.hints-long {font-size: 16px;line-height: 1.38;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper .alanBtn-hint-list.hints-super-long {font-size: 14px;line-height: 1.36;}';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-holder-wrapper .alanBtn-hint-list div {margin-bottom:6px; }';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-header {white-space:nowrap;font-size: 14px;font-weight: 400;font-style: italic;font-stretch: normal;line-height: 1.36;letter-spacing: normal;color: rgba(0, 0, 0, 0.6);display:inline-block;vertical-align:middle;padding-right:12px;padding-left:12px;min-width:112px;text-align:center;animation: alan-text-fade-in .4s ease-in-out forwards;}';
-
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-long  { font-size: 19px!important;line-height: 1.4!important;}  ';
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-super-long  { font-size: 14px!important;line-height: 1.4!important;}  ';
 
@@ -1415,9 +1345,6 @@ function alanBtn(options) {
 
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-appearing {  animation: text-holder-appear 800ms ease-in-out forwards;  }';
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-disappearing {  animation: text-holder-disappear 800ms ease-in-out forwards;    }';
-
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-appearing {  animation: hint-holder-appear 800ms ease-in-out forwards;    }';
-        keyFrames += getStyleSheetMarker() + '.alanBtn-hint-disappearing {  animation: hint-holder-disappear 800ms ease-in-out forwards;    }';
 
         keyFrames += getStyleSheetMarker() + '.alan-btn-disabled {  pointer-events: none;  opacity: .5;  transition: all .2s ease-in-out;  }';
         keyFrames += getStyleSheetMarker() + '.shadow-appear {  opacity: 1 !important;  }\n';
@@ -1473,8 +1400,6 @@ function alanBtn(options) {
             'border: solid 1px transparent;' +
             '}');
 
-        keyFrames += getStyleSheetMarker() + generateKeyFrame('hint-holder-appear', '0%{ width: 0px;min-width: 0px;max-width: 0px;border: solid 1px transparent;}100%{border: solid 1px #d5e2ed;width: ' + hintHolderWidth + 'px;min-width: ' + hintHolderWidth + 'px;max-width: ' + hintHolderWidth + 'px;}');
-        keyFrames += getStyleSheetMarker() + generateKeyFrame('hint-holder-disappear', '0%{border: solid 1px #d5e2ed; width: ' + hintHolderWidth + 'px;min-width: ' + hintHolderWidth + 'px;max-width: ' + hintHolderWidth + 'px;}100%{width: 0px;min-width: 0px;max-width: 0px;border: solid 1px transparent;}');
 
         keyFrames += getStyleSheetMarker() + generateKeyFrame('logo-state-1-animation',
             '0% {  opacity: 1;  } ' +
@@ -1702,7 +1627,7 @@ function alanBtn(options) {
             tryReadSettingsFromLocalStorage();
             switchState(getDefaultBtnState(DISCONNECTED));
 
-            window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host, null, { platform: (mode === 'demo' ? 'alanplayground' : null) });
+            window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host, null, { platform: (mode === 'demo' ? 'alanplayground' : null), appName: window.location.hostname });
             window.tutorProject.on('connectStatus', onConnectStatusChange);
             window.tutorProject.on('options', onOptionsReceived);
 
@@ -1896,14 +1821,8 @@ function alanBtn(options) {
             }
             if (text) {
                 textHolder.appendChild(textHolderTextWrapper);
-                isHintWasPreviously = true;
             } else {
-                if (isHintWasPreviously) {
-                    isHintWasPreviously = false;
-                    textHolder.appendChild(textHolderTextWrapper);
-                } else {
-                    replaceRecognisedText(recognisedText);
-                }
+                replaceRecognisedText(recognisedText);
             }
         }
     }
@@ -1938,66 +1857,6 @@ function alanBtn(options) {
         }
     }
 
-    function showHints() {
-        var hintId;
-
-        if (isMobile()) {
-            return;
-        }
-
-        if ((hints && hints.length === 0) || doNotShowHints) {
-            return;
-        }
-
-        clearTimeout(removeTextHintTimeoutId);
-        clearTimeout(hoverHideHintTimeoutId);
-
-        clearInterval(insideHintsAnimationIntervalId);
-        clearInterval(hintsRequestIntervalId);
-
-        insideHintsAnimationIntervalId = setInterval(function () {
-            var hintList = document.getElementById('hintList');
-            if (hintList) {
-                hintList.outerHTML = getHintList();
-            }
-        }, 6000);
-
-        hintsRequestIntervalId = setInterval(function () {
-            requestHints();
-        }, 4000);
-
-        // console.info('showHints');
-
-        hintId = document.getElementById('hint-id');
-
-        if (hintId && hintId.className.indexOf(DEFAULT) > -1) {
-            hintId.outerHTML = getHintHeader(listeningHintLabel);
-        } else {
-            showRecognisedText(null, getHintsHtml());
-        }
-    }
-
-    function hideHints() {
-        if (isMobile()) {
-            return;
-        }
-
-        if (hints.length === 0) {
-            return;
-        }
-
-        hideRecognisedText();
-    }
-
-    function closeHint(event) {
-        var clickedEl = event.target;
-
-        if (clickedEl.classList.value.indexOf('alanBtn-hint-holder-close') > -1) {
-            doNotShowHints = true;
-            hideHints();
-        }
-    }
-
     function shuffle(array) {
         var currentIndex = array.length,
             temporaryValue, randomIndex;
@@ -2013,57 +1872,6 @@ function alanBtn(options) {
         }
 
         return array;
-    }
-
-    function getHintHeader(label) {
-        return '<div id="hint-id" class="alanBtn-hint-header ' + state + '">' + label + '</div>';
-    }
-
-    function getHintList() {
-        var hintsHtml = '';
-        var hintItems = '';
-        var hintsLength = 0;
-        var shuffledHints = shuffle(hints);
-        var hintsClass = 'alanBtn-hint-list';
-
-        for (var i = 0; i < 2; i++) {
-            if (shuffledHints[i]) {
-                hintsLength += hints[i].length;
-                hintItems += '<div>' + hints[i] + '</div>';
-            }
-        }
-
-        if (hintsLength > 70 && hintsLength <= 100) {
-            hintsClass += ' hints-long';
-        }
-        if (hintsLength > 100) {
-            hintsClass += ' hints-super-long';
-        }
-
-        hintsHtml = '<div id="hintList" class="' + hintsClass + '">';
-        hintsHtml += hintItems;
-        hintsHtml += '</div>';
-        return hintsHtml;
-    }
-
-    function getHintsHtml() {
-        var hintsHtml = '';
-        var shuffledHints = [];
-        var hintClass = '';
-        var label;
-
-        if (state === DEFAULT) {
-            label = defaultHintLabel;
-        } else {
-            label = listeningHintLabel;
-        }
-
-        hintsHtml += '<div class="alanBtn-hint-holder-wrapper">';
-        hintsHtml += getHintHeader(label);
-        hintsHtml += getHintList();
-        hintsHtml += '</div>';
-
-        return hintsHtml;
     }
 
     function onOptionsReceived(data) {
@@ -2109,17 +1917,6 @@ function alanBtn(options) {
             } else {
                 switchState(getDefaultBtnState());
             }
-            requestHints();
-        }
-    }
-
-    function requestHints() {
-        if (window.tutorProject) {
-            window.tutorProject.call('visualHints', {}, function (err, res) {
-                if (res) {
-                    setUpHints(res);
-                }
-            });
         }
     }
 
@@ -2251,12 +2048,6 @@ function alanBtn(options) {
 
         if (newState !== DISCONNECTED) {
             previousState = newState;
-        }
-
-        if (newState === LISTENING) {
-            hintAppearTimeoutId = setTimeout(function () {
-                showHints();
-            }, 300);
         }
 
         currentErrMsg = null;
@@ -2588,11 +2379,6 @@ function alanBtn(options) {
 
         textHolder.appendChild(textHolderTextWrapper);
 
-        if (!isTutorMode()) {
-            hintHolder.appendChild(hintHolderWrapper);
-            rootEl.appendChild(hintHolder);
-        }
-
         rootEl.appendChild(textHolder);
         rootEl.appendChild(btn);
         btnDisabled = false;
@@ -2616,10 +2402,6 @@ function alanBtn(options) {
     function hideSpeach2TextPanel() {
         hideS2TPanel = true;
         hideRecognisedText();
-    }
-
-    function setUpHints(newHints) {
-        hints = newHints;
     }
 
     function applyBtnOptions(btnOptions) {
