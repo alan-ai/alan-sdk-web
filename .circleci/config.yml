@@ -1,0 +1,41 @@
+# For a detailed guide to building and testing on iOS, read the docs:
+# https://circleci.com/docs/2.0/testing-ios/
+
+version: 2.1
+
+orbs:
+  node: circleci/node@4.1.0
+
+jobs:
+  build_web:
+    macos:
+      xcode: 11.3.0
+    steps:
+      - checkout
+      - node/install:
+         install-yarn: true
+         install-npm: true
+         node-version: 10.22.0
+      - run: node --version
+      - restore_cache:
+          keys:
+            - node-modules-cache
+      - run:
+          name: export path
+          command: echo 'export PATH="$PATH:/usr/local/bin"' >> $BASH_ENV
+      - run:
+          name: Install Dependencies npm
+          command: cd examples/alan-example-integration-angular && npm install
+      - run:
+          name: Run build
+          command: cd examples/alan-example-integration-angular && npm run build
+      - save_cache:
+          key: node-modules-cache
+          paths:
+            - ./node_modules
+            
+workflows:
+  version: 2.1
+  build-web:
+    jobs:
+      - build_web
