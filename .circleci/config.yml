@@ -7,7 +7,7 @@ orbs:
   node: circleci/node@4.1.0
 
 jobs:
-  build_ios:
+  build_web:
     macos:
       xcode: 11.3.0
     steps:
@@ -36,6 +36,6 @@ jobs:
             
 workflows:
   version: 2.1
-  build-android-and-ios:
+  build-web:
     jobs:
-      - build_ios
+      - build_web
