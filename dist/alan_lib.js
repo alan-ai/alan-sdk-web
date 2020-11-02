@@ -286,7 +286,7 @@
 
     function ConnectionWrapper() {
         var _this = this;
-        this._worker = new Worker(window.URL.createObjectURL(new Blob(["'use strict';importScripts(    'https://studio.alan.app/js/alan_frame.js',    'https://studio.alan.app/js/alan_codec.js',    'https://studio.alan.app/js/libopus.js');var ALAN_OFF       = 'off';var ALAN_SPEAKING  = 'speaking';var ALAN_LISTENING = 'listening';function ConnectionImpl(config, auth, mode) {    var _this = this;    this._config = config;    this._auth = auth;    this._mode = mode;    this._projectId = config.projectId;    this._url = config.url;    this._connected = false;    this._authorized = false;    this._dialogId = null;    this._callId = 1;    this._callSent = {};    this._callWait = [];    this._failed = false;    this._closed = false;    this._reconnectTimeout = 100;    this._cleanups = [];    this._sampleRate = -1;    this._format = null;    this._formatSent = false;    this._frameQueue = [];    this._remoteSentTs = 0;    this._remoteRecvTs = 0;    this._rtt = 25;    this._rttAlpha = 1./16;    this._alanState = ALAN_OFF;    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 100);    this._visualState = {};    this._addCleanup(function() {clearInterval(_this._sendTimer);});    this._connect();    console.log('Alan: connection created: ' + this._url);}ConnectionImpl.prototype._addCleanup = function(f) {    this._cleanups.push(f);};ConnectionImpl.prototype._onConnectStatus = function(s) {    console.log('Alan: connection status: ' + s);    this._fire('connectStatus', s);};ConnectionImpl.prototype._fire = function(event, object) {    if (event === 'options') {        if (object.versions) {            object.versions['alanbase:web'] = this._config.version;        }    }    postMessage(['fireEvent', event, object]);};ConnectionImpl.prototype._connect = function() {    var _this = this;    if (this._socket) {        console.error('socket is already connected');        return;    }    console.log('Alan: connecting to ' + this._url);    this._socket = new WebSocket(this._url);    this._socket.binaryType = 'arraybuffer';    this._decoder = alanCodec.decoder('pcm', 16000);    this._socket.onopen = function(e) {        console.info('Alan: connected', e.target === _this._socket);        _this._connected = true;        _this._reconnectTimeout = 100;        _this._fire('connection', {status: 'connected'});        if (_this._auth) {            _this._fire('connection', {status: 'authorizing'});            _this._callAuth();        } else {            _this._callWait.forEach(function(c) {  _this._sendCall(c); });            _this._callWait = [];        }    };    this._socket.onmessage = function(msg) {        if (msg.data instanceof ArrayBuffer) {            var f = alanFrame.parse(msg.data);            if (f.sentTs > 0) {                _this._remoteSentTs = f.sentTs;                _this._remoteRecvTs = Date.now();            } else {                _this._remoteSentTs = null;                _this._remoteRecvTs = null;            }            var rtt = 0;            if (f.remoteTs) {                rtt = Date.now() - f.remoteTs;            }            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;            var frames = _this._decoder(f.audioData);            postMessage(['alanAudio', 'playFrame', frames]);        } else if (typeof(msg.data) === 'string') {            msg = JSON.parse(msg.data);            if (msg.i) {                var c = _this._callSent[msg.i];                delete _this._callSent[msg.i];                if (c && c.callback) {                    c.callback(msg.e, msg.r);                }            } else if (msg.e) {                if (msg.e === 'command') {                    postMessage(['alanAudio', 'playCommand', msg.p]);                } else if (msg.e === 'inactivity') {                    postMessage(['alanAudio', 'stop']);                } else {                    _this._fire(msg.e, msg.p);                }            }        } else {            console.error('invalid message type');        }    };    this._socket.onerror = function(evt) {        console.error('Alan: connection closed due to error: ', evt);    };    this._socket.onclose = function(evt) {        console.info('Alan: connection closed');        _this._connected = false;        _this._authorized = false;        _this._socket = null;        _this._onConnectStatus('disconnected');        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);            if (_this._reconnectTimeout < 3000) {                _this._reconnectTimeout *= 2;            } else {                _this._reconnectTimeout += 500;            }            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);        }    };    this._addCleanup(function() {        if (this._socket) {            this._socket.close();            this._socket = null;        }    });};ConnectionImpl.prototype._callAuth = function() {    var _this = this;    var callback = function(err, r) {        if (!err && r.status === 'authorized') {            _this._authorized = true;            _this._formatSent = false;            if (r.dialogId) {                postMessage(['setDialogId', r.dialogId]);                _this._dialogId = r.dialogId;            }            _this._onAuthorized();            _this._onConnectStatus('authorized');        } else if (err === 'auth-failed') {            _this._onConnectStatus('auth-failed');            if (_this._socket) {                _this._socket.close();                _this._socket = null;                _this._failed = true;            }        } else {            _this._onConnectStatus('invalid-auth-response');            console.log('Alan: invalid auth response', err, r);        }    };    var authParam = this._auth;    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;    if (this._dialogId) {        authParam.dialogId = this._dialogId;    }    authParam.mode = this._mode;    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});    return this;};ConnectionImpl.prototype._sendCall = function(call) {    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));    if (call.callback) {        this._callSent[call.cid] = call;    }};ConnectionImpl.prototype._onAuthorized = function() {    console.log('Alan: authorized');    if (this._visualState) {        this.call(null, '_visual_', this._visualState);    }    var _this = this;    this._callWait.forEach(function(c) {        _this._sendCall(c);    });    this._callWait = [];};ConnectionImpl.prototype.close = function() {    for (var i = 0; i < this._cleanups.length; i++ ) {        this._cleanups[i]();    }    this._cleanups = [];    this._closed = true;        if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {        this._socket.close();        this._socket = null;    }    console.log('Alan: closed connection to: ' + this._url);    close();};ConnectionImpl.prototype.call = function(cid, method, param) {    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {        if (cid) {            postMessage(['callback', cid, err, obj]);        }    }};    if (this._authorized || this._connected && !this._auth) {        this._sendCall(call);    } else {        this._callWait.push(call);    }};ConnectionImpl.prototype.setVisual = function(state) {    this._visualState = state;    this.call(null, '_visual_', state);};ConnectionImpl.prototype._sendFrame = function(frame) {    if (!this._socket) {        console.error('sendFrame to closed socket');        return;    }    frame.sentTs = Date.now();    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;    }    this._socket.send(frame.write());};ConnectionImpl.prototype._listen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'listen'});    this._frameQueue.push(f);    this._alanState = ALAN_LISTENING;};ConnectionImpl.prototype._stopListen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'stopListen'});    this._frameQueue.push(f);    this._alanState = ALAN_OFF;};ConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {    if (this._alanState === ALAN_SPEAKING) {        return;    }    if (this._alanState === ALAN_OFF) {        this._listen();    }    if (this._alanState !== ALAN_LISTENING) {        console.error('invalid alan state: ' + this._alanState);        return;    }    if (this._sampleRate !== sampleRate) {        this._sampleRate = sampleRate;        this._encoder = alanCodec.encoder(this._config.codec, 48000);        this._formatSent = false;        this._format = {            send: {codec: this._config.codec, sampleRate: sampleRate},            recv: {codec: 'pcm_s16le', sampleRate: 16000},            timeout: this._timeout,        };    }    var p = this._encoder(frame);    for (var i = 0; i < p.length; i++ ) {        var f = alanFrame.create();        f.audioData = p[i];        this._frameQueue.push(f);    }};ConnectionImpl.prototype._flushQueue = function() {    if (!this._socket || !this._connected) {        var d = 0;        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {            this._frameQueue.shift();            d++;        }        if (d > 0) {            console.error('dropped: %s, frames', d);        }        return;    }    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {        if (!this._formatSent && this._format) {            var frame = alanFrame.create();            frame.jsonData = JSON.stringify({format: this._format});            this._sendFrame(frame);            this._formatSent = true;        }        this._sendFrame(this._frameQueue.shift());    }};function connectProject(config, auth, mode) {    var c = new ConnectionImpl(config, auth, mode);    c.onAudioEvent = function(event, arg1, arg2) {        if (event === 'frame') {            c._onMicFrame(arg1, arg2);        } else if (event === 'micStop' || event === 'playStart') {            c._stopListen();        } else {            console.error('unknown audio event: ' + event, arg1, arg2);        }    };    return c;}var factories = {    connectProject: connectProject,};var currentConnect = null;onmessage = function(e) {    var name = e.data[0];    try {        if (!currentConnect) {            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));        } else {            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));        }    } catch(e) {        console.error('error calling: ' + name, e);    }};"]),{type: 'text/javascript'}));
+        this._worker = new Worker(window.URL.createObjectURL(new Blob(["'use strict';importScripts(    'https://studio.alan.app/js/alan_frame.js',    'https://studio.alan.app/js/alan_codec.js',    'https://studio.alan.app/js/libopus.js');var ALAN_OFF       = 'off';var ALAN_SPEAKING  = 'speaking';var ALAN_LISTENING = 'listening';function ConnectionImpl(config, auth, mode) {    var _this = this;    this._config = config;    this._auth = auth;    this._mode = mode;    this._projectId = config.projectId;    this._url = config.url;    this._connected = false;    this._authorized = false;    this._dialogId = null;    this._callId = 1;    this._callSent = {};    this._callWait = [];    this._failed = false;    this._closed = false;    this._reconnectTimeout = 100;    this._cleanups = [];    this._sampleRate = -1;    this._format = null;    this._formatSent = false;    this._frameQueue = [];    this._remoteSentTs = 0;    this._remoteRecvTs = 0;    this._rtt = 25;    this._rttAlpha = 1./16;    this._alanState = ALAN_OFF;    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 100);    this._visualState = {};    this._addCleanup(function() {clearInterval(_this._sendTimer);});    this._connect();    console.log('Alan: connection created: ' + this._url);}ConnectionImpl.prototype._addCleanup = function(f) {    this._cleanups.push(f);};ConnectionImpl.prototype._onConnectStatus = function(s) {    console.log('Alan: connection status: ' + s);    this._fire('connectStatus', s);};ConnectionImpl.prototype._fire = function(event, object) {    if (event === 'options') {        if (object.versions) {            object.versions['alanbase:web'] = this._config.version;        }    }    postMessage(['fireEvent', event, object]);};ConnectionImpl.prototype._connect = function() {    var _this = this;    if (this._socket) {        console.error('socket is already connected');        return;    }    console.log('Alan: connecting to ' + this._url);    this._socket = new WebSocket(this._url);    this._socket.binaryType = 'arraybuffer';    this._decoder = alanCodec.decoder('pcm', 16000);    this._socket.onopen = function(e) {        console.info('Alan: connected', e.target === _this._socket);        _this._connected = true;        _this._reconnectTimeout = 100;        _this._fire('connection', {status: 'connected'});        if (_this._auth) {            _this._fire('connection', {status: 'authorizing'});            _this._callAuth();        } else {            _this._callWait.forEach(function(c) {  _this._sendCall(c); });            _this._callWait = [];        }    };    this._socket.onmessage = function(msg) {        if (msg.data instanceof ArrayBuffer) {            var f = alanFrame.parse(msg.data);            if (f.sentTs > 0) {                _this._remoteSentTs = f.sentTs;                _this._remoteRecvTs = Date.now();            } else {                _this._remoteSentTs = null;                _this._remoteRecvTs = null;            }            var rtt = 0;            if (f.remoteTs) {                rtt = Date.now() - f.remoteTs;            }            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;            var frames = _this._decoder(f.audioData);            postMessage(['alanAudio', 'playFrame', frames]);        } else if (typeof(msg.data) === 'string') {            msg = JSON.parse(msg.data);            if (msg.i) {                var c = _this._callSent[msg.i];                delete _this._callSent[msg.i];                if (c && c.callback) {                    c.callback(msg.e, msg.r);                }            } else if (msg.e) {                if (msg.e === 'command') {                    postMessage(['alanAudio', 'playCommand', msg.p]);                } else if (msg.e === 'inactivity') {                    postMessage(['alanAudio', 'stop']);                } else {                    _this._fire(msg.e, msg.p);                }            }        } else {            console.error('invalid message type');        }    };    this._socket.onerror = function(evt) {        console.error('Alan: connection closed due to error: ', evt);    };    this._socket.onclose = function(evt) {        console.info('Alan: connection closed');        _this._connected = false;        _this._authorized = false;        _this._socket = null;        _this._onConnectStatus('disconnected');        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);            if (_this._reconnectTimeout < 3000) {                _this._reconnectTimeout *= 2;            } else {                _this._reconnectTimeout += 500;            }            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);        }    };    this._addCleanup(function() {        if (this._socket) {            this._socket.close();            this._socket = null;        }    });};ConnectionImpl.prototype._callAuth = function() {    var _this = this;    var callback = function(err, r) {        if (!err && r.status === 'authorized') {            _this._authorized = true;            _this._formatSent = false;            if (r.dialogId) {                postMessage(['setDialogId', r.dialogId]);                _this._dialogId = r.dialogId;            }            _this._onAuthorized();            _this._onConnectStatus('authorized');        } else if (err === 'auth-failed') {            _this._onConnectStatus('auth-failed');            if (_this._socket) {                _this._socket.close();                _this._socket = null;                _this._failed = true;            }        } else {            _this._onConnectStatus('invalid-auth-response');            console.log('Alan: invalid auth response', err, r);        }    };    var authParam = this._auth;    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;    if (this._dialogId) {        authParam.dialogId = this._dialogId;    }    authParam.mode = this._mode;    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});    return this;};ConnectionImpl.prototype._sendCall = function(call) {    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));    if (call.callback) {        this._callSent[call.cid] = call;    }};ConnectionImpl.prototype._onAuthorized = function() {    console.log('Alan: authorized');    var _this = this;    this._callWait.forEach(function(c) {        _this._sendCall(c);    });    this._callWait = [];};ConnectionImpl.prototype.close = function() {    for (var i = 0; i < this._cleanups.length; i++ ) {        this._cleanups[i]();    }    this._cleanups = [];    this._closed = true;        if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {        this._socket.close();        this._socket = null;    }    console.log('Alan: closed connection to: ' + this._url);    close();};ConnectionImpl.prototype.call = function(cid, method, param) {    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {        if (cid) {            postMessage(['callback', cid, err, obj]);        }    }};    if (this._authorized || this._connected && !this._auth) {        this._sendCall(call);    } else {        this._callWait.push(call);    }};ConnectionImpl.prototype.setVisual = function(state) {    this._visualState = state;    this.call(null, '_visual_', state);};ConnectionImpl.prototype._sendFrame = function(frame) {    if (!this._socket) {        console.error('sendFrame to closed socket');        return;    }    frame.sentTs = Date.now();    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;    }    this._socket.send(frame.write());};ConnectionImpl.prototype._listen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'listen'});    this._frameQueue.push(f);    this._alanState = ALAN_LISTENING;};ConnectionImpl.prototype._stopListen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'stopListen'});    this._frameQueue.push(f);    this._alanState = ALAN_OFF;};ConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {    if (this._alanState === ALAN_SPEAKING) {        return;    }    if (this._alanState === ALAN_OFF) {        this._listen();    }    if (this._alanState !== ALAN_LISTENING) {        console.error('invalid alan state: ' + this._alanState);        return;    }    if (this._sampleRate !== sampleRate) {        this._sampleRate = sampleRate;        this._encoder = alanCodec.encoder(this._config.codec, 48000);        this._formatSent = false;        this._format = {            send: {codec: this._config.codec, sampleRate: sampleRate},            recv: {codec: 'pcm_s16le', sampleRate: 16000},            timeout: this._timeout,        };    }    var p = this._encoder(frame);    for (var i = 0; i < p.length; i++ ) {        var f = alanFrame.create();        f.audioData = p[i];        this._frameQueue.push(f);    }};ConnectionImpl.prototype._flushQueue = function() {    if (!this._socket || !this._connected) {        var d = 0;        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {            this._frameQueue.shift();            d++;        }        if (d > 0) {            console.error('dropped: %s, frames', d);        }        return;    }    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {        if (!this._formatSent && this._format) {            var frame = alanFrame.create();            frame.jsonData = JSON.stringify({format: this._format});            this._sendFrame(frame);            this._formatSent = true;        }        this._sendFrame(this._frameQueue.shift());    }};function connectProject(config, auth, mode) {    var c = new ConnectionImpl(config, auth, mode);    c.onAudioEvent = function(event, arg1, arg2) {        if (event === 'frame') {            c._onMicFrame(arg1, arg2);        } else if (event === 'micStop' || event === 'playStart') {            c._stopListen();        } else {            console.error('unknown audio event: ' + event, arg1, arg2);        }    };    return c;}var factories = {    connectProject: connectProject,};var currentConnect = null;onmessage = function(e) {    var name = e.data[0];    try {        if (!currentConnect) {            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));        } else {            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));        }    } catch(e) {        console.error('error calling: ' + name, e);    }};"]),{type: 'text/javascript'}));
         this._worker.onmessage = function(e) {
             if (e.data[0] === 'fireEvent') {
                 _this._fire(e.data[1], e.data[2]);
@@ -564,8 +564,8 @@ function alanBtn(options) {
             }
         },
         // Other methods
-        setOptions: function (btnOptions) {
-            applyBtnOptions(btnOptions);
+        setOptions: function (options) {
+            onOptionsReceived(options);
         },
         setPreviewState: function (state) {
             switchState(state);
@@ -607,7 +607,7 @@ function alanBtn(options) {
         mode = 'component';
     }
 
-    if (options.position === 'absolute') {
+    if (options.position === 'absolute' || options.pinned) {
         pinned = true;
     }
 
@@ -644,6 +644,7 @@ function alanBtn(options) {
     var previousState = null;
     var isAlanSpeaking = false;
     var isAlanActive = false;
+    var customBtnLogoUrl;
 
     // Set btn position flags
     var isLeftAligned = false;
@@ -695,6 +696,7 @@ function alanBtn(options) {
     var defaultStateBtnIconImg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==';
     var micTriangleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n';
     var micCircleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n';
+    
     var micIcon = document.createElement('div');
     var defaultStateBtnIcon = document.createElement('img');
     var logoState1 = document.createElement('img');
@@ -829,25 +831,25 @@ function alanBtn(options) {
 
     btnSize = btnModes[mode].btnSize;
     
-    if (options.left) {
+    if (options.left !== undefined) {
         isLeftAligned = true;
         isRightAligned = false;
     }
-    if (options.top) {
+    if (options.top !== undefined) {
         isTopAligned = true;
         isBottomAligned = false;
     }
 
     if (isLeftAligned) {
-        sideBtnPos = setDefautlPositionProps(options.left || btnModes[mode].leftPos);
+        sideBtnPos = setDefautlPositionProps(options.left !== undefined ? options.left : btnModes[mode].leftPos);
     } else {
-        sideBtnPos = setDefautlPositionProps(options.right || btnModes[mode].rightPos);
+        sideBtnPos = setDefautlPositionProps(options.right !== undefined ? options.right : btnModes[mode].rightPos);
     }
 
     if (isTopAligned) {
-        topBtnPos = setDefautlPositionProps(options.top || btnModes[mode].topPos);
+        topBtnPos = setDefautlPositionProps(options.top !== undefined ? options.top : btnModes[mode].topPos);
     } else {
-        bottomBtnPos = setDefautlPositionProps(options.bottom || btnModes[mode].bottomPos);
+        bottomBtnPos = setDefautlPositionProps(options.bottom !== undefined ? options.bottom : btnModes[mode].bottomPos);
     }
 
     function setDefautlPositionProps(value) {
@@ -1041,6 +1043,7 @@ function alanBtn(options) {
     defaultStateBtnIcon.style.left = '0%';
     defaultStateBtnIcon.style.position = 'absolute';
     defaultStateBtnIcon.style.pointerEvents = 'none';
+    defaultStateBtnIcon.style.borderRadius = '50%';
     micIcon.appendChild(defaultStateBtnIcon);
 
     micTriangleIcon.style.minHeight = '100%';
@@ -1901,6 +1904,10 @@ function alanBtn(options) {
             applyBtnOptions(data.web.btnOptions);
         }
 
+        if (data && data.web && data.web.logoUrl) {
+            applyLogoOptions(data.web.logoUrl);
+        }
+
         if (isLocalStorageAvailable && data) {
             localStorage.setItem(getStorageKey(), JSON.stringify(data));
         }
@@ -2184,27 +2191,29 @@ function alanBtn(options) {
             logoState10
         ];
 
-        if (newState === LISTENING ||
-            newState === INTERMEDIATE ||
-            newState === SPEAKING ||
-            newState === UNDERSTOOD) {
-
-            if (logoState1.style.animationName === '') {
-                for (i = 0; i < tempLogoParts.length; i++) {
-                    if (i === 0) {
-                        tempLogoParts[i].style.opacity = 1;
-                    } else {
-                        tempLogoParts[i].style.opacity = 0;
+        if(!customBtnLogoUrl) {
+            if (newState === LISTENING ||
+                newState === INTERMEDIATE ||
+                newState === SPEAKING ||
+                newState === UNDERSTOOD) {
+    
+                if (logoState1.style.animationName === '') {
+                    for (i = 0; i < tempLogoParts.length; i++) {
+                        if (i === 0) {
+                            tempLogoParts[i].style.opacity = 1;
+                        } else {
+                            tempLogoParts[i].style.opacity = 0;
+                        }
+                        tempLogoParts[i].style.animationName = 'logo-state-' + (i + 1) + '-animation';
                     }
-                    tempLogoParts[i].style.animationName = 'logo-state-' + (i + 1) + '-animation';
                 }
-            }
-            defaultStateBtnIcon.style.opacity = 0;
-        } else {
-            defaultStateBtnIcon.style.opacity = 1;
-            for (i = 0; i < tempLogoParts.length; i++) {
-                tempLogoParts[i].style.opacity = 0;
-                tempLogoParts[i].style.animationName = '';
+                defaultStateBtnIcon.style.opacity = 0;
+            } else {
+                defaultStateBtnIcon.style.opacity = 1;
+                for (i = 0; i < tempLogoParts.length; i++) {
+                    tempLogoParts[i].style.opacity = 0;
+                    tempLogoParts[i].style.animationName = '';
+                }
             }
         }
 
@@ -2255,7 +2264,7 @@ function alanBtn(options) {
             btnOval2.style.opacity = 0;
 
             if (newState === DISCONNECTED) {
-                micIcon.style.opacity = .4;
+                micIcon.style.opacity = 0;
                 disconnectedMicLoaderIcon.style.opacity = 1;
             } else {
                 micIcon.style.opacity = 0;
@@ -2414,6 +2423,26 @@ function alanBtn(options) {
         }
     }
 
+    function applyLogoOptions(logoUrl) {
+        if (logoUrl) {
+            customBtnLogoUrl = logoUrl;
+            defaultStateBtnIcon.src = logoUrl;
+            micIcon.src = logoUrl;
+            micTriangleIcon.src = logoUrl;
+            micTriangleIcon.classList.remove('triangleMicIconBg');
+            // logoState1.src=logoUrl;
+            // logoState2.src=logoUrl;
+            // logoState3.src=logoUrl;
+            // logoState4.src=logoUrl;
+            // logoState5.src=logoUrl;
+            // logoState6.src=logoUrl;
+            // logoState7.src=logoUrl;
+            // logoState8.src=logoUrl;
+            // logoState9.src=logoUrl;
+            // logoState10.src=logoUrl;
+        }
+    }
+
     rootEl.classList.add("alanBtn-root");
     rootEl.classList.add("alan-" + getProjectId());
 
@@ -2489,8 +2518,9 @@ function alanBtn(options) {
     }
 
     function onMouseDown(e) {
+        console.info('onMouseDown', e);
         var posInfo = e.touches ? e.touches[0] : e;
-        if (!dndBackAnimFinished) return;
+        if (!dndBackAnimFinished || e.buttons !== 1) return;
         dndIsDown = true;
         rootEl.style.transition = '0ms';
         if (!dndSideBtnPos) {

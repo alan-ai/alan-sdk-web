@@ -6,6 +6,7 @@ export interface AlanButtonOptions {
     left?: number | string;
     top?: number | string;
     position?: string;
+    pinned?: boolean;
     onCommand?(commandData: object): void;
     onConnectionStatus?(status: string): void;
 }
