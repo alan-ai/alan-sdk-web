@@ -2347,17 +2347,19 @@ function alanBtn(options) {
 
     function isOriginSecure() {
         var isSecure = false;
+        var protocol = window.location.protocol
+        var hostname = window.location.hostname
 
-        if (window.location.protocol === 'https:') {
+        if (protocol === 'https:') {
             isSecure = true;
         }
 
-        if (window.location.protocol === 'file:') {
+        if (protocol === 'file:') {
             isSecure = true;
         }
 
-        if (window.location.protocol === 'http:' && window.location.hostname === 'localhost') {
-                isSecure = true;
+        if (protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+            isSecure = true;
         }
 
         return isSecure;
