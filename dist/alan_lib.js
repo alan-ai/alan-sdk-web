@@ -626,7 +626,7 @@ function alanBtn(options) {
 
     // Error messages
     var MIC_BLOCKED_MSG = 'Access to the microphone was blocked. Please allow it to use Alan';
-    var NO_VOICE_SUPPORT_IN_BROWSER_MSG = 'Your browser doesn’t support voice input. To use voice, open Alan Tutor in a Chrome, Safari, or Firefox desktop browser window.';
+    var NO_VOICE_SUPPORT_IN_BROWSER_MSG = 'Your browser doesn’t support voice input. To use voice, try it in the Chrome, Safari, or Firefox desktop browser window. If you think your browser supports voice input, please send the Debug info below to support@alan.app. ' + getDebugInfo();
     var NOT_SECURE_ORIGIN_MSG = 'Audio is allowed only on the secure connection: make sure that your connection protocol is under https, file or http with localhost. Now you are running with "' + window.location.protocol + '" protocol and "' + window.location.hostname + '" hostname';
     var LOW_VOLUME_MSG = 'Low volume level';
     var OFFLINE_MSG = 'You\'re offline';
@@ -2384,6 +2384,51 @@ function alanBtn(options) {
         }
 
         return available;
+    }
+
+    function getDebugInfo() {
+        var info = '\nDebug Info:\n';
+
+        info += 'getUserMedia - ';
+        info += navigator.getUserMedia ? 'true' : 'false';
+        info += '\n';
+
+        info += 'mediaDevices.getUserMedia - ';
+        info += (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? 'true' : 'false';
+        info += '\n';
+
+        info += 'webkitGetUserMedia - ';
+        info += navigator.webkitGetUserMedia ? 'true' : 'false';
+        info += '\n';
+
+        info += 'mozGetUserMedia - ';
+        info += navigator.mozGetUserMedia ? 'true' : 'false';
+        info += '\n';
+
+        info += 'msGetUserMedia - ';
+        info += navigator.msGetUserMedia ? 'true' : 'false';
+        info += '\n';
+
+        info += 'AudioContext - ';
+        info += window.AudioContext ? 'true' : 'false';
+        info += '\n';
+
+        info += 'webkitAudioContext - ';
+        info += window.webkitAudioContext ? 'true' : 'false';
+        info += '\n';
+
+        info += 'mozAudioContext - ';
+        info += window.mozAudioContext ? 'true' : 'false';
+        info += '\n';
+
+        info += 'mobile - ';
+        info += /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        info += '\n';
+
+        info += 'userAgent - ';
+        info += navigator.userAgent;
+
+        return info;
     }
 
     //#endregion
