@@ -2358,7 +2358,7 @@ function alanBtn(options) {
             isSecure = true;
         }
 
-        if (protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        if (protocol === 'http:' && (hostname.indexOf('localhost') > -1 || hostname.indexOf('127.0.0.1') > -1)) {
             isSecure = true;
         }
 
