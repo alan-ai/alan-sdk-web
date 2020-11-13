@@ -10,6 +10,17 @@
 (function(ns) {
     "use strict";
 
+    var audioElement = document.createElement("audio");
+    audioElement.setAttribute("autoplay", "true");
+    audioElement.addEventListener("ended", function() {
+        playState = PLAY_IDLE;
+        _handleQueue();
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        document.body.appendChild(audioElement);
+    });
+
     navigator.getUserMedia = (navigator.getUserMedia ||
                               navigator.webkitGetUserMedia ||
                               navigator.mozGetUserMedia ||
@@ -20,75 +31,21 @@
         console.error("getUserMedia is not supported");
     }
 
-    function isAudio(obj) {
-       return obj instanceof Float32Array;
-    }
-
-    function AudioQueue() {
-        this._queue = [];
-    }
-
-    AudioQueue.prototype.write = function(float32arrayOrEvent) {
-        this._queue.push(float32arrayOrEvent);
-    };
-
-    AudioQueue.prototype._fetchData = function() {
-        while (this._queue.length && !isAudio(this._queue[0])) {
-            fireEvent('command', this._queue.shift());
-        }
-        return this._queue.length;
-    };
-
-    AudioQueue.prototype.read = function(samples) {
-        if (!this._fetchData()) {
-            return null;
-        }
-        if (samples === this._queue[0].length) {
-            return this._queue.shift();
-        }
-        if (samples < this._queue[0].length) {
-            var r = this._queue[0].subarray(0, samples);
-            this._queue[0] = this._queue[0].subarray(samples, this._queue[0].length);
-            return r;
-        }
-        var res = new Float32Array(samples);
-        var idx = 0;
-        while (idx < samples && this._queue.length > 0) {
-            if (!this._fetchData()) {
-                break;
-            }
-            var len = Math.min(samples - idx, this._queue[0].length);
-            for (var i = 0; i < len; i++ ) {
-                res[idx + i] = this._queue[0][i];
-            }
-            idx += len;
-            if (len === this._queue[0].length) {
-                this._queue.shift();
-            } else {
-                this._queue[0] = this._queue[0].subarray(len, this._queue[0].length);
-            }
-        }
-        return res;
-    };
-
     var PLAY_IDLE      = 'idle';
     var PLAY_ACTIVE    = 'active';
 
     var handlers       = {};
     var micStream      = null;
-    var audioQueue     = new AudioQueue();
-    var audioPlayback  = null;
-    var audioPlayGain  = null;
     var audioRecorder  = null;
     var audioSource    = null;
     var frameSize      = 4096;
-    var silence        = new Float32Array(frameSize);
-    var playState      = PLAY_IDLE;
     var audioCtx       = null;
     var totalSamples   = 0;
     var sampleRate     = 0;
     var firstSampleTs  = 0;
     var frameCount     = 0;
+    var playState      = PLAY_IDLE;
+    var audioQueue     = [];
 
     if (window.AudioContext) {
         audioCtx = new window.AudioContext();
@@ -96,6 +53,26 @@
 
     if (window.webkitAudioContext) {
         audioCtx = new window.webkitAudioContext();
+    }
+
+    function _handleQueue() {
+        if (!audioQueue.length || playState !== PLAY_IDLE) {
+            return;
+        }
+        while (playState === PLAY_IDLE && audioQueue.length) {
+            var o = audioQueue.shift();
+            if (o.event) {
+                fireEvent('command', o.event);
+            } else if (o.text) {
+                fireEvent('text', o.text);
+            } else if (o.audio) {
+                playState = PLAY_ACTIVE;
+                fireEvent('playStart');
+                audioElement.setAttribute("src", o.audio)
+            } else {
+                console.error('invalid queue item');
+            }
+        }
     }
 
     function fireEvent(event, o1, o2) {
@@ -133,6 +110,9 @@
     }
 
     function recordFrame(sr, float32array) {
+        if (playState === PLAY_ACTIVE) {
+            return;
+        }
         if (sampleRate !== sr) {
             sampleRate = sr;
             firstSampleTs = Date.now();
@@ -144,9 +124,7 @@
             frameCount = 0;
             var audioTime = (1000 * totalSamples) / sampleRate;
             var clockTime = Date.now() - firstSampleTs;
-            console.log("audioTime: "   + audioTime +
-                        ", clockTime: " + clockTime +
-                        ", ratio a/c: " + audioTime / clockTime);
+            console.log("audioTime: "   + audioTime + ", clockTime: " + clockTime + ", ratio a/c: " + audioTime / clockTime);
         }
         fireEvent('frame', sampleRate, float32array);
     }
@@ -155,21 +133,19 @@
         return playState === PLAY_ACTIVE;
     };
 
-    ns.playCommand = function(event) {
-        if (!audioPlayback) {
-            fireEvent('command', event);
-            return;
-        }
-        audioQueue.write(event);
+    ns.playText = function(text) {
+        audioQueue.push({text: text});
+        _handleQueue();
     };
 
-    ns.play = function(frames) {
-        if (!audioPlayback) {
-            return;
-        }
-        for (var i = 0; i < frames.length; i++ ) {
-            audioQueue.write(frames[i]);
-        }
+    ns.playEvent = function(event) {
+        audioQueue.push({event: event});
+        _handleQueue();
+    };
+
+    ns.playAudio = function(audio) {
+        audioQueue.push({audio: audio});
+        _handleQueue();
     };
 
     ns.on = function(event, handler) {
@@ -196,44 +172,17 @@
     };
 
     ns.start = function(onStarted) {
-            if (!micStream) {
-                if (navigator.mediaDevices) {
-                    navigator.mediaDevices.getUserMedia({audio: true}).then(onGetUserMedia, onGetUserMediaError);
-                } else {
-                    navigator.getUserMedia({audio: true}, onGetUserMedia, onGetUserMediaError);
-                }
-            }
-            if (!audioPlayback) {
-                audioPlayback = audioCtx.createScriptProcessor(frameSize, 1, 1);
-                audioPlayback.onaudioprocess = function(e) {
-                    var f = audioQueue.read(frameSize);
-                    if (!f) {
-                        if (playState === PLAY_ACTIVE) {
-                            playState = PLAY_IDLE;
-                            fireEvent('playStop');
-                        }
-                        f = silence;
-                    } else {
-                        if (playState === PLAY_IDLE) {
-                            playState = PLAY_ACTIVE;
-                            fireEvent('playStart');
-                        }
-                    }
-                    if (onStarted) {
-                        onStarted();
-                        onStarted = null;
-                    }
-                    e.outputBuffer.getChannelData(0).set(f);
-                };
-                audioPlayGain = audioCtx.createGain();
-                audioPlayback.connect(audioPlayGain);
-                audioPlayGain.connect(audioCtx.destination);
+        if (!micStream) {
+            if (navigator.mediaDevices) {
+                navigator.mediaDevices.getUserMedia({audio: true}).then(onGetUserMedia, onGetUserMediaError);
             } else {
-                if (onStarted) {
-                    onStarted();
-                    onStarted = null;
-                }
-            } 
+                navigator.getUserMedia({audio: true}, onGetUserMedia, onGetUserMediaError);
+            }
+        }
+        if (onStarted) {
+            onStarted();
+            onStarted = null;
+        }
     };
 
     ns.stop = function() {
@@ -256,15 +205,12 @@
             audioRecorder.disconnect();
             audioRecorder = null;
         }
-        if (audioPlayback) {
-            audioPlayback.disconnect();
-            audioPlayback = null;
+        if (audioElement) {
+            audioElement.pause();
+            audioElement.currentTime = 0;
+            audioElement.src = "";
         }
-        if (audioPlayGain) {
-            audioPlayGain.disconnect();
-            audioPlayGain = null;
-        }
-        audioQueue = new AudioQueue();
+        audioQueue = [];
         playState = PLAY_IDLE;
     };
 
@@ -280,25 +226,29 @@
         baseURL: "wss://" +
             ((host.indexOf('$') === 0 || host === '') ? window.location.host : host ),
         codec: 'opus',
-        version: '1.0.9',
+        version: '1.2.0',
         platform: 'web',
     };
 
     function ConnectionWrapper() {
         var _this = this;
-        this._worker = new Worker(window.URL.createObjectURL(new Blob(["'use strict';importScripts(    'https://studio.alan.app/js/alan_frame.js',    'https://studio.alan.app/js/alan_codec.js',    'https://studio.alan.app/js/libopus.js');var ALAN_OFF       = 'off';var ALAN_SPEAKING  = 'speaking';var ALAN_LISTENING = 'listening';function ConnectionImpl(config, auth, mode) {    var _this = this;    this._config = config;    this._auth = auth;    this._mode = mode;    this._projectId = config.projectId;    this._url = config.url;    this._connected = false;    this._authorized = false;    this._dialogId = null;    this._callId = 1;    this._callSent = {};    this._callWait = [];    this._failed = false;    this._closed = false;    this._reconnectTimeout = 100;    this._cleanups = [];    this._sampleRate = -1;    this._format = null;    this._formatSent = false;    this._frameQueue = [];    this._remoteSentTs = 0;    this._remoteRecvTs = 0;    this._rtt = 25;    this._rttAlpha = 1./16;    this._alanState = ALAN_OFF;    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 100);    this._visualState = {};    this._addCleanup(function() {clearInterval(_this._sendTimer);});    this._connect();    console.log('Alan: connection created: ' + this._url);}ConnectionImpl.prototype._addCleanup = function(f) {    this._cleanups.push(f);};ConnectionImpl.prototype._onConnectStatus = function(s) {    console.log('Alan: connection status: ' + s);    this._fire('connectStatus', s);};ConnectionImpl.prototype._fire = function(event, object) {    if (event === 'options') {        if (object.versions) {            object.versions['alanbase:web'] = this._config.version;        }    }    postMessage(['fireEvent', event, object]);};ConnectionImpl.prototype._connect = function() {    var _this = this;    if (this._socket) {        console.error('socket is already connected');        return;    }    console.log('Alan: connecting to ' + this._url);    this._socket = new WebSocket(this._url);    this._socket.binaryType = 'arraybuffer';    this._decoder = alanCodec.decoder('pcm', 16000);    this._socket.onopen = function(e) {        console.info('Alan: connected', e.target === _this._socket);        _this._connected = true;        _this._reconnectTimeout = 100;        _this._fire('connection', {status: 'connected'});        if (_this._auth) {            _this._fire('connection', {status: 'authorizing'});            _this._callAuth();        } else {            _this._callWait.forEach(function(c) {  _this._sendCall(c); });            _this._callWait = [];        }    };    this._socket.onmessage = function(msg) {        if (msg.data instanceof ArrayBuffer) {            var f = alanFrame.parse(msg.data);            if (f.sentTs > 0) {                _this._remoteSentTs = f.sentTs;                _this._remoteRecvTs = Date.now();            } else {                _this._remoteSentTs = null;                _this._remoteRecvTs = null;            }            var rtt = 0;            if (f.remoteTs) {                rtt = Date.now() - f.remoteTs;            }            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;            var frames = _this._decoder(f.audioData);            postMessage(['alanAudio', 'playFrame', frames]);        } else if (typeof(msg.data) === 'string') {            msg = JSON.parse(msg.data);            if (msg.i) {                var c = _this._callSent[msg.i];                delete _this._callSent[msg.i];                if (c && c.callback) {                    c.callback(msg.e, msg.r);                }            } else if (msg.e) {                if (msg.e === 'command') {                    postMessage(['alanAudio', 'playCommand', msg.p]);                } else if (msg.e === 'inactivity') {                    postMessage(['alanAudio', 'stop']);                } else {                    _this._fire(msg.e, msg.p);                }            }        } else {            console.error('invalid message type');        }    };    this._socket.onerror = function(evt) {        console.error('Alan: connection closed due to error: ', evt);    };    this._socket.onclose = function(evt) {        console.info('Alan: connection closed');        _this._connected = false;        _this._authorized = false;        _this._socket = null;        _this._onConnectStatus('disconnected');        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);            if (_this._reconnectTimeout < 3000) {                _this._reconnectTimeout *= 2;            } else {                _this._reconnectTimeout += 500;            }            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);        }    };    this._addCleanup(function() {        if (this._socket) {            this._socket.close();            this._socket = null;        }    });};ConnectionImpl.prototype._callAuth = function() {    var _this = this;    var callback = function(err, r) {        if (!err && r.status === 'authorized') {            _this._authorized = true;            _this._formatSent = false;            if (r.dialogId) {                postMessage(['setDialogId', r.dialogId]);                _this._dialogId = r.dialogId;            }            _this._onAuthorized();            _this._onConnectStatus('authorized');        } else if (err === 'auth-failed') {            _this._onConnectStatus('auth-failed');            if (_this._socket) {                _this._socket.close();                _this._socket = null;                _this._failed = true;            }        } else {            _this._onConnectStatus('invalid-auth-response');            console.log('Alan: invalid auth response', err, r);        }    };    var authParam = this._auth;    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;    if (this._dialogId) {        authParam.dialogId = this._dialogId;    }    authParam.mode = this._mode;    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});    return this;};ConnectionImpl.prototype._sendCall = function(call) {    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));    if (call.callback) {        this._callSent[call.cid] = call;    }};ConnectionImpl.prototype._onAuthorized = function() {    console.log('Alan: authorized');    var _this = this;    this._callWait.forEach(function(c) {        _this._sendCall(c);    });    this._callWait = [];};ConnectionImpl.prototype.close = function() {    for (var i = 0; i < this._cleanups.length; i++ ) {        this._cleanups[i]();    }    this._cleanups = [];    this._closed = true;        if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {        this._socket.close();        this._socket = null;    }    console.log('Alan: closed connection to: ' + this._url);    close();};ConnectionImpl.prototype.call = function(cid, method, param) {    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {        if (cid) {            postMessage(['callback', cid, err, obj]);        }    }};    if (this._authorized || this._connected && !this._auth) {        this._sendCall(call);    } else {        this._callWait.push(call);    }};ConnectionImpl.prototype.setVisual = function(state) {    this._visualState = state;    this.call(null, '_visual_', state);};ConnectionImpl.prototype._sendFrame = function(frame) {    if (!this._socket) {        console.error('sendFrame to closed socket');        return;    }    frame.sentTs = Date.now();    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;    }    this._socket.send(frame.write());};ConnectionImpl.prototype._listen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'listen'});    this._frameQueue.push(f);    this._alanState = ALAN_LISTENING;};ConnectionImpl.prototype._stopListen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'stopListen'});    this._frameQueue.push(f);    this._alanState = ALAN_OFF;};ConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {    if (this._alanState === ALAN_SPEAKING) {        return;    }    if (this._alanState === ALAN_OFF) {        this._listen();    }    if (this._alanState !== ALAN_LISTENING) {        console.error('invalid alan state: ' + this._alanState);        return;    }    if (this._sampleRate !== sampleRate) {        this._sampleRate = sampleRate;        this._encoder = alanCodec.encoder(this._config.codec, 48000);        this._formatSent = false;        this._format = {            send: {codec: this._config.codec, sampleRate: sampleRate},            recv: {codec: 'pcm_s16le', sampleRate: 16000},            timeout: this._timeout,        };    }    var p = this._encoder(frame);    for (var i = 0; i < p.length; i++ ) {        var f = alanFrame.create();        f.audioData = p[i];        this._frameQueue.push(f);    }};ConnectionImpl.prototype._flushQueue = function() {    if (!this._socket || !this._connected) {        var d = 0;        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {            this._frameQueue.shift();            d++;        }        if (d > 0) {            console.error('dropped: %s, frames', d);        }        return;    }    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {        if (!this._formatSent && this._format) {            var frame = alanFrame.create();            frame.jsonData = JSON.stringify({format: this._format});            this._sendFrame(frame);            this._formatSent = true;        }        this._sendFrame(this._frameQueue.shift());    }};function connectProject(config, auth, mode) {    var c = new ConnectionImpl(config, auth, mode);    c.onAudioEvent = function(event, arg1, arg2) {        if (event === 'frame') {            c._onMicFrame(arg1, arg2);        } else if (event === 'micStop' || event === 'playStart') {            c._stopListen();        } else {            console.error('unknown audio event: ' + event, arg1, arg2);        }    };    return c;}var factories = {    connectProject: connectProject,};var currentConnect = null;onmessage = function(e) {    var name = e.data[0];    try {        if (!currentConnect) {            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));        } else {            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));        }    } catch(e) {        console.error('error calling: ' + name, e);    }};"]),{type: 'text/javascript'}));
+        this._worker = new Worker(window.URL.createObjectURL(new Blob(["'use strict';importScripts(    'https://studio.alan.app/js/alan_frame.js',    'https://studio.alan.app/js/alan_codec.js',    'https://studio.alan.app/js/libopus.js');var ALAN_OFF       = 'off';var ALAN_SPEAKING  = 'speaking';var ALAN_LISTENING = 'listening';function ConnectionImpl(config, auth, mode) {    var _this = this;    this._config = config;    this._auth = auth;    this._mode = mode;    this._projectId = config.projectId;    this._url = config.url;    this._connected = false;    this._authorized = false;    this._dialogId = null;    this._callId = 1;    this._callSent = {};    this._callWait = [];    this._failed = false;    this._closed = false;    this._reconnectTimeout = 100;    this._cleanups = [];    this._sampleRate = -1;    this._format = null;    this._formatSent = false;    this._frameQueue = [];    this._remoteSentTs = 0;    this._remoteRecvTs = 0;    this._rtt = 25;    this._rttAlpha = 1./16;    this._alanState = ALAN_OFF;    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 100);    this._visualState = {};    this._addCleanup(function() {clearInterval(_this._sendTimer);});    this._connect();    console.log('Alan: connection created: ' + this._url);}ConnectionImpl.prototype._addCleanup = function(f) {    this._cleanups.push(f);};ConnectionImpl.prototype._onConnectStatus = function(s) {    console.log('Alan: connection status: ' + s);    this._fire('connectStatus', s);};ConnectionImpl.prototype._fire = function(event, object) {    if (event === 'options') {        if (object.versions) {            object.versions['alanbase:web'] = this._config.version;        }    }    postMessage(['fireEvent', event, object]);};ConnectionImpl.prototype._connect = function() {    var _this = this;    if (this._socket) {        console.error('socket is already connected');        return;    }    console.log('Alan: connecting to ' + this._url);    this._socket = new WebSocket(this._url);    this._socket.binaryType = 'arraybuffer';    this._decoder = alanCodec.decoder('pcm', 16000);    this._socket.onopen = function(e) {        console.info('Alan: connected', e.target === _this._socket);        _this._connected = true;        _this._reconnectTimeout = 100;        _this._fire('connection', {status: 'connected'});        if (_this._auth) {            _this._fire('connection', {status: 'authorizing'});            _this._callAuth();        } else {            _this._callWait.forEach(function(c) {  _this._sendCall(c); });            _this._callWait = [];        }    };    this._socket.onmessage = function(msg) {        if (msg.data instanceof ArrayBuffer) {            var f = alanFrame.parse(msg.data);            if (f.sentTs > 0) {                _this._remoteSentTs = f.sentTs;                _this._remoteRecvTs = Date.now();            } else {                _this._remoteSentTs = null;                _this._remoteRecvTs = null;            }            var rtt = 0;            if (f.remoteTs) {                rtt = Date.now() - f.remoteTs;            }            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;            var uint8 = new Uint8Array(f.audioData);            var frame = '';            var batch = 62000;            for (var offset = 0; offset < uint8.byteLength; offset += batch) {                var b  = uint8.subarray(offset, Math.min(uint8.byteLength, offset + batch));                frame += String.fromCharCode.apply(null, b);            }            postMessage(['alanAudio', 'playFrame', frame]);        } else if (typeof(msg.data) === 'string') {            msg = JSON.parse(msg.data);            if (msg.i) {                var c = _this._callSent[msg.i];                delete _this._callSent[msg.i];                if (c && c.callback) {                    c.callback(msg.e, msg.r);                }            } else if (msg.e) {                if (msg.e === 'text') {                    postMessage(['alanAudio', 'playText', msg.p])                } else if (msg.e === 'command') {                    postMessage(['alanAudio', 'playCommand', msg.p]);                } else if (msg.e === 'inactivity') {                    postMessage(['alanAudio', 'stop']);                } else {                    _this._fire(msg.e, msg.p);                }            }        } else {            console.error('invalid message type');        }    };    this._socket.onerror = function(evt) {        console.error('Alan: connection closed due to error: ', evt);    };    this._socket.onclose = function(evt) {        console.info('Alan: connection closed');        _this._connected = false;        _this._authorized = false;        _this._socket = null;        _this._onConnectStatus('disconnected');        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);            if (_this._reconnectTimeout < 3000) {                _this._reconnectTimeout *= 2;            } else {                _this._reconnectTimeout += 500;            }            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);        }    };    this._addCleanup(function() {        if (this._socket) {            this._socket.close();            this._socket = null;        }    });};ConnectionImpl.prototype._callAuth = function() {    var _this = this;    var callback = function(err, r) {        if (!err && r.status === 'authorized') {            _this._authorized = true;            _this._formatSent = false;            if (r.dialogId) {                postMessage(['setDialogId', r.dialogId]);                _this._dialogId = r.dialogId;            }            _this._onAuthorized();            _this._onConnectStatus('authorized');        } else if (err === 'auth-failed') {            _this._onConnectStatus('auth-failed');            if (_this._socket) {                _this._socket.close();                _this._socket = null;                _this._failed = true;            }        } else {            _this._onConnectStatus('invalid-auth-response');            console.log('Alan: invalid auth response', err, r);        }    };    var authParam = this._auth;    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;    if (this._dialogId) {        authParam.dialogId = this._dialogId;    }    authParam.mode = this._mode;    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});    return this;};ConnectionImpl.prototype._sendCall = function(call) {    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));    if (call.callback) {        this._callSent[call.cid] = call;    }};ConnectionImpl.prototype._onAuthorized = function() {    console.log('Alan: authorized');    var _this = this;    this._callWait.forEach(function(c) {        _this._sendCall(c);    });    this._callWait = [];};ConnectionImpl.prototype.close = function() {    for (var i = 0; i < this._cleanups.length; i++ ) {        this._cleanups[i]();    }    this._cleanups = [];    this._closed = true;        if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {        this._socket.close();        this._socket = null;    }    console.log('Alan: closed connection to: ' + this._url);    close();};ConnectionImpl.prototype.call = function(cid, method, param) {    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {        if (cid) {            postMessage(['callback', cid, err, obj]);        }    }};    if (this._authorized || this._connected && !this._auth) {        this._sendCall(call);    } else {        this._callWait.push(call);    }};ConnectionImpl.prototype.setVisual = function(state) {    this._visualState = state;    this.call(null, '_visual_', state);};ConnectionImpl.prototype._sendFrame = function(frame) {    if (!this._socket) {        console.error('sendFrame to closed socket');        return;    }    frame.sentTs = Date.now();    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;    }    this._socket.send(frame.write());};ConnectionImpl.prototype._listen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'listen'});    this._frameQueue.push(f);    this._alanState = ALAN_LISTENING;};ConnectionImpl.prototype._stopListen = function() {    var f = alanFrame.create();    f.jsonData = JSON.stringify({signal: 'stopListen'});    this._frameQueue.push(f);    this._alanState = ALAN_OFF;};ConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {    if (this._alanState === ALAN_SPEAKING) {        return;    }    if (this._alanState === ALAN_OFF) {        this._listen();    }    if (this._alanState !== ALAN_LISTENING) {        console.error('invalid alan state: ' + this._alanState);        return;    }    if (this._sampleRate !== sampleRate) {        this._sampleRate = sampleRate;        this._encoder = alanCodec.encoder(this._config.codec, 48000);        this._formatSent = false;        this._format = {            send: {codec: this._config.codec, sampleRate: sampleRate},            recv: {codec: 'mp3;base64', sampleRate: 16000},            timeout: this._timeout,        };    }    var p = this._encoder(frame);    for (var i = 0; i < p.length; i++ ) {        var f = alanFrame.create();        f.audioData = p[i];        this._frameQueue.push(f);    }};ConnectionImpl.prototype._flushQueue = function() {    if (!this._socket || !this._connected) {        var d = 0;        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {            this._frameQueue.shift();            d++;        }        if (d > 0) {            console.error('dropped: %s, frames', d);        }        return;    }    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {        if (!this._formatSent && this._format) {            var frame = alanFrame.create();            frame.jsonData = JSON.stringify({format: this._format});            this._sendFrame(frame);            this._formatSent = true;        }        this._sendFrame(this._frameQueue.shift());    }};function connectProject(config, auth, mode) {    var c = new ConnectionImpl(config, auth, mode);    c.onAudioEvent = function(event, arg1, arg2) {        if (event === 'frame') {            c._onMicFrame(arg1, arg2);        } else if (event === 'micStop' || event === 'playStart') {            c._stopListen();        } else {            console.error('unknown audio event: ' + event, arg1, arg2);        }    };    return c;}var factories = {    connectProject: connectProject,};var currentConnect = null;onmessage = function(e) {    var name = e.data[0];    try {        if (!currentConnect) {            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));        } else {            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));        }    } catch(e) {        console.error('error calling: ' + name, e);    }};"]),{type: 'text/javascript'}));
         this._worker.onmessage = function(e) {
             if (e.data[0] === 'fireEvent') {
                 _this._fire(e.data[1], e.data[2]);
                 return;
             }
             if (e.data[0] === 'alanAudio') {
-                if (e.data[1] === 'playFrame') {
-                    alanAudio.play(e.data[2]);
+                if (e.data[1] === 'playText') {
+                    alanAudio.playText(e.data[2]);
                     return;
                 }
-                if (e.data[1] === 'playCommand') {
-                    alanAudio.playCommand(e.data[2]);
+                if (e.data[1] === 'playAudio' || e.data[1] === 'playFrame') {
+                    alanAudio.playAudio(e.data[2]);
+                    return;
+                }
+                if (e.data[1] === 'playEvent' || e.data[1] === 'playCommand') {
+                    alanAudio.playEvent(e.data[2]);
                     return;
                 }
                 if (e.data[1] === 'stop') {
@@ -418,22 +368,32 @@
         connect._config.version   = config.version;
         connect._config.url       = config.baseURL + "/ws_project/" + projectId;
         connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
-        function forwardAudioEvent(name) {
-            function handler(a1, a2) {
-                if (name === 'frame'  && alanAudio.isPlaying()) {
-                    return;
-                }
-                connect._worker.postMessage(['onAudioEvent', name, a1, a2]);
-            }
+        function signupEvent(name, handler) {
             alanAudio.on(name, handler);
             connect._addCleanup(function() {
                 alanAudio.off(name,  handler);
             });
         }
-        forwardAudioEvent('frame');
-        forwardAudioEvent('micStop');
-        //forwardAudioEvent('playStop');
-        forwardAudioEvent('playStart');
+        function passEventToWorker(name) {
+            function handler(a1, a2) {
+                if (name === 'frame' && alanAudio.isPlaying()) {
+                    return;
+                }
+                connect._worker.postMessage(['onAudioEvent', name, a1, a2]);
+            }
+            signupEvent(name, handler);
+        }
+        function passEventToClient(name) {
+            function handler(e1) {
+                connect._fire(name, e1);
+            }
+            signupEvent(name, handler);
+        }
+        passEventToWorker('frame');
+        passEventToWorker('micStop');
+        passEventToWorker('playStart');
+        passEventToClient('text');
+        passEventToClient('command');
         return connect;
     }
 
@@ -1086,11 +1046,11 @@ function alanBtn(options) {
     micCircleIcon.classList.add('circleMicIconBg');
 
     // Define base styles for loader mic icon in disconnected state
-    disconnectedMicLoaderIcon.style.minHeight = '100%';
-    disconnectedMicLoaderIcon.style.height = '100%';
-    disconnectedMicLoaderIcon.style.maxHeight = '100%';
-    disconnectedMicLoaderIcon.style.top = '0%';
-    disconnectedMicLoaderIcon.style.left = '0%';
+    disconnectedMicLoaderIcon.style.minHeight = '70%';
+    disconnectedMicLoaderIcon.style.height = '70%';
+    disconnectedMicLoaderIcon.style.maxHeight = '70%';
+    disconnectedMicLoaderIcon.style.top = '15%';
+    disconnectedMicLoaderIcon.style.left = '15%';
     disconnectedMicLoaderIcon.style.zIndex = btnIconsZIndex;
     disconnectedMicLoaderIcon.style.position = 'absolute';
     disconnectedMicLoaderIcon.style.transition = 'all 0.4s ease-in-out';
@@ -1586,7 +1546,7 @@ function alanBtn(options) {
             }
 
             if(tempLayer.hover && !isMobile()){
-                keyFrames += getStyleSheetMarker() + `.alanBtn:hover .alanBtn-bg-` + stateNameClass + ':not(.super-hidden) {';
+                keyFrames += getStyleSheetMarker() + '.alanBtn:hover .alanBtn-bg-' + stateNameClass + ':not(.super-hidden) {';
                 keyFrames += 'background-image: linear-gradient(122deg,'+tempLayer.hover.color[0]+','+tempLayer.hover.color[1]+');';
                 keyFrames += '}';
                 keyFrames += getStyleSheetMarker() + '.alanBtn:active .alanBtn-bg-' + stateNameClass + ':not(.super-hidden) {';
@@ -2034,7 +1994,7 @@ function alanBtn(options) {
 
     function playSoundOn() {
         if (!soundOnAudioDoesNotExist) {
-            soundOnAudio.play().catch(() => {
+            soundOnAudio.play().catch(function () {
                 console.log("No activation sound, because the user didn't interact with the button");
             });
         }
@@ -2042,7 +2002,7 @@ function alanBtn(options) {
 
     function playSoundOff() {
         if (!soundOffAudioDoesNotExist) {
-            soundOffAudio.play().catch(() => {
+            soundOffAudio.play().catch(function () {
                 console.log("No deactivation sound, because the user didn't interact with the button");
             });
         }
@@ -2347,8 +2307,8 @@ function alanBtn(options) {
 
     function isOriginSecure() {
         var isSecure = false;
-        var protocol = window.location.protocol
-        var hostname = window.location.hostname
+        var protocol = window.location.protocol;
+        var hostname = window.location.hostname;
 
         if (protocol === 'https:') {
             isSecure = true;
