@@ -138,6 +138,11 @@
         _handleQueue();
     };
 
+    ns.playCommand = function(command) {
+        audioQueue.push({event: command});
+        _handleQueue();
+    };
+
     ns.playEvent = function(event) {
         audioQueue.push({event: event});
         _handleQueue();
@@ -586,7 +591,7 @@ function alanBtn(options) {
 
     // Error messages
     var MIC_BLOCKED_MSG = 'Access to the microphone was blocked. Please allow it to use Alan';
-    var NO_VOICE_SUPPORT_IN_BROWSER_MSG = 'Your browser doesn’t support voice input. To use voice, try it in the Chrome, Safari, or Firefox desktop browser window. If you think your browser supports voice input, please send the Debug info below to support@alan.app. ' + getDebugInfo();
+    var NO_VOICE_SUPPORT_IN_BROWSER_MSG = 'Your browser doesn’t support voice input. If you think your browser supports voice input, please send the Debug info below to support@alan.app. ' + getDebugInfo();
     var NOT_SECURE_ORIGIN_MSG = 'Audio is allowed only on the secure connection: make sure that your connection protocol is under https, file or http with localhost. Now you are running with "' + window.location.protocol + '" protocol and "' + window.location.hostname + '" hostname';
     var LOW_VOLUME_MSG = 'Low volume level';
     var OFFLINE_MSG = 'You\'re offline';
@@ -1854,7 +1859,7 @@ function alanBtn(options) {
             showSpeach2TextPanel();
         }
 
-        if (data && data.web && data.web.timeout ) {
+        if (data && data.web && data.web.timeout !== undefined ) {
             turnOffTimeout = data.web.timeout;
             setTurnOffVoiceTimeout();
         }
@@ -2349,41 +2354,37 @@ function alanBtn(options) {
     function getDebugInfo() {
         var info = '\nDebug Info:\n';
 
-        info += 'getUserMedia - ';
+        info += 'getUserMedia: ';
         info += navigator.getUserMedia ? 'true' : 'false';
-        info += '\n';
+        info += ' ';
 
-        info += 'mediaDevices.getUserMedia - ';
+        info += '(mediaDevices.getUserMedia: ';
         info += (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? 'true' : 'false';
-        info += '\n';
+        info += ', ';
 
-        info += 'webkitGetUserMedia - ';
+        info += 'webkit: ';
         info += navigator.webkitGetUserMedia ? 'true' : 'false';
-        info += '\n';
+        info += ', ';
 
-        info += 'mozGetUserMedia - ';
+        info += 'moz: ';
         info += navigator.mozGetUserMedia ? 'true' : 'false';
-        info += '\n';
+        info += ', ';
 
-        info += 'msGetUserMedia - ';
+        info += 'ms: ';
         info += navigator.msGetUserMedia ? 'true' : 'false';
-        info += '\n';
+        info += '), ';
 
-        info += 'AudioContext - ';
+        info += 'AudioContext: ';
         info += window.AudioContext ? 'true' : 'false';
-        info += '\n';
+        info += ' ';
 
-        info += 'webkitAudioContext - ';
+        info += '(webkit: ';
         info += window.webkitAudioContext ? 'true' : 'false';
-        info += '\n';
+        info += ', ';
 
-        info += 'mozAudioContext - ';
+        info += 'moz: ';
         info += window.mozAudioContext ? 'true' : 'false';
-        info += '\n';
-
-        info += 'mobile - ';
-        info += /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        info += '\n';
+        info += '), ';
 
         info += 'userAgent - ';
         info += navigator.userAgent;
@@ -2525,9 +2526,8 @@ function alanBtn(options) {
     }
 
     function onMouseDown(e) {
-        console.info('onMouseDown', e);
         var posInfo = e.touches ? e.touches[0] : e;
-        if (!dndBackAnimFinished || e.buttons !== 1) return;
+        if (!dndBackAnimFinished || (e.buttons !== undefined && e.buttons !== 1)) return;
         dndIsDown = true;
         rootEl.style.transition = '0ms';
         if (!dndSideBtnPos) {
