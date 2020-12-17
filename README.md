@@ -45,34 +45,13 @@ To add voice a web app or page:
 1. <a href="https://studio.alan.app/register" target="_blank">Sign up for Alan Studio</a> to build voice scripts in JavaScript and test them.
 2. Use the Alan Web SDK to embed the Alan button to your app or page. For details, see Alan AI documentation for the necessary framework:
 
-<div style="display:flex; direction:row; flex-wrap: wrap;">
+    * <img src="https://alan.app/assets/about/js.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/vanilla" target="_blank">JavaScript</a>
+	* <img src="https://alan.app/assets/about/react.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/react" target="_blank">React</a>
+    * <img src="https://alan.app/assets/about/angular.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/angular" target="_blank">Angular</a>
+    * <img src="https://alan.app/assets/about/vue.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/vue" target="_blank">Vue</a> 
+    * <img src="https://alan.app/assets/about/ember.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/ember" target="_blank">Ember</a>
+    * <img src="https://alan.app/assets/about/electron.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/electron" target="_blank">Electron</a>
 
-<div style="width:150px; margin-bottom:10px; margin-top:30px">
-<img src="https://alan.app/assets/about/js.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/vanilla" target="_blank">JavaScript</a>
-</div>
-
-<div style="width:120px; margin-bottom:30px; margin-top:30px">
-<img src="https://alan.app/assets/about/react.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/react" target="_blank">React</a>
-</div>
-
-<div style="width:120px; margin-bottom:30px; margin-top:30px">
-<img src="https://alan.app/assets/about/angular.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/angular" target="_blank">Angular</a>
-</div>
-
-<div style="width:120px; margin-bottom:30px; margin-top:30px">
-<img src="https://alan.app/assets/about/vue.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/vue" target="_blank">Vue</a>
-</div>
-
-<div style="width:150px; margin-bottom:30px; margin-top:30px">
-<img src="https://alan.app/assets/about/ember.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/ember" target="_blank">Ember</a>
-</div>
-
-<div style="width:150px; margin-bottom:30px; margin-top:30px">
-<img src="https://alan.app/assets/about/electron.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/electron" target="_blank">Electron</a>
-</div>
-
-
-</div>
 
 Check out our <a href="https://alan-ai.github.io/alan-sdk-web/" target="_blank">demo</a>.
 
