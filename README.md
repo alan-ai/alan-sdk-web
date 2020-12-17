@@ -1,4 +1,3 @@
-
 # Alan voice assistant SDK for Web
 
 [Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
@@ -8,21 +7,79 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/alan-ai/alan-sdk-web)](https://github.com/alan-ai/alan-sdk-web/releases)
 [![CircleCI](https://circleci.com/gh/alan-ai/alan-sdk-web.svg?style=shield)](https://circleci.com/gh/alan-ai/alan-sdk-web)
 
-Add a voice assistant to your application. With no or minimal changes to the existing UI.
+
+Quickly add voice to your app or website. Create a voice assistant or build a multimodal interface with two input modes &mdash; speech and gestures &mdash; working in sync.
+
+<img src="https://alan.app/voice/images/github/tablet-tasks.gif" height="325px" align="right"/>
+
+
+## Alan is a Voice AI Platform
+
+Alan is a conversational voice AI platform that lets you create an intelligent voice assistant for your app. It offers all necessary tools to design, embed and host your conversational experiences:
+
+#### Alan Studio
+A web portal where you can write, test and manage dialog scenarios for your voice assistant or chatbot.
+
+#### Alan Client SDKs
+
+With Alan Client SDKs, you can quickly embed Alan's voice to your app.
+
+#### Alan Cloud
+
+Alan's AI-backend that maintains voice deployments and accomplishes all Spoken Language Understanding (SLU) and Natural Language Processing (NLP) tasks.
+
+To get more details on how Alan works, see <a href="https://alan.app/platform" target="_blank">Alan Platform</a>.
+
+## Why Alan?
+
+* **No or minimum changes to your UI**: To voice enable your app, you only need to get the Alan Client SDK and drop it to your app.
+* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components. Alan does all maintenance and voice processing tasks on behalf of your app.
+* **On-the-fly updates**: All changes to the dialogs become available immediately.
+* **Voice flow testing and analytics**: Alan Studio provides advanced tools for testing your dialog flows and getting the analytics data on users' interactions, all in the same console.
+
 
 ## How to start
 
-To bring voice control to a web application or page:
+To add voice a web app or page:
 
-1. [Sign up for Alan Studio](https://studio.alan.app/register) to build and test voice scripts in JavaScript.
-2. Use the Alan Web SDK to embed the Alan button to your application or page. For details, see [Alan AI documentation]( https://alan.app/docs/client-api/web/web-api).
+1. <a href="https://studio.alan.app/register" target="_blank">Sign up for Alan Studio</a> to build voice scripts in JavaScript and test them.
+2. Use the Alan Web SDK to embed the Alan button to your app or page. For details, see Alan AI documentation for the necessary framework:
 
-Check out our [demo](https://alan-ai.github.io/alan-sdk-web/).
+<div style="display:flex; direction:row; flex-wrap: wrap;">
+
+<div style="width:150px; margin-bottom:10px; margin-top:30px">
+<img src="https://alan.app/assets/about/js.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/vanilla" target="_blank">JavaScript</a>
+</div>
+
+<div style="width:120px; margin-bottom:30px; margin-top:30px">
+<img src="https://alan.app/assets/about/react.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/react" target="_blank">React</a>
+</div>
+
+<div style="width:120px; margin-bottom:30px; margin-top:30px">
+<img src="https://alan.app/assets/about/angular.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/angular" target="_blank">Angular</a>
+</div>
+
+<div style="width:120px; margin-bottom:30px; margin-top:30px">
+<img src="https://alan.app/assets/about/vue.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/vue" target="_blank">Vue</a>
+</div>
+
+<div style="width:150px; margin-bottom:30px; margin-top:30px">
+<img src="https://alan.app/assets/about/ember.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/ember" target="_blank">Ember</a>
+</div>
+
+<div style="width:150px; margin-bottom:30px; margin-top:30px">
+<img src="https://alan.app/assets/about/electron.svg" height="35px" align="center" style="border:0px"/><a href="https://alan.app/docs/client-api/web/electron" target="_blank">Electron</a>
+</div>
+
+
+</div>
+
+Check out our <a href="https://alan-ai.github.io/alan-sdk-web/" target="_blank">demo</a>.
 
 ## Downloads
 
-* [Alan package](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
-* [Alan Web SDK releases](https://github.com/alan-ai/alan-sdk-web/releases)
+* <a href="https://www.npmjs.com/package/@alan-ai/alan-sdk-web" target="_blank">Alan package</a>
+* <a href="https://github.com/alan-ai/alan-sdk-web/releases" target="_blank">Alan Web SDK releases</a>
 
 ## Example apps
 
@@ -34,18 +91,22 @@ In the [Examples](https://github.com/alan-ai/alan-sdk-web/tree/master/examples) 
 * Ember
 * Electron
 
-To install and launch an app, follow the instructions in the README file inside the app folder. Then press the Alan button and ask: "What is Alan Web SDK for?" or "What can I do here?" (for the Order Drinks app).
+To launch the app, follow the instructions in the README file inside the example app folder. Then press the Alan button and try interacting with Alan.
 
-## What is Alan?
+## Other platforms
 
-Alan is a conversational AI platform that lets you build voice assistants, chatbots and conversational bots for your business from scratch. It offers the whole set of tools to design, embed and host a voice interface solution for your app:
+You may also want to try Alan Client SDKs for the following platforms:
 
-* [Alan Studio](https://studio.alan.app/) — a web portal where you can create and manage a dialog scenario for the conversational assistant or chatbot
-* [Voice SDKs](https://github.com/alan-ai) to embed the Alan voice to applications running on multiple platforms, both web and mobile
-* Alan Cloud — Alan's AI-backend that hosts and runs voice scripts, and accomplishes all Spoken Language Understanding (SLU) and Natural Language Processing (NLP) tasks
+* <a href="https://github.com/alan-ai/alan-sdk-ios" target="_blank">iOS</a>
+* <a href="https://github.com/alan-ai/alan-sdk-android" target="_blank">Android</a>
+* <a href="https://github.com/alan-ai/alan-sdk-flutter" target="_blank">Flutter</a>
+* <a href="https://github.com/alan-ai/alan-sdk-ionic" target="_blank">Ionic</a>
+* <a href="https://github.com/alan-ai/alan-sdk-cordova" target="_blank">Apache Cordova</a>
+* <a href="https://github.com/alan-ai/alan-sdk-reactnative" target="_blank">React Native</a>
+* <a href="https://github.com/alan-ai/alan-sdk-pcf" target="_blank">Power Apps</a>
 
-To enable voice control in your app, Alan leverages its NLP-powered engine with industry’s best Automatic Speech Recognition and Speech Synthesis tools and methods. There is no need to create datasets or train your voice solution on your own: Alan automatically trains on voice commands using your app’s terms.
 
 ## Have questions?
 
 If you have any questions or if something is missing in the documentation, please [contact us](mailto:support@alan.app), or tweet us [@alanvoiceai](https://twitter.com/alanvoiceai). We love hearing from you!)
+
