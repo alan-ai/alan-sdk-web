@@ -68,11 +68,17 @@
             } else if (o.audio) {
                 playState = PLAY_ACTIVE;
                 fireEvent('playStart');
-                audioElement.setAttribute("src", o.audio)
+                audioElement.setAttribute("src", o.audio);
+                audioElement.removeEventListener("ended", onPlayStop, false);
+                audioElement.addEventListener("ended", onPlayStop, false);
             } else {
                 console.error('invalid queue item');
             }
         }
+    }
+
+    function onPlayStop() {
+        fireEvent('playStop');
     }
 
     function fireEvent(event, o1, o2) {
@@ -412,6 +418,32 @@
         connect._config.version   = config.version;
         connect._config.url       = config.baseURL + "/ws_project/" + projectId;
         connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
+        function signupEvent(name, handler) {
+            alanAudio.on(name, handler);
+            connect._addCleanup(function() {
+                alanAudio.off(name,  handler);
+            });
+        }
+        function passEventToWorker(name) {
+            function handler(a1, a2) {
+                if (name === 'frame' && alanAudio.isPlaying()) {
+                    return;
+                }
+                connect._worker.postMessage(['onAudioEvent', name, a1, a2]);
+            }
+            signupEvent(name, handler);
+        }
+        function passEventToClient(name) {
+            function handler(e1) {
+                connect._fire(name, e1);
+            }
+            signupEvent(name, handler);
+        }
+        passEventToWorker('frame');
+        passEventToWorker('micStop');
+        passEventToWorker('playStart');
+        passEventToClient('text');
+        passEventToClient('command');
         return connect;
     }
 
@@ -443,9 +475,11 @@ function alanBtn(options) {
     var btnDisabled = false;
     var hideS2TPanel = false;
     var pinned = false;
+    var alanButtonVersion = '1.8.7';
 
     var btnInstance = {
         // Common public API
+        version: alanButtonVersion,
         setVisualState: function (visualState) {
             if (btnDisabled) {
                 return;
@@ -685,13 +719,18 @@ function alanBtn(options) {
     var alanBtnDisabledMessage = document.createElement('div');
     var soundOnAudioDoesNotExist = false;
     var soundOffAudioDoesNotExist = false;
-    var soundOnAudio = new Audio(baseUrl + '/resources/sounds/soundOn.m4a');
+    var soundNextAudioDoesNotExist = false;
+    var soundOnAudio = new Audio(baseUrl + '/resources/sounds/soundOn.m4a?v=' + alanButtonVersion);
     soundOnAudio.onerror = function() {
         soundOnAudioDoesNotExist = true;
     };
-    var soundOffAudio = new Audio(baseUrl + '/resources/sounds/soundOff.m4a');
+    var soundOffAudio = new Audio(baseUrl + '/resources/sounds/soundOff.m4a?v=' + alanButtonVersion);
     soundOffAudio.onerror = function() {
         soundOffAudioDoesNotExist = true;
+    };
+    var soundNextAudio = new Audio(baseUrl + '/resources/sounds/soundNext.m4a?v=' + alanButtonVersion);
+    soundNextAudio.onerror = function() {
+        soundNextAudioDoesNotExist = true;
     };
 
     // Specify layers for different statets to make smooth animation
@@ -824,7 +863,22 @@ function alanBtn(options) {
         return value;
     }
 
-    btnZIndex = options.zIndex || 4;
+    function findHighestZIndex() {
+        var elements = document.getElementsByTagName("*");
+        var defaultZIndex = 4;
+        for (var i = 0; i < elements.length; i++) {
+            var zindex = Number.parseInt(
+                document.defaultView.getComputedStyle(elements[i], null).getPropertyValue("z-index"),
+                10
+            );
+            if (zindex > defaultZIndex) {
+                defaultZIndex = zindex;
+            }
+        }
+        return defaultZIndex;
+    }
+
+    btnZIndex = options.zIndex || (findHighestZIndex() + 1);
     btnIconsZIndex = btnZIndex - 2;
     btnTextPanelsZIndex = btnZIndex - 1;
     btnBgLayerZIndex = btnZIndex - 3;
@@ -838,8 +892,8 @@ function alanBtn(options) {
         rootEl.style.bottom = bottomBtnPos;
     }
 
-    if (options.zIndex !== undefined) {
-        rootEl.style.zIndex =  options.zIndex;
+    if (btnZIndex) {
+        rootEl.style.zIndex =  btnZIndex;
     }
     
     rootEl.style.position = options.position ? options.position : 'fixed';
@@ -1662,7 +1716,7 @@ function alanBtn(options) {
     }
 
     function _activateAlanButton(resolve) {
-        playSoundOn();
+        playSoundNext();
         if (options.onBeforeMicStart) {
             options.onBeforeMicStart();
         }
@@ -1847,12 +1901,6 @@ function alanBtn(options) {
     }
 
     function onOptionsReceived(data) {
-        if (data && data.web && data.web.hidden === true) {
-            hideAlanBtn();
-        } else {
-            showAlanBtn();
-        }
-
         if (data && data.web && data.web.hideS2TPanel === true) {
             hideSpeach2TextPanel();
         } else {
@@ -1875,6 +1923,12 @@ function alanBtn(options) {
 
         if (isLocalStorageAvailable && data) {
             localStorage.setItem(getStorageKey(), JSON.stringify(data));
+        }
+
+        if (data && data.web && data.web.hidden === true) {
+            hideAlanBtn();
+        } else {
+            showAlanBtn();
         }
     }
 
@@ -1957,6 +2011,7 @@ function alanBtn(options) {
     function onPlayStop(e) {
         // console.log('BTN: play stop');
         isAlanSpeaking = false;
+        playSoundNext();
         switchState(LISTENING);
         turnOffVoiceFn();
     }
@@ -1999,6 +2054,7 @@ function alanBtn(options) {
 
     function playSoundOn() {
         if (!soundOnAudioDoesNotExist) {
+            soundOnAudio.currentTime = 0;
             soundOnAudio.play().catch(function () {
                 console.log("No activation sound, because the user didn't interact with the button");
             });
@@ -2007,7 +2063,17 @@ function alanBtn(options) {
 
     function playSoundOff() {
         if (!soundOffAudioDoesNotExist) {
+            soundOffAudio.currentTime = 0;
             soundOffAudio.play().catch(function () {
+                console.log("No deactivation sound, because the user didn't interact with the button");
+            });
+        }
+    }
+
+    function playSoundNext() {
+        if (!soundNextAudioDoesNotExist) {
+            soundNextAudio.currentTime = 0;
+            soundNextAudio.play().catch(function () {
                 console.log("No deactivation sound, because the user didn't interact with the button");
             });
         }
@@ -2547,7 +2613,9 @@ function alanBtn(options) {
 
     function onMouseUp(e) {
         var curPos;
+        var posInfo;
         if (dndIsDown) {
+            posInfo = e.touches ? e.touches[0] : e;
             dndIsDown = false;
             rootEl.style.transition = dndAnimTransition;
             if (isLeftAligned) {
@@ -2556,6 +2624,10 @@ function alanBtn(options) {
                 curPos = +rootEl.style.right.replace('px', '');
             }
             if (curPos <= window.innerWidth / 2) {
+                if (Math.abs(dndInitialMousePositions[0] - posInfo.clientX) < 15 && Math.abs(dndInitialMousePositions[1] - posInfo.clientY) < 15) {
+                    afterMouseMove = false;
+                }
+
                 moveBtnToTheSameSide();
             } else {
                 moveBtnToTheOppositeSide();
