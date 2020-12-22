@@ -468,6 +468,12 @@
 
 (function(ns) {
     "use strict";
+    var alanButtonVersion = '1.8.8';
+
+    if (window.alanBtn) {
+        console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
+    }
+
 function alanBtn(options) {
 
     options = options || {};
@@ -475,7 +481,8 @@ function alanBtn(options) {
     var btnDisabled = false;
     var hideS2TPanel = false;
     var pinned = false;
-    var alanButtonVersion = '1.8.7';
+    
+    console.log('Alan: v.' + alanButtonVersion);
 
     var btnInstance = {
         // Common public API
