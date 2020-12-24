@@ -33,6 +33,7 @@
 
     var PLAY_IDLE      = 'idle';
     var PLAY_ACTIVE    = 'active';
+    var PLAY_STOPPED   = 'stopped';
 
     var handlers       = {};
     var micStream      = null;
@@ -44,7 +45,7 @@
     var sampleRate     = 0;
     var firstSampleTs  = 0;
     var frameCount     = 0;
-    var playState      = PLAY_IDLE;
+    var playState      = PLAY_STOPPED;
     var audioQueue     = [];
 
     if (window.AudioContext) {
@@ -140,6 +141,7 @@
     };
 
     ns.playText = function(text) {
+        playState = PLAY_IDLE;
         audioQueue.push({text: text});
         _handleQueue();
     };
@@ -190,6 +192,7 @@
                 navigator.getUserMedia({audio: true}, onGetUserMedia, onGetUserMediaError);
             }
         }
+        playState = PLAY_IDLE;
         if (onStarted) {
             onStarted();
             onStarted = null;
@@ -198,6 +201,7 @@
 
     ns.stop = function() {
         sampleRate = -1;
+        playState = PLAY_STOPPED;
         if (micStream) {
             for (var i = 0; i < micStream.getTracks().length; i++) {
                 var track = micStream.getAudioTracks()[0];
@@ -222,7 +226,6 @@
             audioElement.src = "";
         }
         audioQueue = [];
-        playState = PLAY_IDLE;
     };
 
 })(typeof(window) !== 'undefined' ? (function() {window.alanAudio = {}; return window.alanAudio})() : exports);
@@ -468,7 +471,7 @@
 
 (function(ns) {
     "use strict";
-    var alanButtonVersion = '1.8.8';
+    var alanButtonVersion = '1.8.9';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -481,6 +484,7 @@ function alanBtn(options) {
     var btnDisabled = false;
     var hideS2TPanel = false;
     var pinned = false;
+    var absolutePosition = false;
     
     console.log('Alan: v.' + alanButtonVersion);
 
@@ -604,9 +608,6 @@ function alanBtn(options) {
     if (options.mode === 'tutor') {
         mode = 'tutor';
         pinned = true;
-    } else if (options.mode === 'tutor-preview') {
-        mode = 'tutor-preview';
-        pinned = true;
     } else if (options.mode === 'demo') {
         mode = 'demo';
     } else {
@@ -615,6 +616,10 @@ function alanBtn(options) {
 
     if (options.position === 'absolute' || options.pinned) {
         pinned = true;
+    }
+
+    if (options.position === 'absolute') {
+        absolutePosition = true;
     }
 
     // Btn states
@@ -721,9 +726,8 @@ function alanBtn(options) {
     var lowVolumeMicIcon = document.createElement('img');
     var noVoiceSupportMicIcon = document.createElement('img');
     var offlineIcon = document.createElement('img');
-    var textHolder = document.createElement('div');
-    var textHolderTextWrapper = document.createElement('div');
-    var alanBtnDisabledMessage = document.createElement('div');
+    var recognisedTextHolder = document.createElement('div');
+    var recognisedTextContent = document.createElement('div');
     var soundOnAudioDoesNotExist = false;
     var soundOffAudioDoesNotExist = false;
     var soundNextAudioDoesNotExist = false;
@@ -805,24 +809,17 @@ function alanBtn(options) {
             bottomPos: 0,
             topPos: 0,
         },
-        "tutor-preview": {
-            btnSize: 64,
-            rightPos: 0,
-            leftPos: 0,
-            bottomPos: 0,
-            topPos: 0,
-        },
         "demo": {
             btnSize: 80,
-            rightPos: 36,
-            leftPos: 36,
+            rightPos: 20,
+            leftPos: 20,
             bottomPos: 36,
             topPos: 0,
         },
         "component": {
             btnSize: options.size || 64,
-            rightPos: 40,
-            leftPos: 40,
+            rightPos: 20,
+            leftPos: 20,
             bottomPos: 40,
             topPos: 0,
         }
@@ -906,66 +903,45 @@ function alanBtn(options) {
     rootEl.style.position = options.position ? options.position : 'fixed';
 
     // Define styles for block with recognised text
-    var textHolderDefaultBorderColor = '#d5eded';
-    var textHolderDefaultBoxShadow = '0px 12px 50px -14px rgba(0,0,0,0.2), 0px 12px 50px -14px rgba(0,169,255,0.3)';
-    textHolderTextWrapper.classList.add('alanBtn-text-holder-text-wrapper');
-    textHolder.classList.add('alanBtn-text-holder');
-    setInnerPositionBasedOnOptions(textHolder, options);
-    if (isLeftAligned) {
-        textHolderTextWrapper.style.textAlign = 'left';
-        textHolder.style.left = '0px';
-    } else {
-        textHolder.style.right = '0px';
-        textHolder.style.float = 'right';
-    }
-    
-    textHolder.style.height = btnSize + 'px';
-    textHolder.style.minHeight = btnSize + 'px';
-    textHolder.style.maxHeight = btnSize + 'px';
-    textHolder.style.borderRadius = btnSize + 'px';
-    textHolder.style.borderRadius = btnSize + 'px';
-    textHolder.style.zIndex = btnTextPanelsZIndex;
-    textHolder.style.borderColor = textHolderDefaultBorderColor;
-    textHolder.style.boxShadow = textHolderDefaultBoxShadow;
+    recognisedTextContent.classList.add('alanBtn-recognised-text-content');
+    recognisedTextHolder.classList.add('alanBtn-recognised-text-holder');
+    setTextPanelPosition(recognisedTextHolder);
 
-    // Define styles for message that informs that Alan Btn was disabled
-    setInnerPositionBasedOnOptions(alanBtnDisabledMessage, options);
-    alanBtnDisabledMessage.style.zIndex = btnTextPanelsZIndex;
-    alanBtnDisabledMessage.style.borderRadius = '7px';
-    alanBtnDisabledMessage.style.backgroundColor = '#ffffff';
-    alanBtnDisabledMessage.style.boxShadow = '0 2px 50px 0 rgba(86, 98, 112, 0.1)';
-    alanBtnDisabledMessage.style.position = 'absolute';
-    alanBtnDisabledMessage.style.color = 'red';
-    alanBtnDisabledMessage.style.width = '200px';
-    alanBtnDisabledMessage.style.fontSize = '14px';
-    alanBtnDisabledMessage.style.padding = '16px';
-    alanBtnDisabledMessage.innerText = "This project's voice button has been disabled.";
-    alanBtnDisabledMessage.classList.add("alan-btn-disabled-msg");
-
-    function setInnerPositionBasedOnOptions(el, options) {
+    function setTextPanelPosition(el) {
+        var _btnSize = parseInt(btnSize, 10);
         if (isTopAligned) {
-            el.style.top = 0;
+            el.style.bottom = '';
+            el.style.top = (absolutePosition ? 0 : parseInt(rootEl.style.top, 10)) + _btnSize / 2 + 'px';
         } else {
-            el.style.bottom = 0;
+            el.style.top = '';
+            el.style.bottom = (absolutePosition ? 0 : parseInt(rootEl.style.bottom, 10)) + _btnSize / 2 + 'px';
         }
         if (isLeftAligned) {
-            el.style.left = 0;
+            el.style.textAlign = 'left';
+            el.style.right = '';
+            el.style.left = (absolutePosition ? 0 : parseInt(rootEl.style.left, 10)) + _btnSize + 10 + 'px';
         } else {
-            el.style.right = 0;
+            el.style.textAlign = 'right';
+            el.style.left = '';
+            el.style.right = (absolutePosition ? 0 : parseInt(rootEl.style.right, 10)) + _btnSize + 10 + 'px';
         }
+        if (absolutePosition) {
+            recognisedTextHolder.style.position = 'absolute';
+        }
+        recognisedTextHolder.style.zIndex = btnTextPanelsZIndex;
     }
 
     function setStylesBasedOnSide() {
         if (isLeftAligned) {
             btn.style.left = 0;
             btn.style.right = '';
-            textHolder.classList.remove('left-side');
-            textHolder.classList.add('right-side');
+            recognisedTextHolder.classList.remove('left-side');
+            recognisedTextHolder.classList.add('right-side');
         } else {
             btn.style.right = 0;
             btn.style.left = '';
-            textHolder.classList.remove('right-side');
-            textHolder.classList.add('left-side');
+            recognisedTextHolder.classList.remove('right-side');
+            recognisedTextHolder.classList.add('left-side');
         }
     }
 
@@ -1360,24 +1336,22 @@ function alanBtn(options) {
             keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;} .alanBtn:hover{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
         }
         
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder { position:relative; max-width:440px; font-family: \'Lato\', sans-serif; font-size: 20px;line-height: 1.2;     min-height: 40px;  color: #000; font-weight: normal; background-color: rgba(245, 252, 252, 0.8);border-radius:32px 0 0 32px; display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
+        keyFrames += getStyleSheetMarker() + '.alanBtn-recognised-text-holder { position:fixed; transform: translateY(' + (isTopAligned ? '-' : '') +'50%); max-width:236px; font-family: \'Lato\', sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
         
-        keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-text-holder {max-width: calc(100% - ' + sideBtnPos + ');}';
+        keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-recognised-text-holder {max-width: calc(100vw - ' + (parseInt(sideBtnPos,10) + parseInt(btnSize,10) + 20 + 'px') + ');}';
 
-        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.left-side { padding-right: ' + btnSize + 'px;}';
-        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.right-side { padding-left: ' + btnSize + 'px;}';
-        
-        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.left-side .alanBtn-text-holder-text-wrapper {padding: 0 12px;}';
-        keyFrames += getStyleSheetMarker() + ' .alanBtn-text-holder.with-text.right-side .alanBtn-text-holder-text-wrapper {padding: 0 12px;}';
-        
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-long  { font-size: 19px!important;line-height: 1.4!important;}  ';
-        keyFrames += getStyleSheetMarker() + '.alanBtn-text-holder-super-long  { font-size: 14px!important;line-height: 1.4!important;}  ';
+        keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.with-text.left-side { text-align: left;}';
+        keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.with-text.right-side { text-align: right;}';
 
-        keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-text-holder-long  { font-size: 12px!important;line-height: 1.4!important;}  ';
-        keyFrames += getStyleSheetMarker(true) + '.mobile .alanBtn-text-holder-super-long  { font-size: 11px!important;line-height: 1.4!important;}  ';
+
+        keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.with-text .alanBtn-recognised-text-content {padding: 10px;}';
+        
+        keyFrames += getStyleSheetMarker(true) + '.alanBtn-recognised-text-holder-long  { font-size: 12px!important;line-height: 1.4!important;}  ';
+        keyFrames += getStyleSheetMarker(true) + '.alanBtn-recognised-text-holder-super-long  { font-size: 11px!important;line-height: 1.4!important;}  ';
 
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-appearing {  animation: text-holder-appear 800ms ease-in-out forwards;  }';
         keyFrames += getStyleSheetMarker() + '.alanBtn-text-disappearing {  animation: text-holder-disappear 800ms ease-in-out forwards;    }';
+        keyFrames += getStyleSheetMarker() + '.alanBtn-text-disappearing-immediately {  animation: none; opactity: 0;   }';
 
         keyFrames += getStyleSheetMarker() + '.alan-btn-disabled {  pointer-events: none;  opacity: .5;  transition: all .2s ease-in-out;  }';
         keyFrames += getStyleSheetMarker() + '.shadow-appear {  opacity: 1 !important;  }\n';
@@ -1391,8 +1365,6 @@ function alanBtn(options) {
 
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn:hover .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
-
-        keyFrames += getStyleSheetMarker() + ".alan-btn-disabled-msg:after {content: '';  position: absolute;  bottom: 2px;  right: 0px;  height: 30px;  width: 90px;  background-size: 100% auto;  background-repeat: no-repeat;  background-position: center center;}";
 
         keyFrames += getStyleSheetMarker() + '.triangleMicIconBg {background-image:url(' + micTriangleIconImg + '); pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + micCircleIconImg + '); pointer-events: none;}';
@@ -1813,50 +1785,39 @@ function alanBtn(options) {
         this.blur();
     });
 
-    function showRecognisedText(e, text, forceOnMobile) {
-        // console.info('showRecognisedText');
+    function showRecognisedText(e) {
         var recognisedText = '';
 
-        if (isMobile() && forceOnMobile !== true) {
-            return;
-        }
-
-        if (hideS2TPanel) {
+        if (hideS2TPanel || dndIsDown) {
             return;
         }
 
         recognisedTextVisible = true;
         if (!options.hideRecognizedText) {
-            if (textHolder.classList.value.indexOf('alanBtn-text-appearing') === -1) {
-                textHolder.classList.add('with-text');
-                textHolder.classList.add('alanBtn-text-appearing');
-                textHolder.classList.remove('alanBtn-text-disappearing');
+            if (recognisedTextHolder.classList.value.indexOf('alanBtn-text-appearing') === -1) {
+                recognisedTextHolder.classList.add('with-text');
+                recognisedTextHolder.classList.add('alanBtn-text-appearing');
+                recognisedTextHolder.classList.remove('alanBtn-text-disappearing');
             }
 
-            if (text) {
-                recognisedText = text;
-                textHolderTextWrapper.innerHTML = text;
-            } else {
+            if (e.text) {
                 recognisedText = e.text;
                 if (recognisedText.length > 200) {
                     recognisedText = recognisedText.substr(0, 200);
                 }
-                textHolderTextWrapper.innerHTML = recognisedText;
+                recognisedTextContent.innerHTML = recognisedText;
             }
 
             if (recognisedText.length > 60 && recognisedText.length <= 80) {
-                textHolder.classList.add('alanBtn-text-holder-long');
+                recognisedTextHolder.classList.add('alanBtn-recognised-text-holder-long');
             } else if (recognisedText.length > 80) {
-                textHolder.classList.add('alanBtn-text-holder-super-long');
+                recognisedTextHolder.classList.add('alanBtn-recognised-text-holder-super-long');
             } else {
-                textHolder.classList.remove('alanBtn-text-holder-long');
-                textHolder.classList.remove('alanBtn-text-holder-super-long');
+                recognisedTextHolder.classList.remove('alanBtn-recognised-text-holder-long');
+                recognisedTextHolder.classList.remove('alanBtn-recognised-text-holder-super-long');
             }
-            if (text) {
-                textHolder.appendChild(textHolderTextWrapper);
-            } else {
-                replaceRecognisedText(recognisedText);
-            }
+           
+            replaceRecognisedText(recognisedText);
         }
     }
 
@@ -1865,27 +1826,27 @@ function alanBtn(options) {
             return;
         }
         if (!options.hideRecognizedText) {
-            textHolderTextWrapper.innerText = recognisedText;
+            recognisedTextContent.innerText = recognisedText;
         }
     }
 
-    function hideRecognisedText(delay, forceOnMobile) {
-        // console.info('hideRecognisedText');
-        if (isMobile() && forceOnMobile !==true ) {
-            return;
-        }
-
+    function hideRecognisedText(delay, noAnimation) {
         if (!options.hideRecognizedText && recognisedTextVisible) {
-            textHolder.classList.add('alanBtn-text-disappearing');
-            textHolder.classList.remove('alanBtn-text-appearing');
+            if (noAnimation === true) {
+                recognisedTextHolder.classList.add('alanBtn-text-disappearing-immediately');
+                recognisedTextHolder.classList.remove('alanBtn-text-appearing');
+            } else {
+                recognisedTextHolder.classList.add('alanBtn-text-disappearing');
+                recognisedTextHolder.classList.remove('alanBtn-text-appearing');
+            }
 
             recognisedTextVisible = false;
 
             setTimeout(function () {
-                textHolderTextWrapper.innerHTML = '';
-                textHolder.classList.remove('alanBtn-text-holder-long');
-                textHolder.classList.remove('alanBtn-text-holder-super-long');
-                textHolder.classList.remove('with-text');
+                recognisedTextContent.innerHTML = '';
+                recognisedTextHolder.classList.remove('alanBtn-recognised-text-holder-long');
+                recognisedTextHolder.classList.remove('alanBtn-recognised-text-holder-super-long');
+                recognisedTextHolder.classList.remove('with-text');
             }, delay || 810);
         }
     }
@@ -2471,9 +2432,9 @@ function alanBtn(options) {
     function showAlanBtn() {
         rootEl.innerHTML = '';
 
-        textHolder.appendChild(textHolderTextWrapper);
+        recognisedTextHolder.appendChild(recognisedTextContent);
 
-        rootEl.appendChild(textHolder);
+        rootEl.appendChild(recognisedTextHolder);
         rootEl.appendChild(btn);
         btnDisabled = false;
     }
@@ -2482,9 +2443,6 @@ function alanBtn(options) {
         if (!isTutorMode()) {
             alanAudio.stop();
             rootEl.innerHTML = '';
-            if (mode === 'demo') {
-                rootEl.appendChild(alanBtnDisabledMessage);
-            }
             btnDisabled = true;
         }
     }
@@ -2570,7 +2528,6 @@ function alanBtn(options) {
     if (!options.rootEl) {
         body.appendChild(rootEl);
     }
-    // showRecognisedText({})
 
     //#endregion
 
@@ -2602,6 +2559,7 @@ function alanBtn(options) {
         var posInfo = e.touches ? e.touches[0] : e;
         if (!dndBackAnimFinished || (e.buttons !== undefined && e.buttons !== 1)) return;
         dndIsDown = true;
+        
         rootEl.style.transition = '0ms';
         if (!dndSideBtnPos) {
             dndSideBtnPos = isLeftAligned ? rootEl.offsetLeft : window.innerWidth - rootEl.offsetLeft;
@@ -2631,7 +2589,7 @@ function alanBtn(options) {
                 curPos = +rootEl.style.right.replace('px', '');
             }
             if (curPos <= window.innerWidth / 2) {
-                if (Math.abs(dndInitialMousePositions[0] - posInfo.clientX) < 15 && Math.abs(dndInitialMousePositions[1] - posInfo.clientY) < 15) {
+                if (posInfo && Math.abs(dndInitialMousePositions[0] - posInfo.clientX) < 15 && Math.abs(dndInitialMousePositions[1] - posInfo.clientY) < 15) {
                     afterMouseMove = false;
                 }
 
@@ -2650,17 +2608,18 @@ function alanBtn(options) {
         var posInfo = e.touches ? e.touches[0] : e;
 
         if (dndIsDown) {
+            hideRecognisedText(0, true);
             e.preventDefault();
             afterMouseMove = true;
 
             if (isLeftAligned) {
                 dndFinalLeftPos = (dndSideBtnPos + posInfo.clientX - dndInitialMousePositions[0]);
                 dndFinalRightPos = window.innerWidth - dndFinalLeftPos;
-                rootEl.style.left = (dndSideBtnPos + posInfo.clientX - dndInitialMousePositions[0]) + 'px';
+                rootEl.style.left = correctXPos(dndSideBtnPos + posInfo.clientX - dndInitialMousePositions[0]) + 'px';
             } else {
                 dndFinalRightPos = (dndSideBtnPos - posInfo.clientX + dndInitialMousePositions[0]);
                 dndFinalLeftPos = window.innerWidth - dndFinalRightPos;
-                rootEl.style.right = (dndSideBtnPos - posInfo.clientX + dndInitialMousePositions[0]) + 'px';
+                rootEl.style.right = correctXPos(dndSideBtnPos - posInfo.clientX + dndInitialMousePositions[0]) + 'px';
             }
 
             if (isTopAligned) {
@@ -2681,6 +2640,16 @@ function alanBtn(options) {
         return yPos;
     }
 
+    function correctXPos(xPos) {
+        var defDelta = 10;
+        if (xPos < 0) {
+            return defDelta;
+        } else if (xPos > window.innerWidth - btnSize - defDelta) {
+            return window.innerWidth - btnSize - defDelta;
+        }
+        return xPos;
+    }
+
     function changeBtnSide(side) {
         if (side === 'to-left') {
             rootEl.style.right = '';
@@ -2697,6 +2666,7 @@ function alanBtn(options) {
     function moveBtnToTheSameSide() {
         rootEl.style.transition = dndAnimTransition;
         rootEl.style[isLeftAligned ? 'left' : 'right'] = dndSideBtnPos + 'px';
+        setTextPanelPosition(recognisedTextHolder);
     }
 
     function moveBtnToTheOppositeSide() {
@@ -2705,7 +2675,9 @@ function alanBtn(options) {
         if (isLeftAligned) {
             rootEl.style.left = finalBtnPos;
             setTimeout(function () {
+                isLeftAligned = false;
                 rootEl.style.right = dndSideBtnPos + 'px';
+                setTextPanelPosition(recognisedTextHolder);
                 changeBtnSide('to-right');
                 dndBackAnimFinished = true;
             }, dndAnimDelay);
@@ -2713,6 +2685,8 @@ function alanBtn(options) {
             rootEl.style.right = finalBtnPos;
             setTimeout(function () {
                 rootEl.style.left = dndSideBtnPos + 'px';
+                isLeftAligned = true;
+                setTextPanelPosition(recognisedTextHolder);
                 changeBtnSide('to-left');
                 dndBackAnimFinished = true;
             }, dndAnimDelay);
