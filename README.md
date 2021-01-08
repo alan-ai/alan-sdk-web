@@ -87,5 +87,6 @@ You may also want to try Alan Client SDKs for the following platforms:
 
 ## Have questions?
 
-If you have any questions or if something is missing in the documentation, please [contact us](mailto:support@alan.app), or tweet us [@alanvoiceai](https://twitter.com/alanvoiceai). We love hearing from you!)
-
+If you have any questions or something is missing in the documentation:
+- Join [Alan AI Slack community](https://app.slack.com/client/TL55N530A) for support
+- Contact us at [support@alan.app](mailto:support@alan.app)
