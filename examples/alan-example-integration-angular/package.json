@@ -11,7 +11,7 @@
   },
   "private": true,
   "dependencies": {
-    "@alan-ai/alan-sdk-web": "1.7.0",
+    "@alan-ai/alan-sdk-web": "^1.7.x",
     "@angular/animations": "~8.2.14",
     "@angular/common": "~8.2.14",
     "@angular/compiler": "~8.2.14",
