@@ -51,6 +51,6 @@
     "node": "8.* || >= 10.*"
   },
   "dependencies": {
-    "@alan-ai/alan-sdk-web": "^1.1.0"
+    "@alan-ai/alan-sdk-web": "^1.7.x"
   }
 }
