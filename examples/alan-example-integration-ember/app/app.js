@@ -12,8 +12,14 @@ const App = Application.extend({
 
 loadInitializers(App, config.modulePrefix);
 
-alanBtn({ 
-  key: '314203787ccd9370974f1bf6b6929c1b2e956eca572e1d8b807a3e2338fdd0dc/prod'
- });
+alanBtn({
+  key: '4d292cf043b0a2ea4d0bf347580da6fd2e956eca572e1d8b807a3e2338fdd0dc/prod',
+  onCommand: (commandData) => {
+    console.log(commandData);
+    if (commandData.command === 'command-example') {
+      document.getElementById('rocket').style.transform = 'rotate(180deg)';
+    }
+  }
+});
 
 export default App;
