@@ -35,6 +35,7 @@
     var audioContext = null;
     var AudioContext = window.AudioContext || window.webkitAudioContext;
     var stopMicTimer = null;
+    var skipFrame = false;
 
     var isIE         = false || !!document.documentMode;
     var isEdge       = !isIE && !!window.StyleMedia;
@@ -63,7 +64,9 @@
                 console.log('audio worker initialized');
                 break;
             case 'page':
-                fireEvent('frame', config.sampleRate, data['page']);
+                if (!skipFrame) {
+                    fireEvent('frame', config.sampleRate, data['page']);
+                }
                 break;
             case 'done':
                 encoder.removeEventListener("message", callback);
@@ -258,6 +261,13 @@
             audioElement.currentTime = 0;
             audioElement.src = "";
         }
+    };
+
+    ns.skipExternalSounds = function() {
+        skipFrame = true;
+        setTimeout(function(){
+            skipFrame = false;
+        }, 250);
     };
 
     function stopMicrophone() {
@@ -525,16 +535,21 @@
 
 (function(ns) {
     "use strict";
-    var alanButtonVersion = '1.8.14';
+    var alanButtonVersion = '1.8.16';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
 
     var alanAltText = 'Alan voice assistant';
+    var currentProjectId = null;
 
     function getDebugInfo() {
         var info = '\nDebug Info:\n';
+
+        info += 'alanBtn: v.' + alanButtonVersion + '\n';
+        info += 'alanSDK: v.' + window.alanSDKVersion + '\n';
+        info += 'projectId: ' + (currentProjectId || 'unknown')  + '\n';
 
         info += 'navigator: \n';
 
@@ -770,6 +785,7 @@ function alanBtn(options) {
     var isBottomAligned = false;
 
     var recognisedTextVisible = false;
+    var playReadyToListenSound = true;
 
     var turnOffTimeout = 30000;
     var turnOffVoiceFn;
@@ -814,8 +830,9 @@ function alanBtn(options) {
     var micTriangleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n';
     var micCircleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n';
     
-    var micIcon = document.createElement('div');
+    var micIconDiv = document.createElement('div');
     var defaultStateBtnIcon = document.createElement('img');
+    var customLogoIcon = document.createElement('img');
     var logoState1 = document.createElement('img');
     var logoState2 = document.createElement('img');
     var logoState3 = document.createElement('img');
@@ -889,6 +906,7 @@ function alanBtn(options) {
         if (navigator.onLine) {
             switchState(getDefaultBtnState());
         } else {
+            alanAudio.stop();
             switchState(OFFLINE);
         }
     }
@@ -1094,18 +1112,20 @@ function alanBtn(options) {
     if (isPreviewMode()) {
         btn.style.cursor = 'default';
     } else {
-        btn.style.cursor = 'pointer';
+        if(!isMobile()) {
+            btn.style.cursor = 'pointer';
+        }    
     }
 
     // Define base styles for microphone btn
-    micIcon.style.minHeight = '100%';
-    micIcon.style.height = '100%';
-    micIcon.style.maxHeight = '100%';
-    micIcon.style.top = '0%';
-    micIcon.style.left = '0%';
-    micIcon.style.zIndex = btnIconsZIndex;
-    micIcon.style.position = 'relative';
-    micIcon.style.transition = 'all 0.4s ease-in-out';
+    micIconDiv.style.minHeight = '100%';
+    micIconDiv.style.height = '100%';
+    micIconDiv.style.maxHeight = '100%';
+    micIconDiv.style.top = '0%';
+    micIconDiv.style.left = '0%';
+    micIconDiv.style.zIndex = btnIconsZIndex;
+    micIconDiv.style.position = 'relative';
+    micIconDiv.style.transition = 'all 0.4s ease-in-out';
 
     function setUpStylesForLogoParts(logos) {
         for (var i = 0; i < logos.length; i++) {
@@ -1125,7 +1145,7 @@ function alanBtn(options) {
             logos[i].style.animationTimingFunction = 'ease-in-out';
             logos[i].style.opacity = 0;
             logos[i].alt = alanAltText + ' logo ' + i;
-            micIcon.appendChild(logos[i]);
+            micIconDiv.appendChild(logos[i]);
         }
     }
 
@@ -1167,7 +1187,25 @@ function alanBtn(options) {
     defaultStateBtnIcon.style.pointerEvents = 'none';
     defaultStateBtnIcon.style.borderRadius = '50%';
     defaultStateBtnIcon.alt = alanAltText + ' button icon';
-    micIcon.appendChild(defaultStateBtnIcon);
+
+    customLogoIcon.src = defaultStateBtnIconImg;
+    customLogoIcon.style.minHeight = '100%';
+    customLogoIcon.style.height = '100%';
+    customLogoIcon.style.maxHeight = '100%';
+    customLogoIcon.style.minWidth = '100%';
+    customLogoIcon.style.width = '100%';
+    customLogoIcon.style.maxWidth = '100%';
+    customLogoIcon.style.top = '0%';
+    customLogoIcon.style.left = '0%';
+    customLogoIcon.style.position = 'absolute';
+    customLogoIcon.style.pointerEvents = 'none';
+    customLogoIcon.style.borderRadius = '50%';
+    customLogoIcon.style.opacity = '0';
+    customLogoIcon.style.animation = 'opacity 300ms ease-in-out';
+    customLogoIcon.alt = alanAltText + ' button icon';
+
+    micIconDiv.appendChild(defaultStateBtnIcon);
+    micIconDiv.appendChild(customLogoIcon);
 
     micTriangleIcon.style.minHeight = '100%';
     micTriangleIcon.style.height = '100%';
@@ -1370,7 +1408,7 @@ function alanBtn(options) {
     var allIcons = [
         micCircleIcon,
         micTriangleIcon,
-        micIcon,
+        micIconDiv,
         offlineIcon,
         lowVolumeMicIcon,
         noVoiceSupportMicIcon,
@@ -1404,7 +1442,7 @@ function alanBtn(options) {
     btn.appendChild(btnBgSpeaking);
     btn.appendChild(btnBgIntermediate);
     btn.appendChild(btnBgUnderstood);
-    btn.appendChild(micIcon);
+    btn.appendChild(micIconDiv);
     btn.appendChild(micTriangleIcon);
     btn.appendChild(micCircleIcon);
     btn.appendChild(disconnectedMicLoaderIcon);
@@ -1449,9 +1487,11 @@ function alanBtn(options) {
         style.type = 'text/css';
 
         keyFrames += '.alanBtn-root * {  box-sizing: border-box; font-family: \'Lato\', sans-serif; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}';
-
+        
+        var hoverSelector = !isMobile() ? ':hover' : ':active';
+        
         if (!isMobile()) {
-            keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;} .alanBtn:hover{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
+            keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;} .alanBtn' + hoverSelector + '{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
         }
         
         keyFrames += getStyleSheetMarker() + '.alanBtn-recognised-text-holder { position:fixed; transform: translateY(' + (isTopAligned ? '-' : '') +'50%); max-width:236px; font-family: \'Lato\', sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
@@ -1473,18 +1513,18 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + '.shadow-disappear {  opacity: 0 !important;  transition: all .1s linear !important;  }';
 
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
-        keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn:hover .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-offline .alanBtn' + hoverSelector + ' .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
 
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-no-voice-support .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
-        keyFrames += getStyleSheetMarker(true) + '.alan-btn-no-voice-support .alanBtn:hover .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-no-voice-support .alanBtn' + hoverSelector + ' .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
 
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
-        keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn:hover .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
+        keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn' + hoverSelector + ' .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
 
         keyFrames += getStyleSheetMarker() + '.triangleMicIconBg {background-image:url(' + micTriangleIconImg + '); pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + micCircleIconImg + '); pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + ' img {pointer-events: none;}';
-        keyFrames += getStyleSheetMarker() + ':hover .triangleMicIconBg-default {opacity:0!important;}';
+        keyFrames += getStyleSheetMarker() + '' + hoverSelector + ' .triangleMicIconBg-default {opacity:0!important;}';
 
 
         keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-gradient', '0%{backgroundPosition: 0 0;}50%{backgroundPosition: -100% 0;}100%{backgroundPosition: 0 0;}');
@@ -1698,15 +1738,15 @@ function alanBtn(options) {
                 keyFrames += '}';
             }
 
-            if(tempLayer.hover && !isMobile()){
-                keyFrames += getStyleSheetMarker() + '.alanBtn:hover .alanBtn-bg-' + stateNameClass + ':not(.super-hidden) {';
+            if(tempLayer.hover){
+                keyFrames += getStyleSheetMarker() + '.alanBtn' + hoverSelector + ' .alanBtn-bg-' + stateNameClass + ':not(.super-hidden) {';
                 keyFrames += 'background-image: linear-gradient(122deg,'+tempLayer.hover.color[0]+','+tempLayer.hover.color[1]+');';
                 keyFrames += '}';
                 keyFrames += getStyleSheetMarker() + '.alanBtn:active .alanBtn-bg-' + stateNameClass + ':not(.super-hidden) {';
                 keyFrames += 'background-image: linear-gradient(122deg,'+tempLayer.hover.color[0]+','+tempLayer.hover.color[1]+');';
                 keyFrames += '}';
 
-                keyFrames += getStyleSheetMarker() + '.alanBtn:hover .alanBtn-oval-bg-' + stateNameClass + ':not(.super-hidden) {';
+                keyFrames += getStyleSheetMarker() + '.alanBtn' + hoverSelector + ' .alanBtn-oval-bg-' + stateNameClass + ':not(.super-hidden) {';
                 keyFrames += 'background-image: linear-gradient(122deg,'+tempLayer.hover.color[0]+','+tempLayer.hover.color[1]+');';
                 keyFrames += '}';
                 keyFrames += getStyleSheetMarker() + '.alanBtn:active .alanBtn-oval-bg-' + stateNameClass + ':not(.super-hidden) {';
@@ -1744,6 +1784,7 @@ function alanBtn(options) {
             alanAudio = options.alanAudio;
         }
         if (options.key) {
+            currentProjectId = options.key;
             tryReadSettingsFromLocalStorage();
             switchState(getDefaultBtnState(DISCONNECTED));
 
@@ -1810,7 +1851,7 @@ function alanBtn(options) {
     }
 
     function _activateAlanButton(resolve) {
-        playSoundOn();
+        //playSoundOn();
         if (options.onBeforeMicStart) {
             options.onBeforeMicStart();
         }
@@ -1889,6 +1930,7 @@ function alanBtn(options) {
         }
         if (alanAudio) {
             if (state === 'default') {
+                coldPlayForSoundNext();
                 activateAlanButton();
             } else {
                 alanAudio.stop();
@@ -2015,6 +2057,10 @@ function alanBtn(options) {
             localStorage.setItem(getStorageKey(), JSON.stringify(data));
         }
 
+        if (data && data.web && data.web.playReadyToListenSound !== undefined) {
+            applyPlayReadyToListenSoundOptions(data.web.playReadyToListenSound);
+        }
+
         if (data && data.web && data.web.hidden === true) {
             hideAlanBtn();
         } else {
@@ -2030,7 +2076,9 @@ function alanBtn(options) {
         }
 
         if (res === 'disconnected') {
-            switchState(getDefaultBtnState(DISCONNECTED));
+            if (previousState !== OFFLINE) {
+                switchState(getDefaultBtnState(DISCONNECTED));
+            }
         } else if (res === 'authorized') {
             if (previousState) {
                 switchState(previousState);
@@ -2043,6 +2091,7 @@ function alanBtn(options) {
     function onMicStart() {
         // console.log('BTN: mic. started', new Date());
         switchState(LISTENING);
+        playSoundNext();
         isAlanActive = true;
 
         if (window.tutorProject) {
@@ -2090,14 +2139,13 @@ function alanBtn(options) {
 
         if (err) {
             if (err.name === 'NotAllowedError') {
-                alert(MIC_BLOCKED_MSG);
                 switchState(PERMISSION_DENIED);
+                setTimeout(function () { alert(MIC_BLOCKED_MSG); }, 300);
             } else if(err.name === 'SecurityError') {
-                alert(NOT_SECURE_ORIGIN_MSG);
                 switchState(NOT_SECURE_ORIGIN);
+                setTimeout(function () { alert(NOT_SECURE_ORIGIN_MSG); }, 300);
             } else {
                 console.error(err.name + ' ' + err.message);
-                //alert(err.name + ' ' + err.message);
             }
         }
     }
@@ -2171,12 +2219,20 @@ function alanBtn(options) {
         }
     }
 
+    function coldPlayForSoundNext() {
+        soundNextAudio.loop = true;
+        soundNextAudio.muted = true;
+        soundNextAudio.play().catch(function (err) { console.log(err); });
+    }
+
     function playSoundNext() {
+        if (!playReadyToListenSound) return;
+        alanAudio.skipExternalSounds();
         if (!soundNextAudioDoesNotExist) {
             soundNextAudio.currentTime = 0;
-            soundNextAudio.play().catch(function () {
-                console.log("No listening sound, because the user didn't interact with the button");
-            });
+            soundNextAudio.muted = false;
+            soundNextAudio.loop = false;
+            soundNextAudio.play().catch(function (err) { console.log(err); });
         }
     }
 
@@ -2197,9 +2253,8 @@ function alanBtn(options) {
 
         if (newState === DEFAULT) {
             btn.style.animation = '';
-            micIcon.style.animation = '';
+            micIconDiv.style.animation = '';
             micTriangleIcon.style.animation = '';
-
             btnBgDefault.classList.remove('super-hidden');
             btnBgDefault.style.opacity = onOpacity;
             btnOval1.style.animation = '';
@@ -2208,7 +2263,7 @@ function alanBtn(options) {
             btnOval2.style.opacity = 0;
             changeBgColors(DEFAULT);
 
-            micIcon.style.opacity = 1;
+            micIconDiv.style.opacity = 1;
             micTriangleIcon.style.opacity = 0;
 
             hideLayers([
@@ -2219,7 +2274,7 @@ function alanBtn(options) {
             ]);
         } else if (newState === LISTENING) {
             btn.style.animation = pulsatingAnimation;
-            micIcon.style.animation = pulsatingMicAnimation;
+            micIconDiv.style.animation = pulsatingMicAnimation;
             micTriangleIcon.style.animation = pulsatingTriangleMicAnimation;
 
             btnBgListening.classList.remove('super-hidden');
@@ -2230,7 +2285,7 @@ function alanBtn(options) {
 
             changeBgColors(LISTENING);
 
-            micIcon.style.opacity = 1;
+            micIconDiv.style.opacity = 1;
             micTriangleIcon.style.opacity = 1;
 
             hideLayers([
@@ -2262,7 +2317,7 @@ function alanBtn(options) {
             btnOval1.style.opacity = 1;
             btnOval2.style.opacity = 1;
             changeBgColors(INTERMEDIATE);
-            micIcon.style.opacity = 1;
+            micIconDiv.style.opacity = 1;
             micTriangleIcon.style.opacity = 1;
 
             hideLayers([
@@ -2281,7 +2336,7 @@ function alanBtn(options) {
             btnOval2.style.opacity = 1;
             changeBgColors(UNDERSTOOD);
 
-            micIcon.style.opacity = 1;
+            micIconDiv.style.opacity = 1;
             micTriangleIcon.style.opacity = 1;
 
             hideLayers([
@@ -2306,8 +2361,12 @@ function alanBtn(options) {
 
         if (newState === DEFAULT) {
             micTriangleIcon.classList.add('triangleMicIconBg-default');
+            customLogoIcon.style.opacity = 0;
         } else {
             micTriangleIcon.classList.remove('triangleMicIconBg-default');
+            if (customBtnLogoUrl) {
+                customLogoIcon.style.opacity = 1;
+            }
         }
 
         tempLogoParts = [
@@ -2372,7 +2431,7 @@ function alanBtn(options) {
                 noVoiceSupportMicIcon.style.opacity = 0;
                 lowVolumeMicIcon.style.opacity = 1;
             }
-            micIcon.style.opacity = 0;
+            micIconDiv.style.opacity = 0;
             micTriangleIcon.style.opacity = 0;
             disconnectedMicLoaderIcon.style.opacity = 0;
             offlineIcon.style.opacity = 0;
@@ -2396,10 +2455,10 @@ function alanBtn(options) {
             btnOval2.style.opacity = 0;
 
             if (newState === DISCONNECTED) {
-                micIcon.style.opacity = 0;
+                micIconDiv.style.opacity = 0;
                 disconnectedMicLoaderIcon.style.opacity = 1;
             } else {
-                micIcon.style.opacity = 0;
+                micIconDiv.style.opacity = 0;
                 disconnectedMicLoaderIcon.style.opacity = 0;
                 offlineIcon.style.opacity = 1;
             }
@@ -2455,10 +2514,10 @@ function alanBtn(options) {
         ];
 
         for (var i = 0; i < tempBgLayers.length; i++) {
+            tempBgLayers[i].classList.add('alanBtn-oval-bg-' + newStateName);
             for (var j = 0; j < tempBgLayerClasses.length; j++) {
                 tempBgLayers[i].classList.remove(tempBgLayerClasses[j]);
             }
-            tempBgLayers[i].classList.add('alanBtn-oval-bg-' + newStateName);
         }
     }
 
@@ -2558,17 +2617,17 @@ function alanBtn(options) {
     function applyLogoOptions(data) {
         if (data && data.web && data.web.logoUrl) {
             customBtnLogoUrl = data.web.logoUrl;
-            defaultStateBtnIcon.src = data.web.logoUrl;
-            micIcon.src = data.web.logoUrl;
-            micTriangleIcon.src = data.web.logoUrl;
+            customLogoIcon.src = customBtnLogoUrl;
             micTriangleIcon.classList.remove('triangleMicIconBg');
         } else {
             customBtnLogoUrl = null;
-            defaultStateBtnIcon.src = defaultStateBtnIconImg;
-            delete micIcon.src;
-            delete micTriangleIcon.src;
+            customLogoIcon.src = defaultStateBtnIconImg;
             micTriangleIcon.classList.add('triangleMicIconBg');
         }
+    }
+
+    function applyPlayReadyToListenSoundOptions(playSound){
+        playReadyToListenSound = playSound;
     }
 
     rootEl.classList.add("alanBtn-root");
@@ -2787,5 +2846,6 @@ ns.alanBtn = alanBtn;
 ns.alanBtn.getDebugInfo = getDebugInfo;
 
 })(window);
+
 return alanBtn;
 }));
