@@ -5,6 +5,10 @@ import {
     animate,
     transition,
 } from '@angular/animations';
+import {
+  AlanCommand,
+  AlanService,
+} from './alan.service';
 
 const animDuration = 300;
 
@@ -32,32 +36,32 @@ export class AppComponent implements AfterViewInit {
     selectedDessert = '';
     orderDetails = '';
 
-    @ViewChild('stepper', { static: false }) stepper: any;
+    @ViewChild('stepper', { static: false })
+    stepper: any;
 
-    constructor() {
-        window.addEventListener('select-coffee', (e: any) => {
-            this.selectDrink(e.detail.item);
-        }, false);
-
-        window.addEventListener('select-dessert', (e: any) => {
-            this.selectDessert(e.detail.item);
-        }, false);
-
-        window.addEventListener('highlight', (e: any) => {
-            this.highlight(e.detail.item);
-        }, false);
-
-        window.addEventListener('go-to-next-step', () => {
-            this.goToNextStep();
-        }, false);
-
-        window.addEventListener('go-to-prev-step', () => {
-            this.goToPrevStep();
-        }, false);
-
-        window.addEventListener('finish-order', () => {
-            this.finishOrder();
-        }, false);
+    constructor(private alanService: AlanService) {
+        alanService.onCommand.subscribe((command: AlanCommand) => {
+            switch (command.command) {
+                case 'select-coffee':
+                    this.selectDrink(command.data.item);
+                    break;
+                case 'select-dessert':
+                    this.selectDessert(command.data.item);
+                    break;
+                case 'highlight':
+                    this.highlight(command.data.item);
+                    break;
+                case 'go-to-next-step':
+                    this.goToNextStep();
+                    break;
+                case 'go-to-prev-step':
+                    this.goToPrevStep();
+                    break;
+                case 'finish-order':
+                    this.finishOrder();
+                    break;
+            }
+        });
     }
 
     ngAfterViewInit() {
