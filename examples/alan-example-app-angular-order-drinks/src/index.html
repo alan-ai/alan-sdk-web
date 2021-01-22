@@ -13,16 +13,5 @@
 <body>
 <app-root></app-root>
 <div class="alan-btn"></div>
-<script type="text/javascript"
- src="https://studio.alan.app/web/lib/alan_lib.js"></script>
-<script>
-  var alanBtnInstance = alanBtn({
-    key: "4a9800e3673b8bf7fcdb8ab082683c6b2e956eca572e1d8b807a3e2338fdd0dc/stage",
-    onCommand: function (commandData) {
-        window.dispatchEvent(new CustomEvent(commandData.command, {detail: commandData.data}));
-    },
-    rootEl: document.getElementById("alan-btn"),
-  });
-</script>
 </body>
 </html>

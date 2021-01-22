@@ -1,9 +1,9 @@
 <template>
   <div class="hello">
-    <h1>{{ msg }}</h1>
+    <h1 id="rocket">{{ msg }}</h1>
     <p>
       For a guide and recipes on how to use the Alan Button check out the
-      <a href="https://alan.app/docs/client-api/web/vue" target="_blank" rel="noopener">Alan Documentation</a>.
+      <a href="https://alan.app/docs/client-api/web/vue" target="_blank" rel="noopener">Alan Documentation</a>. Available commands: "execute command".
     </p>
   </div>
 </template>
