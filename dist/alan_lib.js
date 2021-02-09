@@ -18,6 +18,8 @@
     var MIC_ACTIVE   = 'micActive';
     var MIC_STOPPED  = 'micStopped';
 
+    var AUDIO_RUNNING = 'audioRunning';
+
     var config = {
         bufferLength: 4096,
         sampleRate:   16000,
@@ -46,7 +48,8 @@
     } else {
         audioContext = new AudioContext();
     }
-    console.log('audioContext.sampleRate = ', audioContext.sampleRate);
+    console.log('audioContext.sampleRate = ', audioContext.sampleRate, 'state = ', audioContext.state);
+    audioContext.resume().then(()=> fireEvent(AUDIO_RUNNING));
 
     var microphoneStream = null;
     var microphoneNode = null;
@@ -88,6 +91,7 @@
             return Promise.resolve(microphoneNode);
         }
         return navigator.mediaDevices.getUserMedia({audio : true}).then(stream => {
+            fireEvent('micAllowed');
             microphoneStream = stream;
             microphoneNode = audioContext.createMediaStreamSource(stream);
             microphoneNode.connect(gainNode);
@@ -176,6 +180,10 @@
                 recv: {codec: 'mp3;base64', sampleRate: 16000},
             };
         }
+    };
+
+    ns.isAudioRunning = function() {
+        return audioContext && audioContext.state === 'running';
     };
 
     ns.isPlaying = function() {
@@ -299,7 +307,7 @@
         baseURL: "wss://" +
             ((host.indexOf('$') === 0 || host === '') ? window.location.host : host ),
         codec: 'opus',
-        version: '2.0.41',
+        version: '2.0.42',
         platform: 'web',
     };
 
@@ -535,7 +543,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.17';
+    var alanButtonVersion = '1.8.18';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -543,6 +551,7 @@
 
     var alanAltText = 'Alan voice assistant';
     var currentProjectId = null;
+    var firstClick = null;
 
     function getDebugInfo() {
         var info = '\nDebug Info:\n';
@@ -714,6 +723,10 @@ function alanBtn(options) {
         }
     };
 
+    function sendClientEvent(param) {
+        window.tutorProject.call('clientEvent', param);
+    }
+
 
     //Host
     var host = 'studio.alan.app';
@@ -776,7 +789,6 @@ function alanBtn(options) {
     var previousState = null;
     var isAlanSpeaking = false;
     var isAlanActive = false;
-    var customBtnLogoUrl;
 
     // Set btn position flags
     var isLeftAligned = false;
@@ -826,13 +838,18 @@ function alanBtn(options) {
     var rootEl = options.rootEl || document.createElement('div');
     var body = document.getElementsByTagName('body')[0];
     var btn = document.createElement('div');
-    var defaultStateBtnIconImg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==';
-    var micTriangleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n';
-    var micCircleIconImg = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n';
+
+    var micIconSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==';
+    var roundedTriangleSecondLayerSrc = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n';
+    var circleSecondLayerSrc = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n';
     
     var micIconDiv = document.createElement('div');
-    var defaultStateBtnIcon = document.createElement('img');
-    var customLogoIcon = document.createElement('img');
+
+    var defaultStateBtnIconImg = document.createElement('img');
+    var listenStateBtnIconImg = document.createElement('img');
+    var processStateBtnIconImg = document.createElement('img');
+    var replyStateBtnIconImg = document.createElement('img');
+
     var logoState1 = document.createElement('img');
     var logoState2 = document.createElement('img');
     var logoState3 = document.createElement('img');
@@ -843,12 +860,15 @@ function alanBtn(options) {
     var logoState8 = document.createElement('img');
     var logoState9 = document.createElement('img');
     var logoState10 = document.createElement('img');
-    var micTriangleIcon = document.createElement('div');
-    var micCircleIcon = document.createElement('div');
-    var disconnectedMicLoaderIcon = document.createElement('img');
-    var lowVolumeMicIcon = document.createElement('img');
-    var noVoiceSupportMicIcon = document.createElement('img');
-    var offlineIcon = document.createElement('img');
+    
+    var roundedTriangleIconDiv = document.createElement('div');
+    var circleIconDiv = document.createElement('div');
+
+    var disconnectedMicLoaderIconImg = document.createElement('img');
+    var lowVolumeMicIconImg = document.createElement('img');
+    var noVoiceSupportMicIconImg = document.createElement('img');
+    var offlineIconImg = document.createElement('img');
+
     var recognisedTextHolder = document.createElement('div');
     var recognisedTextContent = document.createElement('div');
     var soundOnAudioDoesNotExist = false;
@@ -1155,9 +1175,8 @@ function alanBtn(options) {
     micIconDiv.style.position = 'relative';
     micIconDiv.style.transition = 'all 0.4s ease-in-out';
 
-    function setUpStylesForLogoParts(logos) {
+    function setUpStylesForAnimatedLogoParts(logos) {
         for (var i = 0; i < logos.length; i++) {
-            var obj = logos[i];
             logos[i].style.minHeight = '100%';
             logos[i].style.height = '100%';
             logos[i].style.maxHeight = '100%';
@@ -1172,7 +1191,7 @@ function alanBtn(options) {
             logos[i].style.animationDuration = '9s';
             logos[i].style.animationTimingFunction = 'ease-in-out';
             logos[i].style.opacity = 0;
-            logos[i].alt = alanAltText + ' logo ' + i;
+            logos[i].alt = alanAltText + ' logo animated part ' + i;
             micIconDiv.appendChild(logos[i]);
         }
     }
@@ -1188,7 +1207,7 @@ function alanBtn(options) {
     logoState9.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1sb2dvLXN0YXRlLTA5PC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWxvZ28tc3RhdGUtMDkiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJsb2dvIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNi4wMDAwMDAsIDIxLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMjQsOS44NjY2NjY2NyBMMTguMjcxMTkyNCwyMSBMNi40NzczOTQ2NiwyMSBDNS43MDEzMTEwMSwyMS4wMDAxMDYzIDQuOTg5NjE3NzYsMjEuMjk5OTMzOSA0LjYzMDYyNzg1LDIxLjk4OTE5NDUgTDE1LjQ5OTE2NTksMS4xMjE2MDEzOCBDMTUuODQ2MDc4MSwwLjQ1NTUyOTk2NCAxNi41MjIzNTU1LDAuMDI5NDg4MzMzNSAxNy4yNjc4MTEsMC4wMDE0NzIxODExNSBDMTcuMjM3NzA4OSwwLjAwMDQ5MjY3MjYzNSAxNy4yMDc1MjM3LDEuOTU5OTMzNjZlLTE0IDE3LjE3NzI2NTMsMS45NTM5OTI1MmUtMTQgTDMwLjY1Mzc4MjMsMi4xMzkzNTE1ZS0xNCBDMzAuNjc5OTk1LDIuMTM5ODMzODVlLTE0IDMwLjcwNjEzNDIsMC4wMDA0OTI5NzU2OTEgMzAuNzMyMTg5LDAuMDAxNDcyMTgxMTUgQzI5LjczMjcyMjksMC4wMzM5OTQyODkxIDI4LjgyNDcxODksMC42MDMyMDY0MiAyOC4zNTk5OTksMS40OTU0Njg1IEwyNCw5Ljg2NjY2NjY3IFoiIGlkPSJzaGFwZS0yIiBmaWxsLW9wYWNpdHk9IjAuOSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNMTguMjcxMTkyNCwyMSBMMTMuMDU2Mzg5NiwzMC44NzgzOTg2IEMxMi42OTczNTIzLDMxLjU2Nzc1MDIgMTEuOTg1NTIzOSwzMiAxMS4yMDkzMzc4LDMyIEwxLjcwNzg2NDk1LDMyIEMwLjk0MDgwMjc5NiwzMiAwLjMxODk3NjA1OSwzMS4zNzcwOTE4IDAuMzE4OTc2MDU5LDMwLjYwODY5NTcgQzAuMzE4OTc2MDU5LDMwLjM4NDU5NDggMC4zNzMwMTU2MTgsMzAuMTYzODEgMC40NzY0OTcxMDYsMjkuOTY1MTI1NiBMNC42MzA2Mjc4NSwyMS45ODkxOTQ1IEM0Ljk4OTYxNzc2LDIxLjI5OTkzMzkgNS43MDEzMTEwMSwyMS4wMDAxMDYzIDYuNDc3Mzk0NjYsMjEgTDE4LjI3MTE5MjQsMjEgWiIgaWQ9InNoYXBlIiBmaWxsLW9wYWNpdHk9IjAuNSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNMTEuMjA5MzM3OCwzMiBDMTEuOTg1NTIzOSwzMiAxMi42OTczNTIzLDMxLjU2Nzc1MDIgMTMuMDU2Mzg5NiwzMC44NzgzOTg2IEwxOC4yNzExOTI0LDIwLjg2NTk3NzMgTDIzLjk1NjQ1ODIsMjAuODY1MTk4MyBDMjQuNzMwOTU2MiwyMC44NjUwOTIyIDI1LjQ0MTU4NjcsMjEuMjk1Mzg0OCAyNS44MDE0ODQ2LDIxLjk4MjM3NjcgTDI5Ljk4MTkwMTUsMjkuOTYyMTc2OSBDMzAuMzM4MzQ0LDMwLjY0MjU3MzIgMzAuMDc2Njg1MiwzMS40ODM1OTk3IDI5LjM5NzQ3MDEsMzEuODQwNjYyMSBDMjkuMTk4MzgzOCwzMS45NDUzMjE1IDI4Ljk3NjkwOTMsMzIgMjguNzUyMDczOCwzMiBMMTEuMjA5MzM3OCwzMiBaIiBpZD0ic2hhcGUiIGZpbGwtb3BhY2l0eT0iMC4zIj48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0yOC4zNTk5OTksMS40OTU0Njg1IEMyOC44MjQ3MTg5LDAuNjAzMjA2NDIgMjkuNzMyNzIyOSwwLjAzMzk5NDI4OTEgMzAuNzMyMTg5LDAuMDAxNDcyMTgxMTUgQzMwLjcwNjEzNDIsMC4wMDA0OTI5NzU2OTEgMzAuNjc5OTk1LC0xLjIzNTI0NDE0ZS0xNCAzMC42NTM3ODIzLC0xLjIzNTcyNjVlLTE0IEwzMC45NDQ0NDQ0LC0xLjQyMTA4NTQ3ZS0xNCBMMzAuODIyNzM0NywtMS4yMzc1MTE4M2UtMTQgQzMwLjc5MjQ3NjMsLTEuMjMxNTg2OTNlLTE0IDMwLjc2MjI5MTEsMC4wMDA0OTI2NzI2MzUgMzAuNzMyMTg5LDAuMDAxNDcyMTgxMTUgQzMxLjQ3NzY0NDUsMC4wMjk0ODgzMzM1IDMyLjE1MzkyMTksMC40NTU1Mjk5NjQgMzIuNTAwODM0MSwxLjEyMTYwMTM4IEw0Ny41MjM1MDI5LDI5Ljk2NTEyNTYgQzQ3LjYyNjk4NDQsMzAuMTYzODEgNDcuNjgxMDIzOSwzMC4zODQ1OTQ4IDQ3LjY4MTAyMzksMzAuNjA4Njk1NyBDNDcuNjgxMDIzOSwzMS4zNzcwOTE4IDQ3LjA1OTE5NzIsMzIgNDYuMjkyMTM1MSwzMiBMMzYuNzkwNjYyMiwzMiBDMzYuMDE0NDc2MSwzMiAzNS4zMDI2NDc3LDMxLjU2Nzc1MDIgMzQuOTQzNjEwNCwzMC44NzgzOTg2IEwyNCw5Ljg2NjY2NjY3IEwyOC4zNTk5OTksMS40OTU0Njg1IFoiIGlkPSJzaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjUiPjwvcGF0aD4KICAgICAgICA8L2c+CiAgICA8L2c+Cjwvc3ZnPg==";
     logoState10.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1sb2dvLXN0YXRlLTEwPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWxvZ28tc3RhdGUtMTAiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJsb2dvIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNi4wMDAwMDAsIDIxLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMTkuNjQwMDAxLDEuNDk1NDY4NSBMMjQsOS44NjY2NjY2NyBMMTguMjcxMTkyNCwyMSBMNi40NzczOTQ2NiwyMSBDNS43MDEzMTEwMSwyMS4wMDAxMDYzIDQuOTg5NjE3NzYsMjEuMjk5OTMzOSA0LjYzMDYyNzg1LDIxLjk4OTE5NDUgTDE1LjQ5OTE2NTksMS4xMjE2MDEzOCBDMTUuODQ2MDc4MSwwLjQ1NTUyOTk2NCAxNi41MjIzNTU1LDAuMDI5NDg4MzMzNSAxNy4yNjc4MTEsMC4wMDE0NzIxODExNSBDMTguMjY3Mjc3MSwwLjAzMzk5NDI4OTEgMTkuMTc1MjgxMSwwLjYwMzIwNjQyIDE5LjY0MDAwMSwxLjQ5NTQ2ODUgWiIgaWQ9InNoYXBlIiBmaWxsLW9wYWNpdHk9IjAuNSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNMTEuMjA5MzM3OCwzMiBMMS43MDc4NjQ5NSwzMiBDMC45NDA4MDI3OTYsMzIgMC4zMTg5NzYwNTksMzEuMzc3MDkxOCAwLjMxODk3NjA1OSwzMC42MDg2OTU3IEMwLjMxODk3NjA1OSwzMC4zODQ1OTQ4IDAuMzczMDE1NjE4LDMwLjE2MzgxIDAuNDc2NDk3MTA2LDI5Ljk2NTEyNTYgTDQuNjMwNjI3ODUsMjEuOTg5MTk0NSBDNC45ODk2MTc3NiwyMS4yOTk5MzM5IDUuNzAxMzExMDEsMjEuMDAwMTA2MyA2LjQ3NzM5NDY2LDIxIEwxOC4yMDEzODg5LDIxIEwxOC4yNzExOTI0LDIwLjg2NTk3NzMgTDIzLjk1NjQ1ODIsMjAuODY1MTk4MyBDMjQuNzMwOTU2MiwyMC44NjUwOTIyIDI1LjQ0MTU4NjcsMjEuMjk1Mzg0OCAyNS44MDE0ODQ2LDIxLjk4MjM3NjcgTDI5Ljk4MTkwMTUsMjkuOTYyMTc2OSBDMzAuMzM4MzQ0LDMwLjY0MjU3MzIgMzAuMDc2Njg1MiwzMS40ODM1OTk3IDI5LjM5NzQ3MDEsMzEuODQwNjYyMSBDMjkuMTk4MzgzOCwzMS45NDUzMjE1IDI4Ljk3NjkwOTMsMzIgMjguNzUyMDczOCwzMiBMMTEuMjA5MzM3OCwzMiBaIiBpZD0ic2hhcGUtMiIgZmlsbC1vcGFjaXR5PSIwLjMiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTI4LjM1OTk5OSwxLjQ5NTQ2ODUgQzI4LjgyNDcxODksMC42MDMyMDY0MiAyOS43MzI3MjI5LDAuMDMzOTk0Mjg5MSAzMC43MzIxODksMC4wMDE0NzIxODExNSBDMzAuNzA2MTM0MiwwLjAwMDQ5Mjk3NTY5MSAzMC42Nzk5OTUsLTEuMjM1MjQ0MTRlLTE0IDMwLjY1Mzc4MjMsLTEuMjM1NzI2NWUtMTQgTDMwLjk0NDQ0NDQsLTEuNDIxMDg1NDdlLTE0IEwzMC44MjI3MzQ3LC0xLjIzNzUxMTgzZS0xNCBDMzAuNzkyNDc2MywtMS4yMzE1ODY5M2UtMTQgMzAuNzYyMjkxMSwwLjAwMDQ5MjY3MjYzNSAzMC43MzIxODksMC4wMDE0NzIxODExNSBDMzEuNDc3NjQ0NSwwLjAyOTQ4ODMzMzUgMzIuMTUzOTIxOSwwLjQ1NTUyOTk2NCAzMi41MDA4MzQxLDEuMTIxNjAxMzggTDQ3LjUyMzUwMjksMjkuOTY1MTI1NiBDNDcuNjI2OTg0NCwzMC4xNjM4MSA0Ny42ODEwMjM5LDMwLjM4NDU5NDggNDcuNjgxMDIzOSwzMC42MDg2OTU3IEM0Ny42ODEwMjM5LDMxLjM3NzA5MTggNDcuMDU5MTk3MiwzMiA0Ni4yOTIxMzUxLDMyIEwzNi43OTA2NjIyLDMyIEMzNi4wMTQ0NzYxLDMyIDM1LjMwMjY0NzcsMzEuNTY3NzUwMiAzNC45NDM2MTA0LDMwLjg3ODM5ODYgTDI0LDkuODY2NjY2NjcgTDI4LjM1OTk5OSwxLjQ5NTQ2ODUgWiIgaWQ9InNoYXBlIiBmaWxsLW9wYWNpdHk9IjAuNSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNMzAuNjUzNzgyMywtMS4yMzU3MjY1ZS0xNCBDMzAuNjc5OTk1LC0xLjIzNTI0NDE0ZS0xNCAzMC43MDYxMzQyLDAuMDAwNDkyOTc1NjkxIDMwLjczMjE4OSwwLjAwMTQ3MjE4MTE1IEMyOS43MzI3MjI5LDAuMDMzOTk0Mjg5MSAyOC44MjQ3MTg5LDAuNjAzMjA2NDIgMjguMzU5OTk5LDEuNDk1NDY4NSBMMjQsOS44NjY2NjY2NyBMMTkuNjQwMDAxLDEuNDk1NDY4NSBDMTkuMTYxMjg0NiwwLjU3NjMzMzA2IDE4LjIxMjE4LC0xLjIxNzg4MzgzZS0xNCAxNy4xNzcyNjUzLC0xLjQyMTA4NTQ3ZS0xNCBMMzAuNjUzNzgyMywtMS4yMzU3MjY1ZS0xNCBaIiBpZD0ic2hhcGUiIGZpbGwtb3BhY2l0eT0iMC45Ij48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=";
 
-    setUpStylesForLogoParts([
+    setUpStylesForAnimatedLogoParts([
         logoState1,
         logoState2,
         logoState3,
@@ -1202,119 +1221,115 @@ function alanBtn(options) {
     ]);
 
     // Define base styles for triangle bellow the microphone btn
-    defaultStateBtnIcon.src = defaultStateBtnIconImg;
-    defaultStateBtnIcon.style.minHeight = '100%';
-    defaultStateBtnIcon.style.height = '100%';
-    defaultStateBtnIcon.style.maxHeight = '100%';
-    defaultStateBtnIcon.style.minWidth = '100%';
-    defaultStateBtnIcon.style.width = '100%';
-    defaultStateBtnIcon.style.maxWidth = '100%';
-    defaultStateBtnIcon.style.top = '0%';
-    defaultStateBtnIcon.style.left = '0%';
-    defaultStateBtnIcon.style.position = 'absolute';
-    defaultStateBtnIcon.style.pointerEvents = 'none';
-    defaultStateBtnIcon.style.borderRadius = '50%';
-    defaultStateBtnIcon.alt = alanAltText + ' button icon';
+    defaultStateBtnIconImg.alt = alanAltText + ' button icon for idle state';
+    listenStateBtnIconImg.alt = alanAltText + ' button icon for listening state';
+    processStateBtnIconImg.alt = alanAltText + ' button icon for processing state';
+    replyStateBtnIconImg.alt = alanAltText + ' button icon for reply state';
 
-    customLogoIcon.src = defaultStateBtnIconImg;
-    customLogoIcon.style.minHeight = '100%';
-    customLogoIcon.style.height = '100%';
-    customLogoIcon.style.maxHeight = '100%';
-    customLogoIcon.style.minWidth = '100%';
-    customLogoIcon.style.width = '100%';
-    customLogoIcon.style.maxWidth = '100%';
-    customLogoIcon.style.top = '0%';
-    customLogoIcon.style.left = '0%';
-    customLogoIcon.style.position = 'absolute';
-    customLogoIcon.style.pointerEvents = 'none';
-    customLogoIcon.style.borderRadius = '50%';
-    customLogoIcon.style.opacity = '0';
-    customLogoIcon.style.animation = 'opacity 300ms ease-in-out';
-    customLogoIcon.alt = alanAltText + ' button icon';
+    var logoImgs = [
+        defaultStateBtnIconImg,
+        listenStateBtnIconImg,
+        processStateBtnIconImg,
+        replyStateBtnIconImg
+    ];
 
-    micIconDiv.appendChild(defaultStateBtnIcon);
-    micIconDiv.appendChild(customLogoIcon);
+    for (var i = 0; i < logoImgs.length; i++) {
+        var logoImgEl = logoImgs[i];
+        logoImgEl.src = micIconSrc;
+        logoImgEl.style.minHeight = '100%';
+        logoImgEl.style.height = '100%';
+        logoImgEl.style.maxHeight = '100%';
+        logoImgEl.style.minWidth = '100%';
+        logoImgEl.style.width = '100%';
+        logoImgEl.style.maxWidth = '100%';
+        logoImgEl.style.top = '0%';
+        logoImgEl.style.left = '0%';
+        logoImgEl.style.position = 'absolute';
+        logoImgEl.style.pointerEvents = 'none';
+        logoImgEl.style.borderRadius = '50%';
+        micIconDiv.appendChild(logoImgEl);
+    }
 
-    micTriangleIcon.style.minHeight = '100%';
-    micTriangleIcon.style.height = '100%';
-    micTriangleIcon.style.maxHeight = '100%';
-    micTriangleIcon.style.minWidth = '100%';
-    micTriangleIcon.style.width = '100%';
-    micTriangleIcon.style.maxWidth = '100%';
-    micTriangleIcon.style.top = '0%';
-    micTriangleIcon.style.left = '0%';
-    micTriangleIcon.style.zIndex = btnIconsZIndex;
-    micTriangleIcon.style.position = 'absolute';
-    micTriangleIcon.style.opacity = 0;
-    micTriangleIcon.style.transition = 'all 0.4s ease-in-out';
-    micTriangleIcon.style.overflow = 'hidden';
-    micTriangleIcon.style.borderRadius = '50%';
-    micTriangleIcon.style.backgroundSize = '100% 100%';
-    micTriangleIcon.style.backgroundPosition = 'center center';
-    micTriangleIcon.style.backgroundRepeat = 'no-repeat';
-    micTriangleIcon.alt = alanAltText + ' microphone icon';
-    micTriangleIcon.classList.add('triangleMicIconBg');
-    micTriangleIcon.classList.add('triangleMicIconBg-default');
+    roundedTriangleIconDiv.style.minHeight = '100%';
+    roundedTriangleIconDiv.style.height = '100%';
+    roundedTriangleIconDiv.style.maxHeight = '100%';
+    roundedTriangleIconDiv.style.minWidth = '100%';
+    roundedTriangleIconDiv.style.width = '100%';
+    roundedTriangleIconDiv.style.maxWidth = '100%';
+    roundedTriangleIconDiv.style.top = '0%';
+    roundedTriangleIconDiv.style.left = '0%';
+    roundedTriangleIconDiv.style.zIndex = btnIconsZIndex;
+    roundedTriangleIconDiv.style.position = 'absolute';
+    roundedTriangleIconDiv.style.opacity = 0;
+    roundedTriangleIconDiv.style.transition = 'all 0.4s ease-in-out';
+    roundedTriangleIconDiv.style.overflow = 'hidden';
+    roundedTriangleIconDiv.style.borderRadius = '50%';
+    roundedTriangleIconDiv.style.backgroundSize = '100% 100%';
+    roundedTriangleIconDiv.style.backgroundPosition = 'center center';
+    roundedTriangleIconDiv.style.backgroundRepeat = 'no-repeat';
+    roundedTriangleIconDiv.alt = alanAltText + ' microphone icon';
+    roundedTriangleIconDiv.classList.add('triangleMicIconBg');
+    roundedTriangleIconDiv.classList.add('triangleMicIconBg-default');
 
-    micCircleIcon.style.minHeight = '100%';
-    micCircleIcon.style.height = '100%';
-    micCircleIcon.style.maxHeight = '100%';
-    micCircleIcon.style.minWidth = '100%';
-    micCircleIcon.style.width = '100%';
-    micCircleIcon.style.maxWidth = '100%';
-    micCircleIcon.style.top = '0%';
-    micCircleIcon.style.left = '0%';
-    micCircleIcon.style.zIndex = btnIconsZIndex;
-    micCircleIcon.style.position = 'absolute';
-    micCircleIcon.style.opacity = 0;
-    micCircleIcon.style.transition = 'all 0.4s ease-in-out';
-    micCircleIcon.style.overflow = 'hidden';
-    micCircleIcon.style.borderRadius = '50%';
-    micCircleIcon.style.backgroundSize = '0% 0%';
-    micCircleIcon.style.backgroundPosition = 'center center';
-    micCircleIcon.style.backgroundRepeat = 'no-repeat';
-    micCircleIcon.alt = alanAltText + ' microphone circle icon';
-    micCircleIcon.classList.add('circleMicIconBg');
+    circleIconDiv.style.minHeight = '100%';
+    circleIconDiv.style.height = '100%';
+    circleIconDiv.style.maxHeight = '100%';
+    circleIconDiv.style.minWidth = '100%';
+    circleIconDiv.style.width = '100%';
+    circleIconDiv.style.maxWidth = '100%';
+    circleIconDiv.style.top = '0%';
+    circleIconDiv.style.left = '0%';
+    circleIconDiv.style.zIndex = btnIconsZIndex;
+    circleIconDiv.style.position = 'absolute';
+    circleIconDiv.style.opacity = 0;
+    circleIconDiv.style.transition = 'all 0.4s ease-in-out';
+    circleIconDiv.style.overflow = 'hidden';
+    circleIconDiv.style.borderRadius = '50%';
+    circleIconDiv.style.backgroundSize = '0% 0%';
+    circleIconDiv.style.backgroundPosition = 'center center';
+    circleIconDiv.style.backgroundRepeat = 'no-repeat';
+    circleIconDiv.alt = alanAltText + ' microphone circle icon';
+    circleIconDiv.classList.add('circleMicIconBg');
 
     // Define base styles for loader mic icon in disconnected state
-    disconnectedMicLoaderIcon.style.minHeight = '70%';
-    disconnectedMicLoaderIcon.style.height = '70%';
-    disconnectedMicLoaderIcon.style.maxHeight = '70%';
-    disconnectedMicLoaderIcon.style.top = '15%';
-    disconnectedMicLoaderIcon.style.left = '15%';
-    disconnectedMicLoaderIcon.style.zIndex = btnIconsZIndex;
-    disconnectedMicLoaderIcon.style.position = 'absolute';
-    disconnectedMicLoaderIcon.style.transition = 'all 0.4s ease-in-out';
-    disconnectedMicLoaderIcon.style.opacity = '0';
-    disconnectedMicLoaderIcon.alt = alanAltText + ' disconnected microphone icon';
-    disconnectedMicLoaderIcon.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgICA8ZyBmaWxsPSIjRkZGIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZD0iTTk2IDBjNTMuMDIgMCA5NiA0Mi45OCA5NiA5NnMtNDIuOTggOTYtOTYgOTZTMCAxNDkuMDIgMCA5NiA0Mi45OCAwIDk2IDB6IiBvcGFjaXR5PSIuMDIiLz4KICAgICAgICA8cGF0aCBkPSJNMTMxLjk2NiAxOS4wOTJjLTMwLTE0LTY1LjI4NC05Ljg0OS05MS4xNDIgMTIuNTc1QzE0Ljk2NiA1NC4wOTIgNi44NSA4My44MSAxMi45MDggMTEzLjk1YzYuMDU4IDMwLjE0MiAzMC4zMDIgNTYuMTkgNjAuMDU4IDY0LjE0MiAzNS4xODMgOS40MDYgNzMtNCA5My0zNC0xNy45MjQgMjMuOTE2LTUyLjM2NiAzOC4yOTMtODMgMzMtMzAuMTY4LTUuMjEtNTcuMTA0LTMxLjExLTY0LTYxLTcuMzQ3LTMxLjgzNS43NzktNTYgMjctODBzODAtMjYgMTA5IDljNS41MzYgNi42ODEgMTMgMTkgMTUgMzQgMSA2IDEgNyAyIDEyIDAgMiAyIDQgNCA0IDMgMCA1LjM3NC0yLjI1NiA1LTYtMy0zMC0yMS41NTYtNTcuMTkzLTQ5LTcweiIgb3BhY2l0eT0iLjQiLz4KICAgIDwvZz4KPC9zdmc+Cg==";
-    disconnectedMicLoaderIcon.style.animation = disconnectedLoaderAnimation;
+    disconnectedMicLoaderIconImg.style.minHeight = '70%';
+    disconnectedMicLoaderIconImg.style.height = '70%';
+    disconnectedMicLoaderIconImg.style.maxHeight = '70%';
+    disconnectedMicLoaderIconImg.style.top = '15%';
+    disconnectedMicLoaderIconImg.style.left = '15%';
+    disconnectedMicLoaderIconImg.style.zIndex = btnIconsZIndex;
+    disconnectedMicLoaderIconImg.style.position = 'absolute';
+    disconnectedMicLoaderIconImg.style.transition = 'all 0.4s ease-in-out';
+    disconnectedMicLoaderIconImg.style.opacity = '0';
+    disconnectedMicLoaderIconImg.alt = alanAltText + ' disconnected microphone icon';
+    disconnectedMicLoaderIconImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgICA8ZyBmaWxsPSIjRkZGIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZD0iTTk2IDBjNTMuMDIgMCA5NiA0Mi45OCA5NiA5NnMtNDIuOTggOTYtOTYgOTZTMCAxNDkuMDIgMCA5NiA0Mi45OCAwIDk2IDB6IiBvcGFjaXR5PSIuMDIiLz4KICAgICAgICA8cGF0aCBkPSJNMTMxLjk2NiAxOS4wOTJjLTMwLTE0LTY1LjI4NC05Ljg0OS05MS4xNDIgMTIuNTc1QzE0Ljk2NiA1NC4wOTIgNi44NSA4My44MSAxMi45MDggMTEzLjk1YzYuMDU4IDMwLjE0MiAzMC4zMDIgNTYuMTkgNjAuMDU4IDY0LjE0MiAzNS4xODMgOS40MDYgNzMtNCA5My0zNC0xNy45MjQgMjMuOTE2LTUyLjM2NiAzOC4yOTMtODMgMzMtMzAuMTY4LTUuMjEtNTcuMTA0LTMxLjExLTY0LTYxLTcuMzQ3LTMxLjgzNS43NzktNTYgMjctODBzODAtMjYgMTA5IDljNS41MzYgNi42ODEgMTMgMTkgMTUgMzQgMSA2IDEgNyAyIDEyIDAgMiAyIDQgNCA0IDMgMCA1LjM3NC0yLjI1NiA1LTYtMy0zMC0yMS41NTYtNTcuMTkzLTQ5LTcweiIgb3BhY2l0eT0iLjQiLz4KICAgIDwvZz4KPC9zdmc+Cg==";
+    disconnectedMicLoaderIconImg.style.animation = disconnectedLoaderAnimation;
 
     // Define base styles for mic icon in low valume state
-    lowVolumeMicIcon.style.minHeight = '100%';
-    lowVolumeMicIcon.style.height = '100%';
-    lowVolumeMicIcon.style.maxHeight = '100%';
-    lowVolumeMicIcon.style.top = '0%';
-    lowVolumeMicIcon.style.left = '0%';
-    lowVolumeMicIcon.style.zIndex = btnIconsZIndex;
-    lowVolumeMicIcon.style.position = 'absolute';
-    lowVolumeMicIcon.style.transition = 'all 0.4s ease-in-out';
-    lowVolumeMicIcon.style.opacity = '0';
-    lowVolumeMicIcon.alt = alanAltText + ' low volume icon';
-    lowVolumeMicIcon.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1taWM8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iQWxhbi1CdXR0b24tLy1BbmltYXRpb24tLy1idXR0b24tbm8tbWljIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8ZyBpZD0iaWNvbiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjIuMDAwMDAwLCAxOS4wMDAwMDApIiBmaWxsPSIjRkZGRkZGIiBmaWxsLXJ1bGU9Im5vbnplcm8iPgogICAgICAgICAgICA8cGF0aCBkPSJNMzIsMTguNDczNjg0MiBDMzIsMjUuNzE5NDczNyAyNi43OCwzMS42OTI2MzE2IDIwLDMyLjY5ODQyMTEgTDIwLDQwIEMyMCw0MS4xMDQ1Njk1IDE5LjEwNDU2OTUsNDIgMTgsNDIgQzE2Ljg5NTQzMDUsNDIgMTYsNDEuMTA0NTY5NSAxNiw0MCBMMTYsMzIuNjk4NDIxMSBDOS4yMiwzMS42OTI2MzE2IDQsMjUuNzE5NDczNyA0LDE4LjQ3MzY4NDIgTDQsMTggQzQsMTYuODk1NDMwNSA0Ljg5NTQzMDUsMTYgNiwxNiBDNy4xMDQ1Njk1LDE2IDgsMTYuODk1NDMwNSA4LDE4IEw4LDE4LjQ3MzY4NDIgQzgsMjQuMTQxODY5OCAxMi40NzcxNTI1LDI4LjczNjg0MjEgMTgsMjguNzM2ODQyMSBDMjMuNTIyODQ3NSwyOC43MzY4NDIxIDI4LDI0LjE0MTg2OTggMjgsMTguNDczNjg0MiBMMjgsMTggQzI4LDE2Ljg5NTQzMDUgMjguODk1NDMwNSwxNiAzMCwxNiBDMzEuMTA0NTY5NSwxNiAzMiwxNi44OTU0MzA1IDMyLDE4IEwzMiwxOC40NzM2ODQyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjgiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTE4LC00LjUyNzM3MjYzZS0xNCBDMjEuMzEzNzA4NSwtNC42MTg1Mjc3OGUtMTQgMjQsMi43NTY5ODMzOCAyNCw2LjE1Nzg5NDc0IEwyNCwxOC40NzM2ODQyIEMyNCwyMS44NzQ1OTU2IDIxLjMxMzcwODUsMjQuNjMxNTc4OSAxOCwyNC42MzE1Nzg5IEMxNC42ODYyOTE1LDI0LjYzMTU3ODkgMTIsMjEuODc0NTk1NiAxMiwxOC40NzM2ODQyIEwxMiw2LjE1Nzg5NDc0IEMxMiwyLjc1Njk4MzM4IDE0LjY4NjI5MTUsLTQuNTI3MzcyNjNlLTE0IDE4LC00LjYxODUyNzc4ZS0xNCBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC42Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLjgxLDMuMjcgTDM0LjczLDM0LjE5IEMzNS40MzE0MDE2LDM0Ljg5MTQwMTYgMzUuNDMxNDAxNiwzNi4wMjg1OTg0IDM0LjczLDM2LjczIEMzNC4wMjg1OTg0LDM3LjQzMTQwMTYgMzIuODkxNDAxNiwzNy40MzE0MDE2IDMyLjE5LDM2LjczIEwxLjI3LDUuODEgQzAuNTY4NTk4MzY4LDUuMTA4NTk4MzcgMC41Njg1OTgzNjgsMy45NzE0MDE2MyAxLjI3LDMuMjcgQzEuOTcxNDAxNjMsMi41Njg1OTgzNyAzLjEwODU5ODM3LDIuNTY4NTk4MzcgMy44MSwzLjI3IFoiIGlkPSJQYXRoIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
+    lowVolumeMicIconImg.style.minHeight = '100%';
+    lowVolumeMicIconImg.style.height = '100%';
+    lowVolumeMicIconImg.style.maxHeight = '100%';
+    lowVolumeMicIconImg.style.top = '0%';
+    lowVolumeMicIconImg.style.left = '0%';
+    lowVolumeMicIconImg.style.zIndex = btnIconsZIndex;
+    lowVolumeMicIconImg.style.position = 'absolute';
+    lowVolumeMicIconImg.style.transition = 'all 0.4s ease-in-out';
+    lowVolumeMicIconImg.style.opacity = '0';
+    lowVolumeMicIconImg.alt = alanAltText + ' low volume icon';
+    lowVolumeMicIconImg.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1taWM8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iQWxhbi1CdXR0b24tLy1BbmltYXRpb24tLy1idXR0b24tbm8tbWljIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8ZyBpZD0iaWNvbiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjIuMDAwMDAwLCAxOS4wMDAwMDApIiBmaWxsPSIjRkZGRkZGIiBmaWxsLXJ1bGU9Im5vbnplcm8iPgogICAgICAgICAgICA8cGF0aCBkPSJNMzIsMTguNDczNjg0MiBDMzIsMjUuNzE5NDczNyAyNi43OCwzMS42OTI2MzE2IDIwLDMyLjY5ODQyMTEgTDIwLDQwIEMyMCw0MS4xMDQ1Njk1IDE5LjEwNDU2OTUsNDIgMTgsNDIgQzE2Ljg5NTQzMDUsNDIgMTYsNDEuMTA0NTY5NSAxNiw0MCBMMTYsMzIuNjk4NDIxMSBDOS4yMiwzMS42OTI2MzE2IDQsMjUuNzE5NDczNyA0LDE4LjQ3MzY4NDIgTDQsMTggQzQsMTYuODk1NDMwNSA0Ljg5NTQzMDUsMTYgNiwxNiBDNy4xMDQ1Njk1LDE2IDgsMTYuODk1NDMwNSA4LDE4IEw4LDE4LjQ3MzY4NDIgQzgsMjQuMTQxODY5OCAxMi40NzcxNTI1LDI4LjczNjg0MjEgMTgsMjguNzM2ODQyMSBDMjMuNTIyODQ3NSwyOC43MzY4NDIxIDI4LDI0LjE0MTg2OTggMjgsMTguNDczNjg0MiBMMjgsMTggQzI4LDE2Ljg5NTQzMDUgMjguODk1NDMwNSwxNiAzMCwxNiBDMzEuMTA0NTY5NSwxNiAzMiwxNi44OTU0MzA1IDMyLDE4IEwzMiwxOC40NzM2ODQyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjgiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTE4LC00LjUyNzM3MjYzZS0xNCBDMjEuMzEzNzA4NSwtNC42MTg1Mjc3OGUtMTQgMjQsMi43NTY5ODMzOCAyNCw2LjE1Nzg5NDc0IEwyNCwxOC40NzM2ODQyIEMyNCwyMS44NzQ1OTU2IDIxLjMxMzcwODUsMjQuNjMxNTc4OSAxOCwyNC42MzE1Nzg5IEMxNC42ODYyOTE1LDI0LjYzMTU3ODkgMTIsMjEuODc0NTk1NiAxMiwxOC40NzM2ODQyIEwxMiw2LjE1Nzg5NDc0IEMxMiwyLjc1Njk4MzM4IDE0LjY4NjI5MTUsLTQuNTI3MzcyNjNlLTE0IDE4LC00LjYxODUyNzc4ZS0xNCBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC42Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLjgxLDMuMjcgTDM0LjczLDM0LjE5IEMzNS40MzE0MDE2LDM0Ljg5MTQwMTYgMzUuNDMxNDAxNiwzNi4wMjg1OTg0IDM0LjczLDM2LjczIEMzNC4wMjg1OTg0LDM3LjQzMTQwMTYgMzIuODkxNDAxNiwzNy40MzE0MDE2IDMyLjE5LDM2LjczIEwxLjI3LDUuODEgQzAuNTY4NTk4MzY4LDUuMTA4NTk4MzcgMC41Njg1OTgzNjgsMy45NzE0MDE2MyAxLjI3LDMuMjcgQzEuOTcxNDAxNjMsMi41Njg1OTgzNyAzLjEwODU5ODM3LDIuNTY4NTk4MzcgMy44MSwzLjI3IFoiIGlkPSJQYXRoIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
 
     // Define base styles for noVoiceSupport icon in low valume state
-    noVoiceSupportMicIcon.style.minHeight = '100%';
-    noVoiceSupportMicIcon.style.height = '100%';
-    noVoiceSupportMicIcon.style.maxHeight = '100%';
-    noVoiceSupportMicIcon.style.top = '0%';
-    noVoiceSupportMicIcon.style.left = '0%';
-    noVoiceSupportMicIcon.style.zIndex = btnIconsZIndex;
-    noVoiceSupportMicIcon.style.position = 'absolute';
-    noVoiceSupportMicIcon.style.transition = 'all 0.4s ease-in-out';
-    noVoiceSupportMicIcon.style.opacity = '0';
-    noVoiceSupportMicIcon.alt = alanAltText + ' no voice support icon';
-    noVoiceSupportMicIcon.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAIuSURBVHgB7dvxUYMwFAbwpxMwAhvoBtVJygZ1A92gI1Qn6AjoBO0GsEG7wfPlgCtNA7xASzX5fnf5oyThLp+BQDiJAAAAAAAAAAAAAAAAxmHmDyk5n+ykLAn6SUhpHVaXwrQhcBsIr5FTLGSwb1IOmpkj9RnrxXE5+1x+fH7Pwyw0+PKSLLpCrGeq1oFiwNWiUGhCZE8UC22I7IliogmRPVFshkJkTxSjvhDZE8WqJ0QEqNURIgL0MTVEgmkhElTGhkix4WqzoNlYWFp1k1fhvvMHgc9n2cFRPzXAou/8t/JAM7EH/SD66ocM9bfrb+WR7kTGm1iHjqR3HDjXbOYMsLR+p9bvPentr3iuSeYM0B7Uwvr9RXqfA+cqKTRyma2sdSB3tMlZJ7X62Ru3Qa7CiSOIF6uN9pmw4NMuTjYUcDAcM8wEkTjaZdasytm9AfHsOL6lUJkZx5c2yr7a2ZlSyGSAa8egt5qBK0JU/TH+Na7uha4QzLHBm7+0ee8Iz/Sf/XlwtjeRtnq2mVU4dVSXUr6l/NDpccS0e5KSSekKybR9lReQkmLAV9hU7ZiFKcWCq8t5zeOtWfndOWhczcYN6+VSFq2+RfQhGnUYWUeY5ph5m0k6+iHENjs9RXuE2OYbYN3HFeKOYjQmwLrfRYgUo7EB1n2bEM03khXd0F0epDXs0Obaovd1ty39UCDAif5ygO0PRyWBH64eqJuFAP9kAwAAAAAAAAAAAAAAU/wC52820szaQtwAAAAASUVORK5CYII=";
+    noVoiceSupportMicIconImg.style.minHeight = '100%';
+    noVoiceSupportMicIconImg.style.height = '100%';
+    noVoiceSupportMicIconImg.style.maxHeight = '100%';
+    noVoiceSupportMicIconImg.style.top = '0%';
+    noVoiceSupportMicIconImg.style.left = '0%';
+    noVoiceSupportMicIconImg.style.zIndex = btnIconsZIndex;
+    noVoiceSupportMicIconImg.style.position = 'absolute';
+    noVoiceSupportMicIconImg.style.transition = 'all 0.4s ease-in-out';
+    noVoiceSupportMicIconImg.style.opacity = '0';
+    noVoiceSupportMicIconImg.alt = alanAltText + ' no voice support icon';
+    noVoiceSupportMicIconImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAIuSURBVHgB7dvxUYMwFAbwpxMwAhvoBtVJygZ1A92gI1Qn6AjoBO0GsEG7wfPlgCtNA7xASzX5fnf5oyThLp+BQDiJAAAAAAAAAAAAAAAAxmHmDyk5n+ykLAn6SUhpHVaXwrQhcBsIr5FTLGSwb1IOmpkj9RnrxXE5+1x+fH7Pwyw0+PKSLLpCrGeq1oFiwNWiUGhCZE8UC22I7IliogmRPVFshkJkTxSjvhDZE8WqJ0QEqNURIgL0MTVEgmkhElTGhkix4WqzoNlYWFp1k1fhvvMHgc9n2cFRPzXAou/8t/JAM7EH/SD66ocM9bfrb+WR7kTGm1iHjqR3HDjXbOYMsLR+p9bvPentr3iuSeYM0B7Uwvr9RXqfA+cqKTRyma2sdSB3tMlZJ7X62Ru3Qa7CiSOIF6uN9pmw4NMuTjYUcDAcM8wEkTjaZdasytm9AfHsOL6lUJkZx5c2yr7a2ZlSyGSAa8egt5qBK0JU/TH+Na7uha4QzLHBm7+0ee8Iz/Sf/XlwtjeRtnq2mVU4dVSXUr6l/NDpccS0e5KSSekKybR9lReQkmLAV9hU7ZiFKcWCq8t5zeOtWfndOWhczcYN6+VSFq2+RfQhGnUYWUeY5ph5m0k6+iHENjs9RXuE2OYbYN3HFeKOYjQmwLrfRYgUo7EB1n2bEM03khXd0F0epDXs0Obaovd1ty39UCDAif5ygO0PRyWBH64eqJuFAP9kAwAAAAAAAAAAAAAAU/wC52820szaQtwAAAAASUVORK5CYII=";
     
     // Define base st`yles for ovals
     var defaultBtnColorOptions = {
@@ -1403,17 +1418,17 @@ function alanBtn(options) {
     }
 
     // Define base styles for mic icon in offline state
-    offlineIcon.style.minHeight = '100%';
-    offlineIcon.style.height = '100%';
-    offlineIcon.style.maxHeight = '100%';
-    offlineIcon.style.top = '0%';
-    offlineIcon.style.left = '0%';
-    offlineIcon.style.zIndex = btnIconsZIndex;
-    offlineIcon.style.position = 'absolute';
-    offlineIcon.style.transition = 'all 0.4s ease-in-out';
-    offlineIcon.style.opacity = '0';
-    offlineIcon.alt = alanAltText + ' offline icon';
-    offlineIcon.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1uZXR3b3JrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLW5vLW5ldHdvcmsiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJpY29uIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMS4wMDAwMDAsIDIyLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMzMsMiBDMzQuNjU2ODU0MiwyIDM2LDMuMzQzMTQ1NzUgMzYsNSBMMzYsMjkgQzM2LDMwLjY1Njg1NDIgMzQuNjU2ODU0MiwzMiAzMywzMiBDMzEuMzQzMTQ1OCwzMiAzMCwzMC42NTY4NTQyIDMwLDI5IEwzMCw1IEMzMCwzLjM0MzE0NTc1IDMxLjM0MzE0NTgsMiAzMywyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjQiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTIzLDggQzI0LjY1Njg1NDIsOCAyNiw5LjM0MzE0NTc1IDI2LDExIEwyNiwyOSBDMjYsMzAuNjU2ODU0MiAyNC42NTY4NTQyLDMyIDIzLDMyIEMyMS4zNDMxNDU4LDMyIDIwLDMwLjY1Njg1NDIgMjAsMjkgTDIwLDExIEMyMCw5LjM0MzE0NTc1IDIxLjM0MzE0NTgsOCAyMyw4IFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTEzLDE2IEMxNC42NTY4NTQyLDE2IDE2LDE3LjM0MzE0NTggMTYsMTkgTDE2LDI5IEMxNiwzMC42NTY4NTQyIDE0LjY1Njg1NDIsMzIgMTMsMzIgQzExLjM0MzE0NTgsMzIgMTAsMzAuNjU2ODU0MiAxMCwyOSBMMTAsMTkgQzEwLDE3LjM0MzE0NTggMTEuMzQzMTQ1OCwxNiAxMywxNiBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC44Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLDIyIEM0LjY1Njg1NDI1LDIyIDYsMjMuMzQzMTQ1OCA2LDI1IEw2LDI5IEM2LDMwLjY1Njg1NDIgNC42NTY4NTQyNSwzMiAzLDMyIEMxLjM0MzE0NTc1LDMyIDIuMDI5MDYxMjVlLTE2LDMwLjY1Njg1NDIgMCwyOSBMMCwyNSBDLTIuMDI5MDYxMjVlLTE2LDIzLjM0MzE0NTggMS4zNDMxNDU3NSwyMiAzLDIyIFoiIGlkPSJTaGFwZSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNNS44MSwxLjI3IEwzNi43MywzMi4xOSBDMzcuNDMxNDAxNiwzMi44OTE0MDE2IDM3LjQzMTQwMTYsMzQuMDI4NTk4NCAzNi43MywzNC43MyBDMzYuMDI4NTk4NCwzNS40MzE0MDE2IDM0Ljg5MTQwMTYsMzUuNDMxNDAxNiAzNC4xOSwzNC43MyBMMy4yNywzLjgxIEMyLjU2ODU5ODM3LDMuMTA4NTk4MzcgMi41Njg1OTgzNywxLjk3MTQwMTYzIDMuMjcsMS4yNyBDMy45NzE0MDE2MywwLjU2ODU5ODM2OCA1LjEwODU5ODM3LDAuNTY4NTk4MzY4IDUuODEsMS4yNyBaIiBpZD0iUGF0aCIgZmlsbC1ydWxlPSJub256ZXJvIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
+    offlineIconImg.style.minHeight = '100%';
+    offlineIconImg.style.height = '100%';
+    offlineIconImg.style.maxHeight = '100%';
+    offlineIconImg.style.top = '0%';
+    offlineIconImg.style.left = '0%';
+    offlineIconImg.style.zIndex = btnIconsZIndex;
+    offlineIconImg.style.position = 'absolute';
+    offlineIconImg.style.transition = 'all 0.4s ease-in-out';
+    offlineIconImg.style.opacity = '0';
+    offlineIconImg.alt = alanAltText + ' offline icon';
+    offlineIconImg.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1uZXR3b3JrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLW5vLW5ldHdvcmsiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJpY29uIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMS4wMDAwMDAsIDIyLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMzMsMiBDMzQuNjU2ODU0MiwyIDM2LDMuMzQzMTQ1NzUgMzYsNSBMMzYsMjkgQzM2LDMwLjY1Njg1NDIgMzQuNjU2ODU0MiwzMiAzMywzMiBDMzEuMzQzMTQ1OCwzMiAzMCwzMC42NTY4NTQyIDMwLDI5IEwzMCw1IEMzMCwzLjM0MzE0NTc1IDMxLjM0MzE0NTgsMiAzMywyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjQiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTIzLDggQzI0LjY1Njg1NDIsOCAyNiw5LjM0MzE0NTc1IDI2LDExIEwyNiwyOSBDMjYsMzAuNjU2ODU0MiAyNC42NTY4NTQyLDMyIDIzLDMyIEMyMS4zNDMxNDU4LDMyIDIwLDMwLjY1Njg1NDIgMjAsMjkgTDIwLDExIEMyMCw5LjM0MzE0NTc1IDIxLjM0MzE0NTgsOCAyMyw4IFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTEzLDE2IEMxNC42NTY4NTQyLDE2IDE2LDE3LjM0MzE0NTggMTYsMTkgTDE2LDI5IEMxNiwzMC42NTY4NTQyIDE0LjY1Njg1NDIsMzIgMTMsMzIgQzExLjM0MzE0NTgsMzIgMTAsMzAuNjU2ODU0MiAxMCwyOSBMMTAsMTkgQzEwLDE3LjM0MzE0NTggMTEuMzQzMTQ1OCwxNiAxMywxNiBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC44Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLDIyIEM0LjY1Njg1NDI1LDIyIDYsMjMuMzQzMTQ1OCA2LDI1IEw2LDI5IEM2LDMwLjY1Njg1NDIgNC42NTY4NTQyNSwzMiAzLDMyIEMxLjM0MzE0NTc1LDMyIDIuMDI5MDYxMjVlLTE2LDMwLjY1Njg1NDIgMCwyOSBMMCwyNSBDLTIuMDI5MDYxMjVlLTE2LDIzLjM0MzE0NTggMS4zNDMxNDU3NSwyMiAzLDIyIFoiIGlkPSJTaGFwZSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNNS44MSwxLjI3IEwzNi43MywzMi4xOSBDMzcuNDMxNDAxNiwzMi44OTE0MDE2IDM3LjQzMTQwMTYsMzQuMDI4NTk4NCAzNi43MywzNC43MyBDMzYuMDI4NTk4NCwzNS40MzE0MDE2IDM0Ljg5MTQwMTYsMzUuNDMxNDAxNiAzNC4xOSwzNC43MyBMMy4yNywzLjgxIEMyLjU2ODU5ODM3LDMuMTA4NTk4MzcgMi41Njg1OTgzNywxLjk3MTQwMTYzIDMuMjcsMS4yNyBDMy45NzE0MDE2MywwLjU2ODU5ODM2OCA1LjEwODU5ODM3LDAuNTY4NTk4MzY4IDUuODEsMS4yNyBaIiBpZD0iUGF0aCIgZmlsbC1ydWxlPSJub256ZXJvIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
 
     btnBgDefault.classList.add('alanBtn-bg-default');
     btnBgListening.classList.add('alanBtn-bg-listening');
@@ -1434,12 +1449,12 @@ function alanBtn(options) {
     btnBgDefault.style.opacity = onOpacity;
 
     var allIcons = [
-        micCircleIcon,
-        micTriangleIcon,
+        circleIconDiv,
+        roundedTriangleIconDiv,
         micIconDiv,
-        offlineIcon,
-        lowVolumeMicIcon,
-        noVoiceSupportMicIcon,
+        offlineIconImg,
+        lowVolumeMicIconImg,
+        noVoiceSupportMicIconImg,
         logoState1,
         logoState2,
         logoState3,
@@ -1452,7 +1467,7 @@ function alanBtn(options) {
         logoState10,
     ];
 
-    for (var i = 0; i < allIcons.length; i++) {
+    for (i = 0; i < allIcons.length; i++) {
         allIcons[i].setAttribute('draggable', 'false');
     }
 
@@ -1471,12 +1486,12 @@ function alanBtn(options) {
     btn.appendChild(btnBgIntermediate);
     btn.appendChild(btnBgUnderstood);
     btn.appendChild(micIconDiv);
-    btn.appendChild(micTriangleIcon);
-    btn.appendChild(micCircleIcon);
-    btn.appendChild(disconnectedMicLoaderIcon);
-    btn.appendChild(lowVolumeMicIcon);
-    btn.appendChild(noVoiceSupportMicIcon);
-    btn.appendChild(offlineIcon);
+    btn.appendChild(roundedTriangleIconDiv);
+    btn.appendChild(circleIconDiv);
+    btn.appendChild(disconnectedMicLoaderIconImg);
+    btn.appendChild(lowVolumeMicIconImg);
+    btn.appendChild(noVoiceSupportMicIconImg);
+    btn.appendChild(offlineIconImg);
     btn.classList.add("alanBtn");
 
     if(isMobile()){
@@ -1549,8 +1564,8 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}';
         keyFrames += getStyleSheetMarker(true) + '.alan-btn-permission-denied .alanBtn' + hoverSelector + ' .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}';
 
-        keyFrames += getStyleSheetMarker() + '.triangleMicIconBg {background-image:url(' + micTriangleIconImg + '); pointer-events: none;}';
-        keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + micCircleIconImg + '); pointer-events: none;}';
+        keyFrames += getStyleSheetMarker() + '.triangleMicIconBg {background-image:url(' + roundedTriangleSecondLayerSrc + '); pointer-events: none;}';
+        keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + circleSecondLayerSrc + '); pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + ' img {pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + '' + hoverSelector + ' .triangleMicIconBg-default {opacity:0!important;}';
 
@@ -1885,6 +1900,9 @@ function alanBtn(options) {
         }
         alanAudio.on('micStart', onMicStart);
         alanAudio.on('micStop', onMicStop);
+        alanAudio.on('micAllowed', onMicAllowed);
+        alanAudio.on('audioRunning', onAudioRunning);
+        checkIfPlayAllowed();
         alanAudio.on('micFail', onMicFail);
         alanAudio.on('playStart', onPlayStart);
         alanAudio.on('playStop', onPlayStop);
@@ -1949,7 +1967,17 @@ function alanBtn(options) {
         return activatePromise;
     }
 
+    function checkIfPlayAllowed() {
+        if (alanAudio.isAudioRunning()) {
+            sendClientEvent({ playAllowed: true });
+        }
+    }
+
     btn.addEventListener('click', function (e) {
+        if (!firstClick) {
+            firstClick = true;
+            sendClientEvent({ firstClick: true });
+        }
         if (afterMouseMove) return;
         if (!dndBackAnimFinished) return;
         if (currentErrMsg) {
@@ -2052,10 +2080,10 @@ function alanBtn(options) {
         }
 
         if (data && data.web && data.web.btnOptions) {
-            console.info('OPTIONS',data.web.btnOptions);
             applyBtnOptions(data.web.btnOptions);
         }
 
+        console.info('OPTIONS',data.web);
         applyLogoOptions(data);
 
         if (options.mode !== 'tutor') {
@@ -2075,6 +2103,7 @@ function alanBtn(options) {
         if (data && data.web && data.web.hidden === true) {
             hideAlanBtn();
         } else {
+            sendClientEvent({ buttonReady: true });
             showAlanBtn();
         }
     }
@@ -2099,6 +2128,14 @@ function alanBtn(options) {
         }
     }
 
+    function onMicAllowed() {
+        sendClientEvent({ micAllowed: true });
+    }
+
+    function onAudioRunning() {
+        checkIfPlayAllowed();
+    }
+
     function onMicStart() {
         // console.log('BTN: mic. started', new Date());
         switchState(LISTENING);
@@ -2121,6 +2158,8 @@ function alanBtn(options) {
 
         alanAudio.off('micStart', onMicStart);
         alanAudio.off('micStop', onMicStop);
+        alanAudio.off('micAllowed', onMicAllowed);
+        alanAudio.off('audioRunning', onAudioRunning);
         alanAudio.off('micFail', onMicFail);
         alanAudio.off('playStart', onPlayStart);
         alanAudio.off('playStop', onPlayStop);
@@ -2249,12 +2288,22 @@ function alanBtn(options) {
         }
     }
 
+    function changeCustomLogoVisibility(visibleLogo, logosToHide) {
+        if (visibleLogo && visibleLogo.src) {
+            visibleLogo.style.opacity = 1;
+        }
+
+        for (var i = 0; i < logosToHide.length; i++) {
+            logosToHide[i].style.opacity = 0;
+        }
+    }
+
     window.switchState = switchState;
 
     function switchState(newState) {
 
-        // console.info('BTN: state', newState);
-
+        console.info('BTN: state', newState);
+        
         var tempLogoParts = [],
             i = 0;
 
@@ -2267,7 +2316,7 @@ function alanBtn(options) {
         if (newState === DEFAULT) {
             btn.style.animation = '';
             micIconDiv.style.animation = '';
-            micTriangleIcon.style.animation = '';
+            roundedTriangleIconDiv.style.animation = '';
             btnBgDefault.classList.remove('super-hidden');
             btnBgDefault.style.opacity = onOpacity;
             btnOval1.style.animation = '';
@@ -2277,7 +2326,16 @@ function alanBtn(options) {
             changeBgColors(DEFAULT);
 
             micIconDiv.style.opacity = 1;
-            micTriangleIcon.style.opacity = 0;
+            roundedTriangleIconDiv.style.opacity = 0;
+
+            changeCustomLogoVisibility(
+                defaultStateBtnIconImg,
+                [
+                    listenStateBtnIconImg,
+                    processStateBtnIconImg,
+                    replyStateBtnIconImg
+                ]
+            );
 
             hideLayers([
                 btnBgListening,
@@ -2288,7 +2346,6 @@ function alanBtn(options) {
         } else if (newState === LISTENING) {
             btn.style.animation = pulsatingAnimation;
             micIconDiv.style.animation = pulsatingMicAnimation;
-            micTriangleIcon.style.animation = pulsatingTriangleMicAnimation;
 
             btnBgListening.classList.remove('super-hidden');
             btnBgListening.style.opacity = onOpacity;
@@ -2299,7 +2356,20 @@ function alanBtn(options) {
             changeBgColors(LISTENING);
 
             micIconDiv.style.opacity = 1;
-            micTriangleIcon.style.opacity = 1;
+
+            if (!listenStateBtnIconImg.src) {
+                roundedTriangleIconDiv.style.animation = pulsatingTriangleMicAnimation;
+                roundedTriangleIconDiv.style.opacity = 1;
+            }
+
+            changeCustomLogoVisibility(
+                listenStateBtnIconImg,
+                [
+                    defaultStateBtnIconImg,
+                    processStateBtnIconImg,
+                    replyStateBtnIconImg
+                ]
+            );
 
             hideLayers([
                 btnBgSpeaking,
@@ -2316,6 +2386,15 @@ function alanBtn(options) {
             btnOval2.style.opacity = 1;
             changeBgColors(SPEAKING);
 
+            changeCustomLogoVisibility(
+                replyStateBtnIconImg,
+                [
+                    defaultStateBtnIconImg,
+                    listenStateBtnIconImg,
+                    processStateBtnIconImg
+                ]
+            );
+
             hideLayers([
                 btnBgDefault,
                 btnBgListening,
@@ -2331,7 +2410,10 @@ function alanBtn(options) {
             btnOval2.style.opacity = 1;
             changeBgColors(INTERMEDIATE);
             micIconDiv.style.opacity = 1;
-            micTriangleIcon.style.opacity = 1;
+            if (!processStateBtnIconImg.src) {
+                console.info('roundedTriangleIconDiv.style.opacity = 1');
+                roundedTriangleIconDiv.style.opacity = 1;
+            }
 
             hideLayers([
                 btnBgDefault,
@@ -2340,6 +2422,16 @@ function alanBtn(options) {
                 btnBgUnderstood,
 
             ]);
+
+            changeCustomLogoVisibility(
+                processStateBtnIconImg,
+                [
+                    defaultStateBtnIconImg,
+                    listenStateBtnIconImg,
+                    replyStateBtnIconImg
+                ]
+            );
+
         } else if (newState === UNDERSTOOD) {
             btn.style.animation = pulsatingAnimation;
 
@@ -2350,38 +2442,47 @@ function alanBtn(options) {
             changeBgColors(UNDERSTOOD);
 
             micIconDiv.style.opacity = 1;
-            micTriangleIcon.style.opacity = 1;
+            if (!processStateBtnIconImg.src) {
+                console.info('roundedTriangleIconDiv.style.opacity = 1');
+                roundedTriangleIconDiv.style.opacity = 1;
+            } else {
+                roundedTriangleIconDiv.style.opacity = 0;
+            }
+
+            changeCustomLogoVisibility(
+                processStateBtnIconImg,
+                [
+                    defaultStateBtnIconImg,
+                    listenStateBtnIconImg,
+                    replyStateBtnIconImg
+                ]
+            );
 
             hideLayers([
                 btnBgDefault,
                 btnBgListening,
                 btnBgSpeaking,
                 btnBgIntermediate,
-
             ]);
         }
 
         if (newState === SPEAKING) {
-            micTriangleIcon.style.opacity = 0;
-            micCircleIcon.style.opacity = 1;
-            micTriangleIcon.style.backgroundSize = '0% 0%';
-            micCircleIcon.style.backgroundSize = '100% 100%';
-        } else  {
-            micCircleIcon.style.opacity = 0;
-            micCircleIcon.style.backgroundSize = '0% 0%';
-            micTriangleIcon.style.backgroundSize = '100% 100%';
+            roundedTriangleIconDiv.style.opacity = 0;
+            roundedTriangleIconDiv.style.backgroundSize = '0% 0%';
+            if (!replyStateBtnIconImg.src) {
+                circleIconDiv.style.opacity = 1;
+                circleIconDiv.style.backgroundSize = '100% 100%';
+            }
+        } else {
+            circleIconDiv.style.opacity = 0;
+            circleIconDiv.style.backgroundSize = '0% 0%';
+            roundedTriangleIconDiv.style.backgroundSize = '100% 100%';
         }
 
         if (newState === DEFAULT) {
-            micTriangleIcon.classList.add('triangleMicIconBg-default');
-            customLogoIcon.style.opacity = 0;
-            defaultStateBtnIcon.style.opacity = 1;
+            roundedTriangleIconDiv.classList.add('triangleMicIconBg-default');
         } else {
-            micTriangleIcon.classList.remove('triangleMicIconBg-default');
-            if (customBtnLogoUrl) {
-                customLogoIcon.style.opacity = 1;
-                defaultStateBtnIcon.style.opacity = 0;
-            }
+            roundedTriangleIconDiv.classList.remove('triangleMicIconBg-default');
         }
 
         tempLogoParts = [
@@ -2397,29 +2498,27 @@ function alanBtn(options) {
             logoState10
         ];
 
-        if(!customBtnLogoUrl) {
-            if (newState === LISTENING ||
-                newState === INTERMEDIATE ||
-                newState === SPEAKING ||
-                newState === UNDERSTOOD) {
-    
-                if (logoState1.style.animationName === '') {
-                    for (i = 0; i < tempLogoParts.length; i++) {
-                        if (i === 0) {
-                            tempLogoParts[i].style.opacity = 1;
-                        } else {
-                            tempLogoParts[i].style.opacity = 0;
-                        }
-                        tempLogoParts[i].style.animationName = 'logo-state-' + (i + 1) + '-animation';
-                    }
-                }
-                defaultStateBtnIcon.style.opacity = 0;
-            } else {
-                defaultStateBtnIcon.style.opacity = 1;
+        if ((newState === LISTENING && !listenStateBtnIconImg.src) ||
+            (newState === INTERMEDIATE && !processStateBtnIconImg.src) ||
+            (newState === SPEAKING && !replyStateBtnIconImg.src) ||
+            (newState === UNDERSTOOD && !processStateBtnIconImg.src)) {
+
+            if (logoState1.style.animationName === '') {
                 for (i = 0; i < tempLogoParts.length; i++) {
-                    tempLogoParts[i].style.opacity = 0;
-                    tempLogoParts[i].style.animationName = '';
+                    if (i === 0) {
+                        tempLogoParts[i].style.opacity = 1;
+                    } else {
+                        tempLogoParts[i].style.opacity = 0;
+                    }
+                    tempLogoParts[i].style.animationName = 'logo-state-' + (i + 1) + '-animation';
                 }
+            }
+            defaultStateBtnIconImg.style.opacity = 0;
+        } else {
+            //defaultStateBtnIconImg.style.opacity = 1;
+            for (i = 0; i < tempLogoParts.length; i++) {
+                tempLogoParts[i].style.opacity = 0;
+                tempLogoParts[i].style.animationName = '';
             }
         }
 
@@ -2440,16 +2539,27 @@ function alanBtn(options) {
             }
 
             if (newState === NO_VOICE_SUPPORT) {
-                noVoiceSupportMicIcon.style.opacity = 1;
-                lowVolumeMicIcon.style.opacity = 0;
+                noVoiceSupportMicIconImg.style.opacity = 1;
+                lowVolumeMicIconImg.style.opacity = 0;
             } else {
-                noVoiceSupportMicIcon.style.opacity = 0;
-                lowVolumeMicIcon.style.opacity = 1;
+                noVoiceSupportMicIconImg.style.opacity = 0;
+                lowVolumeMicIconImg.style.opacity = 1;
             }
+
+            changeCustomLogoVisibility(
+                null,
+                [
+                    defaultStateBtnIconImg,
+                    listenStateBtnIconImg,
+                    processStateBtnIconImg,
+                    replyStateBtnIconImg
+                ]
+            );
+
             micIconDiv.style.opacity = 0;
-            micTriangleIcon.style.opacity = 0;
-            disconnectedMicLoaderIcon.style.opacity = 0;
-            offlineIcon.style.opacity = 0;
+            roundedTriangleIconDiv.style.opacity = 0;
+            disconnectedMicLoaderIconImg.style.opacity = 0;
+            offlineIconImg.style.opacity = 0;
             btnOval1.style.animation = '';
             btnOval2.style.animation = '';
             btnOval1.style.opacity = 0;
@@ -2462,25 +2572,34 @@ function alanBtn(options) {
                 rootEl.classList.add("alan-btn-offline");
                 currentErrMsg = OFFLINE_MSG;
             }
-            micTriangleIcon.style.opacity = 0;
-            lowVolumeMicIcon.style.opacity = 0;
+            roundedTriangleIconDiv.style.opacity = 0;
+            lowVolumeMicIconImg.style.opacity = 0;
             btnOval1.style.animation = '';
             btnOval2.style.animation = '';
             btnOval1.style.opacity = 0;
             btnOval2.style.opacity = 0;
 
+            changeCustomLogoVisibility(
+                null,
+                [
+                    defaultStateBtnIconImg,
+                    listenStateBtnIconImg,
+                    processStateBtnIconImg,
+                    replyStateBtnIconImg
+                ]);
+
             if (newState === DISCONNECTED) {
                 micIconDiv.style.opacity = 0;
-                disconnectedMicLoaderIcon.style.opacity = 1;
+                disconnectedMicLoaderIconImg.style.opacity = 1;
             } else {
                 micIconDiv.style.opacity = 0;
-                disconnectedMicLoaderIcon.style.opacity = 0;
-                offlineIcon.style.opacity = 1;
+                disconnectedMicLoaderIconImg.style.opacity = 0;
+                offlineIconImg.style.opacity = 1;
             }
         } else {
-            lowVolumeMicIcon.style.opacity = 0;
-            offlineIcon.style.opacity = 0;
-            disconnectedMicLoaderIcon.style.opacity = 0;
+            lowVolumeMicIconImg.style.opacity = 0;
+            offlineIconImg.style.opacity = 0;
+            disconnectedMicLoaderIconImg.style.opacity = 0;
             rootEl.classList.remove("alan-btn-low-volume");
             rootEl.classList.remove("alan-btn-permission-denied");
             rootEl.classList.remove("alan-btn-disconnected");
@@ -2630,14 +2749,44 @@ function alanBtn(options) {
     }
 
     function applyLogoOptions(data) {
-        if (data && data.web && data.web.logoUrl) {
-            customBtnLogoUrl = data.web.logoUrl;
-            customLogoIcon.src = customBtnLogoUrl;
-            micTriangleIcon.classList.remove('triangleMicIconBg');
-        } else {
-            customBtnLogoUrl = null;
-            customLogoIcon.src = defaultStateBtnIconImg;
-            micTriangleIcon.classList.add('triangleMicIconBg');
+        if (data && data.web) {
+            // support prev version of the Alan Btn where we can customize logo via only one prop - logoUrl
+            if (data.web.logoUrl &&
+                !data.web.logoIdle &&
+                !data.web.logoListen &&
+                !data.web.logoProcess &&
+                !data.web.logoReply) {
+                listenStateBtnIconImg.src = data.web.logoUrl;
+                processStateBtnIconImg.src = data.web.logoUrl;
+                replyStateBtnIconImg.src = data.web.logoUrl;
+            } else {
+                if (data.web.logoIdle) {
+                    defaultStateBtnIconImg.src = data.web.logoIdle;
+                } else {
+                    defaultStateBtnIconImg.src = micIconSrc;
+                }
+
+                if (data.web.logoListen) {
+                    listenStateBtnIconImg.src = data.web.logoListen;
+                } else {
+                    listenStateBtnIconImg.removeAttribute('src');
+                    listenStateBtnIconImg.style.opacity = 0;
+                }
+
+                if (data.web.logoProcess) {
+                    processStateBtnIconImg.src = data.web.logoProcess;
+                } else {
+                    processStateBtnIconImg.removeAttribute('src');
+                    processStateBtnIconImg.style.opacity = 0;
+                }
+
+                if (data.web.logoReply) {
+                    replyStateBtnIconImg.src = data.web.logoReply;
+                } else {
+                    replyStateBtnIconImg.removeAttribute('src');
+                    replyStateBtnIconImg.style.opacity = 0;
+                }
+            }
         }
     }
 
