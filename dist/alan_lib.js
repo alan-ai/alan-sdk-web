@@ -7,6 +7,450 @@
     root.alanBtn = factory();
   }
 }(this, function() {
+(function (ns) {
+    "use strict";
+
+    function testSocket() {
+        return new Promise(function (resolve, reject) {
+            var socketUrl = 'wss://javascript.info/article/websocket/chat/ws';
+            console.log('[WS]: Start testing');
+            console.log('[WS]: Connecting to ' + socketUrl);
+
+            try {
+                var socket = new WebSocket(socketUrl);
+                socket.onopen = function (e) {
+                    var testMsg = 'test-msg';
+                    console.log('[WS]: Connection established');
+                    console.log('[WS]: Sending data to socket, msg: ' + testMsg);
+                    socket.send(testMsg);
+                };
+
+                socket.onmessage = function (event) {
+                    console.log('[WS]: Data received from server: ' + event.data);
+                    console.log('[WS]: Finish testing - OK');
+                    resolve();
+                };
+
+                socket.onerror = function (error) {
+                    console.log('[WS]: ', error.message);
+                    console.log('[WS]: Finish testing - ERROR');
+                    reject();
+                };
+            }
+            catch (err) {
+                console.log('[WS]: ', err);
+                reject();
+            }
+        });
+    }
+    function testWorker() {
+        return new Promise(function (resolve, reject) {
+            console.log("[WebWorker]: Start testing");
+            if (typeof (Worker) !== "undefined") {
+                console.log('[WebWorker]: Has Web Worker support');
+
+                try {
+                    var myWorker = new Worker(window.URL.createObjectURL(new Blob(["onmessage = function(e) {console.log('[WebWorker]: Message received from main script');var workerResult = e.data[0];console.log('[WebWorker]: Posting message back to main script');postMessage(workerResult);}"])));
+                    myWorker.onmessage = function (e) {
+                        console.log('[WebWorker]: Message received from worker: ', e.data);
+                        console.log('[WebWorker]: Finish testing - OK');
+                        resolve();
+                    }
+
+                    myWorker.onerror = function (err) {
+                        console.error('[WebWorker]: Finish testing - ERROR');
+                        reject();
+                    }
+                    myWorker.postMessage(['test-msg']);
+                } catch (err) {
+                    console.error('[WebWorker]: Finish testing - ERROR');
+                    reject();
+                }
+            } else {
+                console.log('[WebWorker]: No Web Worker support');
+                reject();
+            }
+        });
+    }
+
+    function testOrignSecure() {
+        return new Promise(function (resolve, reject) {
+            console.log("[ORIGN]: Start testing");
+            var protocol = window.location.protocol;
+            var hostname = window.location.hostname;
+
+            if (protocol === 'https:' || protocol === 'file:' || (protocol === 'http:' && (hostname.indexOf('localhost') > -1 || hostname.indexOf('127.0.0.1') > -1))) {
+                console.log('[ORIGN]: Secure');
+                console.log('[ORIGN]: Finish testing - OK');
+                resolve();
+            } else {
+                console.log('[ORIGN]: Not secure');
+                console.log('[ORIGN]: Finish testing - ERROR');
+                reject();
+            }
+        });
+    }
+
+    function testAudioContext() {
+        return new Promise(function (resolve, reject) {
+            console.log("[AUDIO CONTEXT]: Start testing");
+            var fakeGetUserMedia = (navigator.getUserMedia ||
+                navigator.webkitGetUserMedia ||
+                navigator.mozGetUserMedia ||
+                navigator.msGetUserMedia ||
+                (navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+
+            var fakeContext = window.AudioContext ||
+                window.webkitAudioContext ||
+                window.mozAudioContext;
+
+            if (fakeGetUserMedia && fakeContext) {
+                console.log('[AUDIO CONTEXT]: Audio supported');
+                console.log('[AUDIO CONTEXT]: Finish testing - OK');
+                resolve();
+            } else {
+                console.log('[AUDIO CONTEXT]: Audio NOT supported');
+                console.log('[AUDIO CONTEXT DETAILS]:', getAudioDebugInfo());
+                console.log('[AUDIO CONTEXT]: Finish testing - ERROR');
+                reject();
+            }
+        });
+    }
+
+    function getAudioDebugInfo() {
+        var info = '';
+
+        info += 'getUserMedia: ';
+        info += navigator.getUserMedia ? '1' : '0';
+        info += ', ';
+
+        info += 'mediaDevices: ';
+        info += (navigator.mediaDevices) ? '1' : '0';
+        info += ', ';
+
+        info += 'mediaDevices.getUserMedia: ';
+        info += (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? '1' : '0';
+        info += ', ';
+
+        info += 'webkitGUM: ';
+        info += navigator.webkitGetUserMedia ? '1' : '0';
+        info += ', ';
+
+        info += 'mozGUM: ';
+        info += navigator.mozGetUserMedia ? '1' : '0';
+        info += ', ';
+
+        info += 'msGUM: ';
+        info += navigator.msGetUserMedia ? '1' : '0';
+        info += '\n';
+
+        info += 'window: \n';
+
+        info += 'AudioContext: ';
+        info += window.AudioContext ? '1' : '0';
+        info += ', ';
+
+        info += 'webkitAC: ';
+        info += window.webkitAudioContext ? '1' : '0';
+        info += ', ';
+
+        info += 'mozAC: ';
+        info += window.mozAudioContext ? '1' : '0';
+        info += '\n';
+
+        info += 'userAgent: ';
+        info += navigator.userAgent;
+
+        return info;
+    }
+
+    function testAll() {
+        var that = this;
+        var allTests = Object.keys(this);
+
+        function getNextTest(nextTestName) {
+            return that[nextTestName]();
+        }
+
+        allTests = allTests.filter(name => name !== 'run' && name !== 'getAudioDebugInfo')
+
+        return allTests.reduce((prevPromise, nextTestName) => {
+            return prevPromise.then(() => {
+                return getNextTest(nextTestName);
+            });
+        }, Promise.resolve());
+    }
+
+    ns.alanDiagnostic = {
+        testSocket: testSocket,
+        testWorker: testWorker,
+        testOrignSecure: testOrignSecure,
+        testAudioContext: testAudioContext,
+        getAudioDebugInfo: getAudioDebugInfo,
+        run: testAll
+    };
+
+})(window);
+
+(function(ns) {
+    "use strict";
+
+    var host = 'studio.alan.app';
+
+    var config = {
+        // baseURL: (window.location.protocol === "https:" ? "wss://" : "ws://") +
+        baseURL: "wss://" +
+            ((host.indexOf('$') === 0 || host === '') ? window.location.host : host ),
+        codec: 'opus',
+        version: '2.0.43',
+        platform: 'web',
+    };
+
+    function ConnectionWrapper() {
+        var _this = this;
+        this._worker = new Worker(window.URL.createObjectURL(new Blob(["(function(ns) {\n    'use strict';\n\n    var SENT_TS    = 1;\n    var REMOTE_TS  = 2;\n    var TIMESTAMP  = 3;\n    var AUDIO_DATA = 4;\n    var JSON_DATA  = 5;\n\n    AlanFrame.fields = [\n        propUint64(SENT_TS,   'sentTs'),\n        propUint64(REMOTE_TS, 'remoteTs'),\n        propUint64(TIMESTAMP, 'timestamp'),\n        propBytes(AUDIO_DATA, 'audioData'),\n        propJson(JSON_DATA,   'jsonData'),\n    ];\n\n    function AlanFrameProp(type, name, sizeF, readF, writeF) {\n        this.type   = type;\n        this.name   = name;\n        this.sizeF  = sizeF;\n        this.writeF = writeF;\n        this.readF  = readF;\n    }\n\n    function fixedSize(size) {\n        return function() {\n            return size;\n        }\n    }\n\n    function bufferSize(buffer) {\n        return 4 + byteLength(buffer);\n    }\n\n    function writeUIntN(uint8array, value, nBytes, offset) {\n        for (var i = 0; i < nBytes; i++ ) {\n            uint8array[offset + i] = 0xFF & value;\n            value /= 256;\n        }\n    }\n\n    function readUIntN(uint8array, nBytes, offset) {\n        var r = 0;\n        for (var i = nBytes - 1; i >= 0; i-- ) {\n            r *= 256;\n            r += 0xFF & uint8array[offset + i];\n        }\n        return r;\n    }\n\n    function writeUInt64(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 8, offset);\n    }\n\n    function readUInt64(uint8array, offset) {\n        return readUIntN(uint8array, 8, offset);\n    }\n\n    function writeUInt32(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 4, offset);\n    }\n\n    function readUInt32(uint8array, offset) {\n        return readUIntN(uint8array, 4, offset);\n    }\n\n    function writeBuffer(uint8array, buffer, offset) {\n        buffer = toUint8(buffer);\n        writeUInt32(uint8array, buffer.length, offset);\n        for (var i = 0; i < buffer.length; i++ ) {\n            uint8array[offset + 4 + i] = buffer[i];\n        }\n    }\n\n    function readBuffer(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('buffer too big');\n        }\n        return uint8array.subarray(offset + 4, offset + 4 + size);\n    }\n\n    function readUTF8(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('string too big');\n        }\n        return String.fromCharCode.apply(null, uint8array.slice(offset + 4, offset + 4 + size));\n    }\n\n    function writeUTF8(uint8array, string, offset) {\n        writeUInt32(uint8array, string.length, offset);\n        for (var i = 0; i < string.length; i++ ) {\n            uint8array[offset + 4 + i] = string.charCodeAt(i);\n        }\n    }\n\n    function sizeUTF8(string) {\n        return 4 + string.length;\n    }\n\n    function propUint32(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(4), readUInt32, writeUInt32);\n    }\n\n    function propUint64(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(8), readUInt64, writeUInt64);\n    }\n\n    function propBytes(type, name) {\n        return new AlanFrameProp(type, name, bufferSize, readBuffer, writeBuffer);\n    }\n\n    function propJson(type, name) {\n        return new AlanFrameProp(type, name, sizeUTF8, readUTF8, writeUTF8);\n    }\n\n    AlanFrame.fieldByType = function(type) {\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var frame = AlanFrame.fields[i];\n            if (frame.type === type) {\n                return frame;\n            }\n        }\n        throw new Error('invalid field: ' + type);\n    };\n\n    function AlanFrame() {\n        this.version = 1;\n    }\n\n    AlanFrame.prototype.write = function() {\n        var result = new Uint8Array(this.writeSize());\n        var offset = 1;\n        result[0]  = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                result[offset++] = field.type;\n                field.writeF(result, value, offset);\n                offset += field.sizeF(value);\n            }\n        }\n        return result.buffer;\n    };\n\n    /**\n     * @returns UInt8Array\n     */\n    AlanFrame.prototype.writeSize = function() {\n        var size = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                size += 1 + field.sizeF(value);\n            }\n        }\n        return size;\n    };\n\n    AlanFrame.prototype.toString = function() {\n        var first = true, str = '';\n        for (var k in this) {\n            if (this.hasOwnProperty(k)) {\n                if (first) {\n                    str += k + ' = ';\n                    first = false;\n                } else {\n                    str += ', ' + k + ' = ';\n                }\n                var v = this[k];\n                if (typeof(v) === 'object') {\n                    str += 'bytes[' + byteLength(v) + ']';\n                } else {\n                    str += v;\n                }\n            }\n        }\n        return str;\n    };\n\n    function byteLength(b) {\n        if (b instanceof Uint8Array) {\n            return b.length;\n        }\n        if (b instanceof ArrayBuffer) {\n            return b.byteLength;\n        }\n    }\n\n    function toArrayBuffer(buffer) {\n        if (buffer instanceof ArrayBuffer) {\n            return buffer;\n        }\n        return buffer.buffer;\n    }\n\n    function toUint8(buffer) {\n        if (buffer instanceof Uint8Array) {\n            return buffer;\n        }\n        if (buffer instanceof ArrayBuffer) {\n            return new Uint8Array(buffer);\n        }\n        throw new Error('invalid buffer type');\n    }\n\n    function parse(uint8array) {\n        uint8array = toUint8(uint8array);\n        var r = new AlanFrame();\n        var offset = 0;\n        r.version = uint8array[offset++];\n        while (offset < uint8array.length) {\n            var frame = AlanFrame.fieldByType(uint8array[offset++]);\n            r[frame.name] = frame.readF(uint8array, offset);\n            offset += frame.sizeF(r[frame.name]);\n        }\n        return r;\n    }\n\n    ns.create = function() {\n        return new AlanFrame();\n    };\n\n    ns.parse = parse;\n\n})(typeof(window)            !== 'undefined' ? (function() {window.alanFrame = {}; return window.alanFrame; })() :\n   typeof(WorkerGlobalScope) !== 'undefined' ? (function() {alanFrame = {}; return alanFrame; })() :\n   exports);\n\n\n'use strict';\n\nvar ALAN_OFF       = 'off';\nvar ALAN_SPEAKING  = 'speaking';\nvar ALAN_LISTENING = 'listening';\n\nfunction ConnectionImpl(config, auth, mode) {\n    var _this = this;\n    this._config = config;\n    this._auth = auth;\n    this._mode = mode;\n    this._projectId = config.projectId;\n    this._url = config.url;\n    this._connected = false;\n    this._authorized = false;\n    this._dialogId = null;\n    this._callId = 1;\n    this._callSent = {};\n    this._callWait = [];\n    this._failed = false;\n    this._closed = false;\n    this._reconnectTimeout = 100;\n    this._cleanups = [];\n    this._format = null;\n    this._formatSent = false;\n    this._frameQueue = [];\n    this._remoteSentTs = 0;\n    this._remoteRecvTs = 0;\n    this._rtt = 25;\n    this._rttAlpha = 1./16;\n    this._alanState = ALAN_OFF;\n    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 50);\n    this._visualState = {};\n    this._addCleanup(function() {clearInterval(_this._sendTimer);});\n    this._connect();\n    console.log('Alan: connection created: ' + this._url);\n}\n\nConnectionImpl.prototype._addCleanup = function(f) {\n    this._cleanups.push(f);\n};\n\nConnectionImpl.prototype._onConnectStatus = function(s) {\n    console.log('Alan: connection status: ' + s);\n    this._fire('connectStatus', s);\n};\n\nConnectionImpl.prototype._fire = function(event, object) {\n    if (event === 'options') {\n        if (object.versions) {\n            object.versions['alanbase:web'] = this._config.version;\n        }\n    }\n    postMessage(['fireEvent', event, object]);\n};\n\nConnectionImpl.prototype._connect = function() {\n    var _this = this;\n    if (this._socket) {\n        console.error('socket is already connected');\n        return;\n    }\n    console.log('Alan: connecting to ' + this._url);\n    this._socket = new WebSocket(this._url);\n    this._socket.binaryType = 'arraybuffer';\n    this._socket.onopen = function(e) {\n        console.info('Alan: connected', e.target === _this._socket);\n        _this._connected = true;\n        _this._reconnectTimeout = 100;\n        _this._fire('connection', {status: 'connected'});\n        if (_this._auth) {\n            _this._fire('connection', {status: 'authorizing'});\n            _this._callAuth();\n        } else {\n            _this._callWait.forEach(function(c) {  _this._sendCall(c); });\n            _this._callWait = [];\n        }\n    };\n    this._socket.onmessage = function(msg) {\n        if (msg.data instanceof ArrayBuffer) {\n            var f = alanFrame.parse(msg.data);\n            if (f.sentTs > 0) {\n                _this._remoteSentTs = f.sentTs;\n                _this._remoteRecvTs = Date.now();\n            } else {\n                _this._remoteSentTs = null;\n                _this._remoteRecvTs = null;\n            }\n            var rtt = 0;\n            if (f.remoteTs) {\n                rtt = Date.now() - f.remoteTs;\n            }\n            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;\n            var uint8 = new Uint8Array(f.audioData);\n            var frame = [];\n            var batch = 10000;\n            for (var offset = 0; offset < uint8.byteLength; offset += batch) {\n                var b = uint8.subarray(offset, Math.min(uint8.byteLength, offset + batch));\n                let a = String.fromCharCode.apply(null, b);\n                frame.push(a);\n            }\n            frame = frame.join('');\n            postMessage(['alanAudio', 'playFrame', frame]);\n        } else if (typeof(msg.data) === 'string') {\n            msg = JSON.parse(msg.data);\n            if (msg.i) {\n                var c = _this._callSent[msg.i];\n                delete _this._callSent[msg.i];\n                if (c && c.callback) {\n                    c.callback(msg.e, msg.r);\n                }\n            } else if (msg.e) {\n                if (msg.e === 'text') {\n                    postMessage(['alanAudio', 'playText', msg.p])\n                } else if (msg.e === 'command') {\n                    postMessage(['alanAudio', 'playCommand', msg.p]);\n                } else if (msg.e === 'inactivity') {\n                    postMessage(['alanAudio', 'stop']);\n                } else {\n                    _this._fire(msg.e, msg.p);\n                }\n            }\n        } else {\n            console.error('invalid message type');\n        }\n    };\n    this._socket.onerror = function(evt) {\n        console.error('Alan: connection closed due to error: ', evt);\n    };\n    this._socket.onclose = function(evt) {\n        console.info('Alan: connection closed');\n        _this._connected = false;\n        _this._authorized = false;\n        _this._socket = null;\n        _this._onConnectStatus('disconnected');\n        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {\n            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);\n            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);\n            if (_this._reconnectTimeout < 3000) {\n                _this._reconnectTimeout *= 2;\n            } else {\n                _this._reconnectTimeout += 500;\n            }\n            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);\n        }\n    };\n    this._addCleanup(function() {\n        if (this._socket) {\n            this._socket.close();\n            this._socket = null;\n        }\n    });\n};\n\nConnectionImpl.prototype._callAuth = function() {\n    var _this = this;\n    var callback = function(err, r) {\n        if (!err && r.status === 'authorized') {\n            _this._authorized = true;\n            _this._formatSent = false;\n            if (r.dialogId) {\n                postMessage(['setDialogId', r.dialogId]);\n                _this._dialogId = r.dialogId;\n            }\n            _this._onAuthorized();\n            _this._onConnectStatus('authorized');\n        } else if (err === 'auth-failed') {\n            _this._onConnectStatus('auth-failed');\n            if (_this._socket) {\n                _this._socket.close();\n                _this._socket = null;\n                _this._failed = true;\n            }\n        } else {\n            _this._onConnectStatus('invalid-auth-response');\n            console.log('Alan: invalid auth response', err, r);\n        }\n    };\n    var authParam = this._auth;\n    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;\n    if (this._dialogId) {\n        authParam.dialogId = this._dialogId;\n    }\n    authParam.mode = this._mode;\n    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});\n    return this;\n};\n\nConnectionImpl.prototype._sendCall = function(call) {\n    this._sendFormatIfNeeded(false);\n    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));\n    if (call.callback) {\n        this._callSent[call.cid] = call;\n    }\n};\n\nConnectionImpl.prototype._onAuthorized = function() {\n    console.log('Alan: authorized');\n    var _this = this;\n    this._callWait.forEach(function(c) {\n        _this._sendCall(c);\n    });\n    this._callWait = [];\n};\n\nConnectionImpl.prototype.close = function() {\n    for (var i = 0; i < this._cleanups.length; i++ ) {\n        this._cleanups[i]();\n    }\n    this._cleanups = [];\n    this._closed = true;\n    \n    if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {\n        this._socket.close();\n        this._socket = null;\n    }\n    console.log('Alan: closed connection to: ' + this._url);\n    //close(); TODO: delete it!\n};\n\nConnectionImpl.prototype.call = function(cid, method, param) {\n    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {\n        if (cid) {\n            postMessage(['callback', cid, err, obj]);\n        }\n    }};\n    if (this._authorized || this._connected && !this._auth) {\n        this._sendCall(call);\n    } else {\n        this._callWait.push(call);\n    }\n};\n\nConnectionImpl.prototype.setVisual = function(state) {\n    this._visualState = state;\n    this.call(null, '_visual_', state);\n};\n\nConnectionImpl.prototype._sendFrame = function(frame) {\n    if (!this._socket) {\n        console.error('sendFrame to closed socket');\n        return;\n    }\n    frame.sentTs = Date.now();\n    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {\n        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;\n    }\n    this._socket.send(frame.write());\n};\n\nConnectionImpl.prototype._listen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'listen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_LISTENING;\n};\n\nConnectionImpl.prototype._stopListen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'stopListen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_OFF;\n};\n\nConnectionImpl.prototype._onAudioFormat = function(format) {\n    console.log('_onAudioFormat', format);\n    this._formatSent = false;\n    this._format = format;\n};\n\nConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {\n    if (this._alanState === ALAN_SPEAKING) {\n        return;\n    }\n    if (this._alanState === ALAN_OFF) {\n        this._listen();\n    }\n    if (this._alanState !== ALAN_LISTENING) {\n        console.error('invalid alan state: ' + this._alanState);\n        return;\n    }\n    this._sendFormatIfNeeded(true);\n    var f = alanFrame.create();\n    f.audioData = frame;\n    this._frameQueue.push(f);\n};\n\nConnectionImpl.prototype._sendFormatIfNeeded = function(inQueue) {\n    if (!this._format || this._formatSent) {\n        return;\n    }\n    this._formatSent = true;\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({format: this._format});\n    if (inQueue) {\n        this._frameQueue.push(f);\n    } else {\n        this._sendFrame(f);\n    }\n};\n\nConnectionImpl.prototype._flushQueue = function() {\n    if (!this._socket || !this._connected) {\n        var d = 0;\n        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {\n            this._frameQueue.shift();\n            d++;\n        }\n        if (d > 0) {\n            console.error('dropped: %s, frames', d);\n        }\n        return;\n    }\n    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {\n        this._sendFrame(this._frameQueue.shift());\n    }\n};\n\nfunction connectProject(config, auth, mode) {\n    var c = new ConnectionImpl(config, auth, mode);\n    c.onAudioEvent = function(event, arg1, arg2) {\n        if (event === 'format') {\n            c._onAudioFormat(arg1);\n        } else if (event === 'frame') {\n            c._onMicFrame(arg1, arg2);\n        } else if (event === 'micStop' || event === 'playStart') {\n            c._stopListen();\n        } else {\n            console.error('unknown audio event: ' + event, arg1, arg2);\n        }\n    };\n    return c;\n}\n\nvar factories = {\n    connectProject: connectProject,\n};\n\nvar currentConnect = null;\n\nonmessage = function(e) {\n    var name = e.data[0];\n    try {\n        if (!currentConnect) {\n            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));\n        } else {\n            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));\n        }\n    } catch(e) {\n        console.error('error calling: ' + name, e);\n    }\n};\n"]),{type: 'text/javascript'}));
+        this._worker.onmessage = function(e) {
+            if (e.data[0] === 'fireEvent') {
+                _this._fire(e.data[1], e.data[2]);
+                return;
+            }
+            if (e.data[0] === 'alanAudio') {
+                if (e.data[1] === 'playText') {
+                    alanAudio.playText(e.data[2]);
+                    return;
+                }
+                if (e.data[1] === 'playAudio' || e.data[1] === 'playFrame') {
+                    alanAudio.playAudio(e.data[2]);
+                    return;
+                }
+                if (e.data[1] === 'playEvent' || e.data[1] === 'playCommand') {
+                    alanAudio.playEvent(e.data[2]);
+                    return;
+                }
+                if (e.data[1] === 'stop') {
+                    alanAudio.stop();
+                    return;
+                }
+            }
+            if (e.data[0] === "callback") {
+                _this._callback[e.data[1]](e.data[2], e.data[3]);
+                delete _this._callback[e.data[1]];
+                return;
+            }
+            if (e.data[0] === "setDialogId") {
+                _this._dialogId = e.data[1];
+                return;
+            }
+            console.error("invalid event", e.data);
+        };
+        this._worker.onerror = function(e) {
+            console.error("error in worker: " + e.filename + ":" + e.lineno + " - " +  e.message);
+        };
+        this._handlers = {};
+        this._cleanups = [];
+        this._callback = {};
+        this._callIds  = 1;
+        this._config   = {};
+    }
+
+    ConnectionWrapper.prototype.on = function(event, handler) {
+        var h = this._handlers[event];
+        if (!h) {
+            h = [];
+            this._handlers[event] = h;
+        }
+        h.push(handler);
+    };
+
+    ConnectionWrapper.prototype.off = function(event, handler) {
+        var h = this._handlers[event];
+        if (h) {
+            var index = h.indexOf(handler);
+            if (index >= 0) {
+                h.splice(index, 1);
+            }
+        }
+    };
+
+    ConnectionWrapper.prototype.getSettings = function() {
+        return {
+            server: config.baseURL,
+            projectId: this._config.projectId,
+            dialogId: this._dialogId,
+        };
+    };
+
+    ConnectionWrapper.prototype.setVisual = function(state) {
+        this._worker.postMessage(['setVisual', state]);
+    };
+
+    ConnectionWrapper.prototype.call = function(method, param, callback) {
+        var cid = null;
+        if (callback) {
+            cid = this._callIds++;
+            this._callback[cid] = callback;
+        }
+        this._worker.postMessage(['call', cid, method, param]);
+    };
+
+    ConnectionWrapper.prototype.close = function() {
+        console.log('closing connection to: ' + this._url);
+        this._cleanups.forEach(function (h) { h();});
+        this._worker.postMessage(['close']);
+        this._worker.terminate();
+    };
+
+    ConnectionWrapper.prototype._fire = function(event, object) {
+        var h = this._handlers[event];
+        if (h) {
+            for (var i = 0; i < h.length; i++ ) {
+                h[i](object);
+            }
+        }
+    };
+
+    ConnectionWrapper.prototype._addCleanup = function(f) {
+        this._cleanups.push(f);
+    };
+
+    function fillAuth(values, ext) {
+        var auth = {};
+        for (var k in values) {
+            auth[k] = values[k];
+        }
+
+        if (!ext || (ext && ext.platform == null)) {
+            auth.platform = config.platform;
+        } else {
+            auth.platform = config.platform + ":" + ext.platform;
+        }
+        if (!ext || (ext && ext.platformVersion == null)) {
+            auth.platformVersion = config.version;
+        } else {
+            auth.platformVersion = config.version + ":" + ext.platformVersion;
+        }
+        if (ext && ext.appName) {
+            auth.appName = ext.appName;
+        }
+        return auth;
+    }
+
+    function isProjectIdValid(projectId) {
+        return projectId.match(/^[A-Z0-9]{64}\/(prod|stage|testing)$/gi);
+    }
+                            
+    function connectProject(projectId, auth,  host, mode, ext) {
+        var connect = new ConnectionWrapper();
+        if (host)  {
+            config.baseURL = "wss://" + host;
+        }
+        connect._config.projectId = projectId;
+        connect._config.codec     = config.codec;
+        connect._config.version   = config.version;
+        connect._config.url       = config.baseURL + "/ws_project/" + projectId;
+
+        if (!isProjectIdValid(projectId)) {
+            throw new Error("Wrong projectId was provided");
+        }
+
+        connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
+        function signupEvent(name, handler) {
+            alanAudio.on(name, handler);
+            connect._addCleanup(function() {
+                alanAudio.off(name,  handler);
+            });
+        }
+        function passEventToWorker(name) {
+            function handler(a1, a2) {
+                if (name === 'frame' && alanAudio.isPlaying()) {
+                    return;
+                }
+                connect._worker.postMessage(['onAudioEvent', name, a1, a2]);
+            }
+            signupEvent(name, handler);
+        }
+        function passEventToClient(name) {
+            function handler(e1) {
+                connect._fire(name, e1);
+            }
+            signupEvent(name, handler);
+        }
+        passEventToWorker('frame');
+        passEventToWorker('micStop');
+        passEventToWorker('playStart');
+        passEventToClient('text');
+        passEventToClient('command');
+        connect._worker.postMessage(['onAudioEvent', 'format', alanAudio.getFormat()]);
+        return connect;
+    }
+
+    function connectProjectTest(projectId, auth,  host, mode, ext) {
+        var connect = new ConnectionWrapper();
+        if (host)  {
+            config.baseURL = "wss://" + host;
+        }
+        connect._config.projectId = projectId;
+        connect._config.codec     = config.codec;
+        connect._config.version   = config.version;
+        connect._config.url       = config.baseURL + "/ws_project/" + projectId;
+
+        if (!isProjectIdValid(projectId)) {
+            throw new Error("Wrong projectId was provided");
+        }
+
+        connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
+        function signupEvent(name, handler) {
+            alanAudio.on(name, handler);
+            connect._addCleanup(function() {
+                alanAudio.off(name,  handler);
+            });
+        }
+        function passEventToWorker(name) {
+            function handler(a1, a2) {
+                if (name === 'frame' && alanAudio.isPlaying()) {
+                    return;
+                }
+                connect._worker.postMessage(['onAudioEvent', name, a1, a2]);
+            }
+            signupEvent(name, handler);
+        }
+        function passEventToClient(name) {
+            function handler(e1) {
+                connect._fire(name, e1);
+            }
+            signupEvent(name, handler);
+        }
+        passEventToWorker('frame');
+        passEventToWorker('micStop');
+        passEventToWorker('playStart');
+        passEventToClient('text');
+        passEventToClient('command');
+        return connect;
+    }
+
+    function connectTutor(auth, host) {
+        var connect = new ConnectionWrapper();
+        if (host)  {
+            config.baseURL = "wss://" + host;
+        }
+        connect._config.version = config.version;
+        connect._config.url = config.baseURL + "/ws_tutor";
+        connect._worker.postMessage(["connectProject", connect._config, auth]);
+        return connect;
+    }
+
+    ns.alanSDKVersion = config.version;
+
+    ns.alan = {
+        sdkVersion: config.version,
+        diagnostic: ns.alanDiagnostic,
+        projectTest: connectProjectTest,
+        project: connectProject,
+        tutor: connectTutor,
+    };
+
+})(window);
+
 (function(ns) {
     "use strict";
 
@@ -299,251 +743,8 @@
 
 (function(ns) {
     "use strict";
-
-    var host = 'studio.alan.app';
-
-    var config = {
-        // baseURL: (window.location.protocol === "https:" ? "wss://" : "ws://") +
-        baseURL: "wss://" +
-            ((host.indexOf('$') === 0 || host === '') ? window.location.host : host ),
-        codec: 'opus',
-        version: '2.0.42',
-        platform: 'web',
-    };
-
-    function ConnectionWrapper() {
-        var _this = this;
-        this._worker = new Worker(window.URL.createObjectURL(new Blob(["(function(ns) {\n    'use strict';\n\n    var SENT_TS    = 1;\n    var REMOTE_TS  = 2;\n    var TIMESTAMP  = 3;\n    var AUDIO_DATA = 4;\n    var JSON_DATA  = 5;\n\n    AlanFrame.fields = [\n        propUint64(SENT_TS,   'sentTs'),\n        propUint64(REMOTE_TS, 'remoteTs'),\n        propUint64(TIMESTAMP, 'timestamp'),\n        propBytes(AUDIO_DATA, 'audioData'),\n        propJson(JSON_DATA,   'jsonData'),\n    ];\n\n    function AlanFrameProp(type, name, sizeF, readF, writeF) {\n        this.type   = type;\n        this.name   = name;\n        this.sizeF  = sizeF;\n        this.writeF = writeF;\n        this.readF  = readF;\n    }\n\n    function fixedSize(size) {\n        return function() {\n            return size;\n        }\n    }\n\n    function bufferSize(buffer) {\n        return 4 + byteLength(buffer);\n    }\n\n    function writeUIntN(uint8array, value, nBytes, offset) {\n        for (var i = 0; i < nBytes; i++ ) {\n            uint8array[offset + i] = 0xFF & value;\n            value /= 256;\n        }\n    }\n\n    function readUIntN(uint8array, nBytes, offset) {\n        var r = 0;\n        for (var i = nBytes - 1; i >= 0; i-- ) {\n            r *= 256;\n            r += 0xFF & uint8array[offset + i];\n        }\n        return r;\n    }\n\n    function writeUInt64(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 8, offset);\n    }\n\n    function readUInt64(uint8array, offset) {\n        return readUIntN(uint8array, 8, offset);\n    }\n\n    function writeUInt32(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 4, offset);\n    }\n\n    function readUInt32(uint8array, offset) {\n        return readUIntN(uint8array, 4, offset);\n    }\n\n    function writeBuffer(uint8array, buffer, offset) {\n        buffer = toUint8(buffer);\n        writeUInt32(uint8array, buffer.length, offset);\n        for (var i = 0; i < buffer.length; i++ ) {\n            uint8array[offset + 4 + i] = buffer[i];\n        }\n    }\n\n    function readBuffer(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('buffer too big');\n        }\n        return uint8array.subarray(offset + 4, offset + 4 + size);\n    }\n\n    function readUTF8(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('string too big');\n        }\n        return String.fromCharCode.apply(null, uint8array.slice(offset + 4, offset + 4 + size));\n    }\n\n    function writeUTF8(uint8array, string, offset) {\n        writeUInt32(uint8array, string.length, offset);\n        for (var i = 0; i < string.length; i++ ) {\n            uint8array[offset + 4 + i] = string.charCodeAt(i);\n        }\n    }\n\n    function sizeUTF8(string) {\n        return 4 + string.length;\n    }\n\n    function propUint32(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(4), readUInt32, writeUInt32);\n    }\n\n    function propUint64(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(8), readUInt64, writeUInt64);\n    }\n\n    function propBytes(type, name) {\n        return new AlanFrameProp(type, name, bufferSize, readBuffer, writeBuffer);\n    }\n\n    function propJson(type, name) {\n        return new AlanFrameProp(type, name, sizeUTF8, readUTF8, writeUTF8);\n    }\n\n    AlanFrame.fieldByType = function(type) {\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var frame = AlanFrame.fields[i];\n            if (frame.type === type) {\n                return frame;\n            }\n        }\n        throw new Error('invalid field: ' + type);\n    };\n\n    function AlanFrame() {\n        this.version = 1;\n    }\n\n    AlanFrame.prototype.write = function() {\n        var result = new Uint8Array(this.writeSize());\n        var offset = 1;\n        result[0]  = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                result[offset++] = field.type;\n                field.writeF(result, value, offset);\n                offset += field.sizeF(value);\n            }\n        }\n        return result.buffer;\n    };\n\n    /**\n     * @returns UInt8Array\n     */\n    AlanFrame.prototype.writeSize = function() {\n        var size = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                size += 1 + field.sizeF(value);\n            }\n        }\n        return size;\n    };\n\n    AlanFrame.prototype.toString = function() {\n        var first = true, str = '';\n        for (var k in this) {\n            if (this.hasOwnProperty(k)) {\n                if (first) {\n                    str += k + ' = ';\n                    first = false;\n                } else {\n                    str += ', ' + k + ' = ';\n                }\n                var v = this[k];\n                if (typeof(v) === 'object') {\n                    str += 'bytes[' + byteLength(v) + ']';\n                } else {\n                    str += v;\n                }\n            }\n        }\n        return str;\n    };\n\n    function byteLength(b) {\n        if (b instanceof Uint8Array) {\n            return b.length;\n        }\n        if (b instanceof ArrayBuffer) {\n            return b.byteLength;\n        }\n    }\n\n    function toArrayBuffer(buffer) {\n        if (buffer instanceof ArrayBuffer) {\n            return buffer;\n        }\n        return buffer.buffer;\n    }\n\n    function toUint8(buffer) {\n        if (buffer instanceof Uint8Array) {\n            return buffer;\n        }\n        if (buffer instanceof ArrayBuffer) {\n            return new Uint8Array(buffer);\n        }\n        throw new Error('invalid buffer type');\n    }\n\n    function parse(uint8array) {\n        uint8array = toUint8(uint8array);\n        var r = new AlanFrame();\n        var offset = 0;\n        r.version = uint8array[offset++];\n        while (offset < uint8array.length) {\n            var frame = AlanFrame.fieldByType(uint8array[offset++]);\n            r[frame.name] = frame.readF(uint8array, offset);\n            offset += frame.sizeF(r[frame.name]);\n        }\n        return r;\n    }\n\n    ns.create = function() {\n        return new AlanFrame();\n    };\n\n    ns.parse = parse;\n\n})(typeof(window)            !== 'undefined' ? (function() {window.alanFrame = {}; return window.alanFrame; })() :\n   typeof(WorkerGlobalScope) !== 'undefined' ? (function() {alanFrame = {}; return alanFrame; })() :\n   exports);\n\n\n'use strict';\n\nvar ALAN_OFF       = 'off';\nvar ALAN_SPEAKING  = 'speaking';\nvar ALAN_LISTENING = 'listening';\n\nfunction ConnectionImpl(config, auth, mode) {\n    var _this = this;\n    this._config = config;\n    this._auth = auth;\n    this._mode = mode;\n    this._projectId = config.projectId;\n    this._url = config.url;\n    this._connected = false;\n    this._authorized = false;\n    this._dialogId = null;\n    this._callId = 1;\n    this._callSent = {};\n    this._callWait = [];\n    this._failed = false;\n    this._closed = false;\n    this._reconnectTimeout = 100;\n    this._cleanups = [];\n    this._format = null;\n    this._formatSent = false;\n    this._frameQueue = [];\n    this._remoteSentTs = 0;\n    this._remoteRecvTs = 0;\n    this._rtt = 25;\n    this._rttAlpha = 1./16;\n    this._alanState = ALAN_OFF;\n    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 50);\n    this._visualState = {};\n    this._addCleanup(function() {clearInterval(_this._sendTimer);});\n    this._connect();\n    console.log('Alan: connection created: ' + this._url);\n}\n\nConnectionImpl.prototype._addCleanup = function(f) {\n    this._cleanups.push(f);\n};\n\nConnectionImpl.prototype._onConnectStatus = function(s) {\n    console.log('Alan: connection status: ' + s);\n    this._fire('connectStatus', s);\n};\n\nConnectionImpl.prototype._fire = function(event, object) {\n    if (event === 'options') {\n        if (object.versions) {\n            object.versions['alanbase:web'] = this._config.version;\n        }\n    }\n    postMessage(['fireEvent', event, object]);\n};\n\nConnectionImpl.prototype._connect = function() {\n    var _this = this;\n    if (this._socket) {\n        console.error('socket is already connected');\n        return;\n    }\n    console.log('Alan: connecting to ' + this._url);\n    this._socket = new WebSocket(this._url);\n    this._socket.binaryType = 'arraybuffer';\n    this._socket.onopen = function(e) {\n        console.info('Alan: connected', e.target === _this._socket);\n        _this._connected = true;\n        _this._reconnectTimeout = 100;\n        _this._fire('connection', {status: 'connected'});\n        if (_this._auth) {\n            _this._fire('connection', {status: 'authorizing'});\n            _this._callAuth();\n        } else {\n            _this._callWait.forEach(function(c) {  _this._sendCall(c); });\n            _this._callWait = [];\n        }\n    };\n    this._socket.onmessage = function(msg) {\n        if (msg.data instanceof ArrayBuffer) {\n            var f = alanFrame.parse(msg.data);\n            if (f.sentTs > 0) {\n                _this._remoteSentTs = f.sentTs;\n                _this._remoteRecvTs = Date.now();\n            } else {\n                _this._remoteSentTs = null;\n                _this._remoteRecvTs = null;\n            }\n            var rtt = 0;\n            if (f.remoteTs) {\n                rtt = Date.now() - f.remoteTs;\n            }\n            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;\n            var uint8 = new Uint8Array(f.audioData);\n            var frame = [];\n            var batch = 10000;\n            for (var offset = 0; offset < uint8.byteLength; offset += batch) {\n                var b = uint8.subarray(offset, Math.min(uint8.byteLength, offset + batch));\n                let a = String.fromCharCode.apply(null, b);\n                frame.push(a);\n            }\n            frame = frame.join('');\n            postMessage(['alanAudio', 'playFrame', frame]);\n        } else if (typeof(msg.data) === 'string') {\n            msg = JSON.parse(msg.data);\n            if (msg.i) {\n                var c = _this._callSent[msg.i];\n                delete _this._callSent[msg.i];\n                if (c && c.callback) {\n                    c.callback(msg.e, msg.r);\n                }\n            } else if (msg.e) {\n                if (msg.e === 'text') {\n                    postMessage(['alanAudio', 'playText', msg.p])\n                } else if (msg.e === 'command') {\n                    postMessage(['alanAudio', 'playCommand', msg.p]);\n                } else if (msg.e === 'inactivity') {\n                    postMessage(['alanAudio', 'stop']);\n                } else {\n                    _this._fire(msg.e, msg.p);\n                }\n            }\n        } else {\n            console.error('invalid message type');\n        }\n    };\n    this._socket.onerror = function(evt) {\n        console.error('Alan: connection closed due to error: ', evt);\n    };\n    this._socket.onclose = function(evt) {\n        console.info('Alan: connection closed');\n        _this._connected = false;\n        _this._authorized = false;\n        _this._socket = null;\n        _this._onConnectStatus('disconnected');\n        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {\n            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);\n            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);\n            if (_this._reconnectTimeout < 3000) {\n                _this._reconnectTimeout *= 2;\n            } else {\n                _this._reconnectTimeout += 500;\n            }\n            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);\n        }\n    };\n    this._addCleanup(function() {\n        if (this._socket) {\n            this._socket.close();\n            this._socket = null;\n        }\n    });\n};\n\nConnectionImpl.prototype._callAuth = function() {\n    var _this = this;\n    var callback = function(err, r) {\n        if (!err && r.status === 'authorized') {\n            _this._authorized = true;\n            _this._formatSent = false;\n            if (r.dialogId) {\n                postMessage(['setDialogId', r.dialogId]);\n                _this._dialogId = r.dialogId;\n            }\n            _this._onAuthorized();\n            _this._onConnectStatus('authorized');\n        } else if (err === 'auth-failed') {\n            _this._onConnectStatus('auth-failed');\n            if (_this._socket) {\n                _this._socket.close();\n                _this._socket = null;\n                _this._failed = true;\n            }\n        } else {\n            _this._onConnectStatus('invalid-auth-response');\n            console.log('Alan: invalid auth response', err, r);\n        }\n    };\n    var authParam = this._auth;\n    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;\n    if (this._dialogId) {\n        authParam.dialogId = this._dialogId;\n    }\n    authParam.mode = this._mode;\n    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});\n    return this;\n};\n\nConnectionImpl.prototype._sendCall = function(call) {\n    this._sendFormatIfNeeded(false);\n    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));\n    if (call.callback) {\n        this._callSent[call.cid] = call;\n    }\n};\n\nConnectionImpl.prototype._onAuthorized = function() {\n    console.log('Alan: authorized');\n    var _this = this;\n    this._callWait.forEach(function(c) {\n        _this._sendCall(c);\n    });\n    this._callWait = [];\n};\n\nConnectionImpl.prototype.close = function() {\n    for (var i = 0; i < this._cleanups.length; i++ ) {\n        this._cleanups[i]();\n    }\n    this._cleanups = [];\n    this._closed = true;\n    \n    if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {\n        this._socket.close();\n        this._socket = null;\n    }\n    console.log('Alan: closed connection to: ' + this._url);\n    //close(); TODO: delete it!\n};\n\nConnectionImpl.prototype.call = function(cid, method, param) {\n    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {\n        if (cid) {\n            postMessage(['callback', cid, err, obj]);\n        }\n    }};\n    if (this._authorized || this._connected && !this._auth) {\n        this._sendCall(call);\n    } else {\n        this._callWait.push(call);\n    }\n};\n\nConnectionImpl.prototype.setVisual = function(state) {\n    this._visualState = state;\n    this.call(null, '_visual_', state);\n};\n\nConnectionImpl.prototype._sendFrame = function(frame) {\n    if (!this._socket) {\n        console.error('sendFrame to closed socket');\n        return;\n    }\n    frame.sentTs = Date.now();\n    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {\n        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;\n    }\n    this._socket.send(frame.write());\n};\n\nConnectionImpl.prototype._listen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'listen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_LISTENING;\n};\n\nConnectionImpl.prototype._stopListen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'stopListen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_OFF;\n};\n\nConnectionImpl.prototype._onAudioFormat = function(format) {\n    console.log('_onAudioFormat', format);\n    this._formatSent = false;\n    this._format = format;\n};\n\nConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {\n    if (this._alanState === ALAN_SPEAKING) {\n        return;\n    }\n    if (this._alanState === ALAN_OFF) {\n        this._listen();\n    }\n    if (this._alanState !== ALAN_LISTENING) {\n        console.error('invalid alan state: ' + this._alanState);\n        return;\n    }\n    this._sendFormatIfNeeded(true);\n    var f = alanFrame.create();\n    f.audioData = frame;\n    this._frameQueue.push(f);\n};\n\nConnectionImpl.prototype._sendFormatIfNeeded = function(inQueue) {\n    if (!this._format || this._formatSent) {\n        return;\n    }\n    this._formatSent = true;\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({format: this._format});\n    if (inQueue) {\n        this._frameQueue.push(f);\n    } else {\n        this._sendFrame(f);\n    }\n};\n\nConnectionImpl.prototype._flushQueue = function() {\n    if (!this._socket || !this._connected) {\n        var d = 0;\n        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {\n            this._frameQueue.shift();\n            d++;\n        }\n        if (d > 0) {\n            console.error('dropped: %s, frames', d);\n        }\n        return;\n    }\n    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {\n        this._sendFrame(this._frameQueue.shift());\n    }\n};\n\nfunction connectProject(config, auth, mode) {\n    var c = new ConnectionImpl(config, auth, mode);\n    c.onAudioEvent = function(event, arg1, arg2) {\n        if (event === 'format') {\n            c._onAudioFormat(arg1);\n        } else if (event === 'frame') {\n            c._onMicFrame(arg1, arg2);\n        } else if (event === 'micStop' || event === 'playStart') {\n            c._stopListen();\n        } else {\n            console.error('unknown audio event: ' + event, arg1, arg2);\n        }\n    };\n    return c;\n}\n\nvar factories = {\n    connectProject: connectProject,\n};\n\nvar currentConnect = null;\n\nonmessage = function(e) {\n    var name = e.data[0];\n    try {\n        if (!currentConnect) {\n            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));\n        } else {\n            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));\n        }\n    } catch(e) {\n        console.error('error calling: ' + name, e);\n    }\n};\n"]),{type: 'text/javascript'}));
-        this._worker.onmessage = function(e) {
-            if (e.data[0] === 'fireEvent') {
-                _this._fire(e.data[1], e.data[2]);
-                return;
-            }
-            if (e.data[0] === 'alanAudio') {
-                if (e.data[1] === 'playText') {
-                    alanAudio.playText(e.data[2]);
-                    return;
-                }
-                if (e.data[1] === 'playAudio' || e.data[1] === 'playFrame') {
-                    alanAudio.playAudio(e.data[2]);
-                    return;
-                }
-                if (e.data[1] === 'playEvent' || e.data[1] === 'playCommand') {
-                    alanAudio.playEvent(e.data[2]);
-                    return;
-                }
-                if (e.data[1] === 'stop') {
-                    alanAudio.stop();
-                    return;
-                }
-            }
-            if (e.data[0] === "callback") {
-                _this._callback[e.data[1]](e.data[2], e.data[3]);
-                delete _this._callback[e.data[1]];
-                return;
-            }
-            if (e.data[0] === "setDialogId") {
-                _this._dialogId = e.data[1];
-                return;
-            }
-            console.error("invalid event", e.data);
-        };
-        this._worker.onerror = function(e) {
-            console.error("error in worker: " + e.filename + ":" + e.lineno + " - " +  e.message);
-        };
-        this._handlers = {};
-        this._cleanups = [];
-        this._callback = {};
-        this._callIds  = 1;
-        this._config   = {};
-    }
-
-    ConnectionWrapper.prototype.on = function(event, handler) {
-        var h = this._handlers[event];
-        if (!h) {
-            h = [];
-            this._handlers[event] = h;
-        }
-        h.push(handler);
-    };
-
-    ConnectionWrapper.prototype.off = function(event, handler) {
-        var h = this._handlers[event];
-        if (h) {
-            var index = h.indexOf(handler);
-            if (index >= 0) {
-                h.splice(index, 1);
-            }
-        }
-    };
-
-    ConnectionWrapper.prototype.getSettings = function() {
-        return {
-            server: config.baseURL,
-            projectId: this._config.projectId,
-            dialogId: this._dialogId,
-        };
-    };
-
-    ConnectionWrapper.prototype.setVisual = function(state) {
-        this._worker.postMessage(['setVisual', state]);
-    };
-
-    ConnectionWrapper.prototype.call = function(method, param, callback) {
-        var cid = null;
-        if (callback) {
-            cid = this._callIds++;
-            this._callback[cid] = callback;
-        }
-        this._worker.postMessage(['call', cid, method, param]);
-    };
-
-    ConnectionWrapper.prototype.close = function() {
-        console.log('closing connection to: ' + this._url);
-        this._cleanups.forEach(function (h) { h();});
-        this._worker.postMessage(['close']);
-    };
-
-    ConnectionWrapper.prototype._fire = function(event, object) {
-        var h = this._handlers[event];
-        if (h) {
-            for (var i = 0; i < h.length; i++ ) {
-                h[i](object);
-            }
-        }
-    };
-
-    ConnectionWrapper.prototype._addCleanup = function(f) {
-        this._cleanups.push(f);
-    };
-
-    function fillAuth(values, ext) {
-        var auth = {};
-        for (var k in values) {
-            auth[k] = values[k];
-        }
-
-        if (!ext || (ext && ext.platform == null)) {
-            auth.platform = config.platform;
-        } else {
-            auth.platform = config.platform + ":" + ext.platform;
-        }
-        if (!ext || (ext && ext.platformVersion == null)) {
-            auth.platformVersion = config.version;
-        } else {
-            auth.platformVersion = config.version + ":" + ext.platformVersion;
-        }
-        if (ext && ext.appName) {
-            auth.appName = ext.appName;
-        }
-        return auth;
-    }
-                            
-    function connectProject(projectId, auth,  host, mode, ext) {
-        var connect = new ConnectionWrapper();
-        if (host)  {
-            config.baseURL = "wss://" + host;
-        }
-        connect._config.projectId = projectId;
-        connect._config.codec     = config.codec;
-        connect._config.version   = config.version;
-        connect._config.url       = config.baseURL + "/ws_project/" + projectId;
-        connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
-        function signupEvent(name, handler) {
-            alanAudio.on(name, handler);
-            connect._addCleanup(function() {
-                alanAudio.off(name,  handler);
-            });
-        }
-        function passEventToWorker(name) {
-            function handler(a1, a2) {
-                if (name === 'frame' && alanAudio.isPlaying()) {
-                    return;
-                }
-                connect._worker.postMessage(['onAudioEvent', name, a1, a2]);
-            }
-            signupEvent(name, handler);
-        }
-        function passEventToClient(name) {
-            function handler(e1) {
-                connect._fire(name, e1);
-            }
-            signupEvent(name, handler);
-        }
-        passEventToWorker('frame');
-        passEventToWorker('micStop');
-        passEventToWorker('playStart');
-        passEventToClient('text');
-        passEventToClient('command');
-        connect._worker.postMessage(['onAudioEvent', 'format', alanAudio.getFormat()]);
-        return connect;
-    }
-
-    function connectProjectTest(projectId, auth,  host, mode, ext) {
-        var connect = new ConnectionWrapper();
-        if (host)  {
-            config.baseURL = "wss://" + host;
-        }
-        connect._config.projectId = projectId;
-        connect._config.codec     = config.codec;
-        connect._config.version   = config.version;
-        connect._config.url       = config.baseURL + "/ws_project/" + projectId;
-        connect._worker.postMessage(["connectProject", connect._config, fillAuth(auth, ext), mode]);
-        function signupEvent(name, handler) {
-            alanAudio.on(name, handler);
-            connect._addCleanup(function() {
-                alanAudio.off(name,  handler);
-            });
-        }
-        function passEventToWorker(name) {
-            function handler(a1, a2) {
-                if (name === 'frame' && alanAudio.isPlaying()) {
-                    return;
-                }
-                connect._worker.postMessage(['onAudioEvent', name, a1, a2]);
-            }
-            signupEvent(name, handler);
-        }
-        function passEventToClient(name) {
-            function handler(e1) {
-                connect._fire(name, e1);
-            }
-            signupEvent(name, handler);
-        }
-        passEventToWorker('frame');
-        passEventToWorker('micStop');
-        passEventToWorker('playStart');
-        passEventToClient('text');
-        passEventToClient('command');
-        return connect;
-    }
-
-    function connectTutor(auth, host) {
-        var connect = new ConnectionWrapper();
-        if (host)  {
-            config.baseURL = "wss://" + host;
-        }
-        connect._config.version = config.version;
-        connect._config.url = config.baseURL + "/ws_tutor";
-        connect._worker.postMessage(["connectProject", connect._config, auth]);
-        return connect;
-    }
-
-    ns.alanSDKVersion = config.version;
-
-    ns.alan = {
-        sdkVersion: config.version,
-        projectTest: connectProjectTest,
-        project: connectProject,
-        tutor: connectTutor,
-    };
-
-})(window);
-
-(function(ns) {
-    "use strict";
     
-    var alanButtonVersion = '1.8.18';
+    var alanButtonVersion = '1.8.19';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
