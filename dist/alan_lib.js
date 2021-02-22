@@ -200,7 +200,7 @@
     var config = {
         // baseURL: (window.location.protocol === "https:" ? "wss://" : "ws://") +
         baseURL: "wss://" +
-            ((host.indexOf('$') === 0 || host === '') ? window.location.host : host ),
+            ((host.indexOf('$') === 0 || host === '') ? window.location.hostname : host ),
         codec: 'opus',
         version: '2.0.43',
         platform: 'web',
@@ -744,7 +744,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.19';
+    var alanButtonVersion = '1.8.20';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -1433,10 +1433,9 @@ function alanBtn(options) {
         processStateBtnIconImg,
         replyStateBtnIconImg
     ];
-
+    defaultStateBtnIconImg.src = micIconSrc;
     for (var i = 0; i < logoImgs.length; i++) {
         var logoImgEl = logoImgs[i];
-        logoImgEl.src = micIconSrc;
         logoImgEl.style.minHeight = '100%';
         logoImgEl.style.height = '100%';
         logoImgEl.style.maxHeight = '100%';
