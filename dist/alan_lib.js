@@ -744,7 +744,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.20';
+    var alanButtonVersion = '1.8.21';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -1115,10 +1115,13 @@ function alanBtn(options) {
     var sideBtnPos;
     var bottomBtnPos;
     var topBtnPos;
+    var initRightPos;
     var btnZIndex;
     var btnIconsZIndex;
     var btnTextPanelsZIndex;
     var btnBgLayerZIndex;
+
+    var overlayIsVisible = false;
 
     // Define base properties for disable/enable button functionality
     var isLocalStorageAvailable = false;
@@ -1208,6 +1211,7 @@ function alanBtn(options) {
         sideBtnPos = setDefautlPositionProps(options.left !== undefined ? options.left : btnModes[mode].leftPos);
     } else {
         sideBtnPos = setDefautlPositionProps(options.right !== undefined ? options.right : btnModes[mode].rightPos);
+        initRightPos = parseInt(sideBtnPos, 10);
     }
 
     if (isTopAligned) {
@@ -1287,14 +1291,14 @@ function alanBtn(options) {
         }
 
         if (absolutePosition) {
-            recognisedTextHolder.style.position = 'absolute';
+            el.style.position = 'absolute';
         }
         if (topPos) {
             el.style.bottom = '';
             el.style.top = (absolutePosition ? 0 : topPos) + _btnSize / 2   + 'px';
             el.style.setProperty('transform', 'translateY(-50%)', 'important');
         }
-        recognisedTextHolder.style.zIndex = btnTextPanelsZIndex;
+        el.style.zIndex = btnTextPanelsZIndex;
     }
 
     function setStylesBasedOnSide() {
@@ -1531,7 +1535,7 @@ function alanBtn(options) {
     noVoiceSupportMicIconImg.alt = alanAltText + ' no voice support icon';
     noVoiceSupportMicIconImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAIuSURBVHgB7dvxUYMwFAbwpxMwAhvoBtVJygZ1A92gI1Qn6AjoBO0GsEG7wfPlgCtNA7xASzX5fnf5oyThLp+BQDiJAAAAAAAAAAAAAAAAxmHmDyk5n+ykLAn6SUhpHVaXwrQhcBsIr5FTLGSwb1IOmpkj9RnrxXE5+1x+fH7Pwyw0+PKSLLpCrGeq1oFiwNWiUGhCZE8UC22I7IliogmRPVFshkJkTxSjvhDZE8WqJ0QEqNURIgL0MTVEgmkhElTGhkix4WqzoNlYWFp1k1fhvvMHgc9n2cFRPzXAou/8t/JAM7EH/SD66ocM9bfrb+WR7kTGm1iHjqR3HDjXbOYMsLR+p9bvPentr3iuSeYM0B7Uwvr9RXqfA+cqKTRyma2sdSB3tMlZJ7X62Ru3Qa7CiSOIF6uN9pmw4NMuTjYUcDAcM8wEkTjaZdasytm9AfHsOL6lUJkZx5c2yr7a2ZlSyGSAa8egt5qBK0JU/TH+Na7uha4QzLHBm7+0ee8Iz/Sf/XlwtjeRtnq2mVU4dVSXUr6l/NDpccS0e5KSSekKybR9lReQkmLAV9hU7ZiFKcWCq8t5zeOtWfndOWhczcYN6+VSFq2+RfQhGnUYWUeY5ph5m0k6+iHENjs9RXuE2OYbYN3HFeKOYjQmwLrfRYgUo7EB1n2bEM03khXd0F0epDXs0Obaovd1ty39UCDAif5ygO0PRyWBH64eqJuFAP9kAwAAAAAAAAAAAAAAU/wC52820szaQtwAAAAASUVORK5CYII=";
     
-    // Define base st`yles for ovals
+    // Define base styles for ovals
     var defaultBtnColorOptions = {
         "idle": {
             "background": {
@@ -1629,6 +1633,8 @@ function alanBtn(options) {
     offlineIconImg.style.opacity = '0';
     offlineIconImg.alt = alanAltText + ' offline icon';
     offlineIconImg.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1uZXR3b3JrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLW5vLW5ldHdvcmsiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJpY29uIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMS4wMDAwMDAsIDIyLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMzMsMiBDMzQuNjU2ODU0MiwyIDM2LDMuMzQzMTQ1NzUgMzYsNSBMMzYsMjkgQzM2LDMwLjY1Njg1NDIgMzQuNjU2ODU0MiwzMiAzMywzMiBDMzEuMzQzMTQ1OCwzMiAzMCwzMC42NTY4NTQyIDMwLDI5IEwzMCw1IEMzMCwzLjM0MzE0NTc1IDMxLjM0MzE0NTgsMiAzMywyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjQiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTIzLDggQzI0LjY1Njg1NDIsOCAyNiw5LjM0MzE0NTc1IDI2LDExIEwyNiwyOSBDMjYsMzAuNjU2ODU0MiAyNC42NTY4NTQyLDMyIDIzLDMyIEMyMS4zNDMxNDU4LDMyIDIwLDMwLjY1Njg1NDIgMjAsMjkgTDIwLDExIEMyMCw5LjM0MzE0NTc1IDIxLjM0MzE0NTgsOCAyMyw4IFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTEzLDE2IEMxNC42NTY4NTQyLDE2IDE2LDE3LjM0MzE0NTggMTYsMTkgTDE2LDI5IEMxNiwzMC42NTY4NTQyIDE0LjY1Njg1NDIsMzIgMTMsMzIgQzExLjM0MzE0NTgsMzIgMTAsMzAuNjU2ODU0MiAxMCwyOSBMMTAsMTkgQzEwLDE3LjM0MzE0NTggMTEuMzQzMTQ1OCwxNiAxMywxNiBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC44Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLDIyIEM0LjY1Njg1NDI1LDIyIDYsMjMuMzQzMTQ1OCA2LDI1IEw2LDI5IEM2LDMwLjY1Njg1NDIgNC42NTY4NTQyNSwzMiAzLDMyIEMxLjM0MzE0NTc1LDMyIDIuMDI5MDYxMjVlLTE2LDMwLjY1Njg1NDIgMCwyOSBMMCwyNSBDLTIuMDI5MDYxMjVlLTE2LDIzLjM0MzE0NTggMS4zNDMxNDU3NSwyMiAzLDIyIFoiIGlkPSJTaGFwZSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNNS44MSwxLjI3IEwzNi43MywzMi4xOSBDMzcuNDMxNDAxNiwzMi44OTE0MDE2IDM3LjQzMTQwMTYsMzQuMDI4NTk4NCAzNi43MywzNC43MyBDMzYuMDI4NTk4NCwzNS40MzE0MDE2IDM0Ljg5MTQwMTYsMzUuNDMxNDAxNiAzNC4xOSwzNC43MyBMMy4yNywzLjgxIEMyLjU2ODU5ODM3LDMuMTA4NTk4MzcgMi41Njg1OTgzNywxLjk3MTQwMTYzIDMuMjcsMS4yNyBDMy45NzE0MDE2MywwLjU2ODU5ODM2OCA1LjEwODU5ODM3LDAuNTY4NTk4MzY4IDUuODEsMS4yNyBaIiBpZD0iUGF0aCIgZmlsbC1ydWxlPSJub256ZXJvIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
+
+    var crossImgSrc = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuNzczNDUgNy4wMDAwM0wxMy44Mzk4IDAuOTMzNjA0QzE0LjA1MzQgMC43MjAwMjIgMTQuMDUzNCAwLjM3Mzc0MSAxMy44Mzk4IDAuMTYwMTg2QzEzLjYyNjMgLTAuMDUzMzY4MSAxMy4yOCAtMC4wNTMzOTU1IDEzLjA2NjQgMC4xNjAxODZMNyA2LjIyNjYxTDAuOTMzNjA0IDAuMTYwMTg2QzAuNzIwMDIyIC0wLjA1MzM5NTUgMC4zNzM3NDEgLTAuMDUzMzk1NSAwLjE2MDE4NiAwLjE2MDE4NkMtMC4wNTMzNjgxIDAuMzczNzY4IC0wLjA1MzM5NTUgMC43MjAwNDkgMC4xNjAxODYgMC45MzM2MDRMNi4yMjY1OSA3TDAuMTYwMTg2IDEzLjA2NjRDLTAuMDUzMzk1NSAxMy4yOCAtMC4wNTMzOTU1IDEzLjYyNjMgMC4xNjAxODYgMTMuODM5OEMwLjI2Njk2NCAxMy45NDY2IDAuNDA2OTM2IDE0IDAuNTQ2OTA5IDE0QzAuNjg2ODgxIDE0IDAuODI2ODI3IDEzLjk0NjYgMC45MzM2MzEgMTMuODM5OEw3IDcuNzczNDVMMTMuMDY2NCAxMy44Mzk4QzEzLjE3MzIgMTMuOTQ2NiAxMy4zMTMyIDE0IDEzLjQ1MzEgMTRDMTMuNTkzMSAxNCAxMy43MzMgMTMuOTQ2NiAxMy44Mzk4IDEzLjgzOThDMTQuMDUzNCAxMy42MjYzIDE0LjA1MzQgMTMuMjggMTMuODM5OCAxMy4wNjY0TDcuNzczNDUgNy4wMDAwM1oiIGZpbGw9IiNCQkNGRTciLz4KPC9zdmc+Cg==";
 
     btnBgDefault.classList.add('alanBtn-bg-default');
     btnBgListening.classList.add('alanBtn-bg-listening');
@@ -1768,8 +1774,13 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + '.circleMicIconBg {background-image:url(' + circleSecondLayerSrc + '); pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + ' img {pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + '' + hoverSelector + ' .triangleMicIconBg-default {opacity:0!important;}';
-
-
+        
+        keyFrames += getStyleSheetMarker() + '.alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup {padding:6px 20px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__body {position:relative;color: #0D1940;font-size: 16px;line-height: 20px;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {position:absolute;top:2px;right:-10px;cursor: pointer;pointer-events: auto!important;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok:hover {color: rgb(0, 0, 0, 90%);}';
+        
         keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-gradient', '0%{backgroundPosition: 0 0;}50%{backgroundPosition: -100% 0;}100%{backgroundPosition: 0 0;}');
         keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-pulsating', '0%{transform: scale(1.11111);}50%{transform: scale(1.0);}100%{transform: scale(1.11111);}');
         keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-mic-pulsating', '0%{transform: scale(0.91);}50%{transform: scale(1.0);}100%{transform: scale(0.91);}');
@@ -2093,8 +2104,19 @@ function alanBtn(options) {
         };
     }
 
+    function checkPerrmissions() {
+        if (navigator.permissions) {
+            navigator.permissions.query({ name: 'microphone' }).then(function (result) {
+                if (result.state !== 'granted') {
+                    showGrantMicAccessPopup();
+                }
+            });
+        }
+    }
+
     function _activateAlanButton(resolve) {
         //playSoundOn();
+        checkPerrmissions();
         if (options.onBeforeMicStart) {
             options.onBeforeMicStart();
         }
@@ -2173,6 +2195,85 @@ function alanBtn(options) {
         }
     }
 
+    function showGrantMicAccessPopup() {
+        var _btnSize = parseInt(btnSize, 10);
+        var overlay = document.createElement('div');
+        var popup = document.createElement('div');
+        var rootElClientRect = rootEl.getBoundingClientRect();
+        var maxZIndex = 2147483647;
+        var popup2BtnMargin = 12;
+
+        overlayIsVisible = true;
+
+        overlay.id = 'alan-overlay';
+        popup.id = 'alan-overlay-popup';
+        overlay.classList.add('alan-overlay');
+        popup.classList.add('alan-overlay-popup');
+
+        overlay.style.zIndex = maxZIndex - 1;
+        btn.style.zIndex = maxZIndex;
+        btn.style.pointerEvents = 'none';
+        popup.style.zIndex = maxZIndex;
+        popup.style.borderRadius = '10px';
+
+        if (!absolutePosition) {
+            if (!isLeftAligned) {
+                popup.style.right = initRightPos + 'px';
+            } else {
+                popup.style.left = rootElClientRect.x + 'px';
+            }
+
+            if (rootElClientRect.top > 80) {
+                popup.style.top = rootElClientRect.top - popup2BtnMargin + 'px';
+                popup.style.setProperty('transform', 'translateY(-100%)', 'important');
+                popup.style[isLeftAligned ? 'borderBottomLeftRadius' : 'borderBottomRightRadius'] = 0;
+            } else {
+                popup.style.top = rootElClientRect.top + _btnSize + popup2BtnMargin + 'px';
+                popup.style[isLeftAligned ? 'borderTopLeftRadius' : 'borderTopRightRadius'] = 0;
+            }
+        } else {
+            popup.style.position = 'absolute';
+            if (isLeftAligned) {
+                popup.style.left = 0;
+            } else {
+                popup.style.right = 0;
+            }
+
+            if (isTopAligned) {
+                popup.style.top = _btnSize + popup2BtnMargin + 'px';
+                popup.style[isLeftAligned ? 'borderTopLeftRadius' : 'borderTopRightRadius'] = 0;
+            } else {
+                popup.style.bottom = _btnSize + popup2BtnMargin + 'px';
+                popup.style[isLeftAligned ? 'borderBottomLeftRadius' : 'borderBottomRightRadius'] = 0;
+            }
+        }
+
+        popup.innerHTML = '<div class="alan-overlay-popup__body">Please allow access to your mic to contninue...<img id="alan-overlay-ok-btn" src="' + crossImgSrc + '" class="alan-overlay-popup__ok"/></div>';
+
+        rootEl.appendChild(popup);
+        rootEl.appendChild(overlay);
+
+        document.getElementById('alan-overlay-ok-btn').addEventListener('click', hideGrantMicAccessPopup);
+    }
+
+    function hideGrantMicAccessPopup() {
+        var overlay = document.getElementById('alan-overlay');
+        var popup = document.getElementById('alan-overlay-popup');
+        var overlayCloseIcon = document.getElementById('alan-overlay-ok-btn');
+        if (overlayCloseIcon) {
+            overlayCloseIcon.removeEventListener('click', hideGrantMicAccessPopup);
+        }
+        if (overlay) {
+            overlay.remove();
+        }
+        if (popup) {
+            popup.remove();
+        }
+        btn.style.zIndex = btnZIndex;
+        btn.style.pointerEvents = 'auto';
+        overlayIsVisible = false;
+    }
+
     btn.addEventListener('click', function (e) {
         if (!firstClick) {
             firstClick = true;
@@ -2181,7 +2282,11 @@ function alanBtn(options) {
         if (afterMouseMove) return;
         if (!dndBackAnimFinished) return;
         if (currentErrMsg) {
-            alert(currentErrMsg);
+            if (currentErrMsg === MIC_BLOCKED_MSG) {
+                showGrantMicAccessPopup();
+            } else {
+                alert(currentErrMsg);
+            }
             return;
         }
         if (alanAudio) {
@@ -2338,6 +2443,7 @@ function alanBtn(options) {
 
     function onMicStart() {
         // console.log('BTN: mic. started', new Date());
+        hideGrantMicAccessPopup();
         switchState(LISTENING);
         playSoundNext();
         isAlanActive = true;
@@ -2388,9 +2494,10 @@ function alanBtn(options) {
         onMicStop();
 
         if (err) {
+            hideGrantMicAccessPopup();
             if (err.name === 'NotAllowedError') {
                 switchState(PERMISSION_DENIED);
-                setTimeout(function () { alert(MIC_BLOCKED_MSG); }, 300);
+                setTimeout(function () { if(firstClick){alert(MIC_BLOCKED_MSG);} }, 300);
             } else if(err.name === 'SecurityError') {
                 switchState(NOT_SECURE_ORIGIN);
                 setTimeout(function () { alert(NOT_SECURE_ORIGIN_MSG); }, 300);
@@ -3059,6 +3166,7 @@ function alanBtn(options) {
     function onMouseDown(e) {
         var posInfo = e.touches ? e.touches[0] : e,
             rootElClientRect;
+        if (overlayIsVisible) return;
         if (!posInfo) return;
         if (!dndBackAnimFinished || (e.buttons !== undefined && e.buttons !== 1)) return;
         dndIsDown = true;
