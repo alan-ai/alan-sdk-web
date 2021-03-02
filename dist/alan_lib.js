@@ -744,7 +744,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.21';
+    var alanButtonVersion = '1.8.22';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -2248,7 +2248,7 @@ function alanBtn(options) {
             }
         }
 
-        popup.innerHTML = '<div class="alan-overlay-popup__body">Please allow access to your mic to contninue...<img id="alan-overlay-ok-btn" src="' + crossImgSrc + '" class="alan-overlay-popup__ok"/></div>';
+        popup.innerHTML = '<div class="alan-overlay-popup__body">Please allow access to your mic to continue...<img id="alan-overlay-ok-btn" src="' + crossImgSrc + '" class="alan-overlay-popup__ok"/></div>';
 
         rootEl.appendChild(popup);
         rootEl.appendChild(overlay);
