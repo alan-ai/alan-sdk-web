@@ -744,7 +744,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.22';
+    var alanButtonVersion = '1.8.23';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -2110,6 +2110,8 @@ function alanBtn(options) {
                 if (result.state !== 'granted') {
                     showGrantMicAccessPopup();
                 }
+            }).catch(function () {
+                console.warn('Not possible to detect mic permissions');
             });
         }
     }
