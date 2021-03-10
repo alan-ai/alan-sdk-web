@@ -744,7 +744,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.23';
+    var alanButtonVersion = '1.8.24';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -1002,6 +1002,19 @@ function alanBtn(options) {
 
     var turnOffTimeout = 30000;
     var turnOffVoiceFn;
+
+    // Dnd variables
+    var dndInitMousePos = [0, 0];
+    var dndIsDown = false;
+    var btnWasMoved = false;
+    var afterMouseMove = false;
+    var dndFinalHorPos = null;
+    var dndBtnLeftPos = 0;
+    var dndBtnTopPos;
+    var dndAnimDelay = 300;
+    var tempDeltaX = 0, tempDeltaY = 0;
+    var dndAnimTransition = dndAnimDelay + 'ms';
+    var dndBackAnimFinished = true;
 
     function setTurnOffVoiceTimeout() {
         turnOffVoiceFn = debounce(function () {
@@ -1776,9 +1789,9 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + '' + hoverSelector + ' .triangleMicIconBg-default {opacity:0!important;}';
         
         keyFrames += getStyleSheetMarker() + '.alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
-        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup {padding:6px 20px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup {box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
         keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__body {position:relative;color: #0D1940;font-size: 16px;line-height: 20px;}';
-        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {position:absolute;top:2px;right:-10px;cursor: pointer;pointer-events: auto!important;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {position:absolute;top:2px;right:-20px;cursor: pointer;pointer-events: auto!important;}';
         keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok:hover {color: rgb(0, 0, 0, 90%);}';
         
         keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-gradient', '0%{backgroundPosition: 0 0;}50%{backgroundPosition: -100% 0;}100%{backgroundPosition: 0 0;}');
@@ -2104,6 +2117,13 @@ function alanBtn(options) {
         };
     }
 
+    window.onresize = function () {
+        if (btnWasMoved) {
+            var rootElClientRect = rootEl.getBoundingClientRect();
+            rootEl.style.setProperty('top', correctYPos(rootElClientRect.top) + 'px', 'important');
+        }
+    };
+
     function checkPerrmissions() {
         if (navigator.permissions) {
             navigator.permissions.query({ name: 'microphone' }).then(function (result) {
@@ -2131,6 +2151,7 @@ function alanBtn(options) {
         alanAudio.on('playStart', onPlayStart);
         alanAudio.on('playStop', onPlayStop);
         alanAudio.on('command', onCommandCbInMicBtn);
+        alanAudio.on('popup', onPopup);
         alanAudio.start(resolve);
         if (options.onMicStarted) {
             options.onMicStarted();
@@ -2197,7 +2218,21 @@ function alanBtn(options) {
         }
     }
 
+    function onPopup(popupOptions) {
+        hidePopup();
+        showPopup(popupOptions);
+    }
+
     function showGrantMicAccessPopup() {
+        showPopup({
+            message: 'Please allow access to your mic to continue...',
+            overlay: true
+        });
+    }
+
+    function showPopup(popupOptions) {
+        var message = popupOptions.message;
+        var withOverlay = popupOptions.overlay;
         var _btnSize = parseInt(btnSize, 10);
         var overlay = document.createElement('div');
         var popup = document.createElement('div');
@@ -2250,20 +2285,22 @@ function alanBtn(options) {
             }
         }
 
-        popup.innerHTML = '<div class="alan-overlay-popup__body">Please allow access to your mic to continue...<img id="alan-overlay-ok-btn" src="' + crossImgSrc + '" class="alan-overlay-popup__ok"/></div>';
+        popup.innerHTML = '<div class="alan-overlay-popup__body">' + message + '<img id="alan-overlay-ok-btn" src="' + crossImgSrc + '" class="alan-overlay-popup__ok"/></div>';
 
         rootEl.appendChild(popup);
-        rootEl.appendChild(overlay);
+        if (withOverlay) {
+            rootEl.appendChild(overlay);
+        }
 
-        document.getElementById('alan-overlay-ok-btn').addEventListener('click', hideGrantMicAccessPopup);
+        document.getElementById('alan-overlay-ok-btn').addEventListener('click', hidePopup);
     }
 
-    function hideGrantMicAccessPopup() {
+    function hidePopup() {
         var overlay = document.getElementById('alan-overlay');
         var popup = document.getElementById('alan-overlay-popup');
         var overlayCloseIcon = document.getElementById('alan-overlay-ok-btn');
         if (overlayCloseIcon) {
-            overlayCloseIcon.removeEventListener('click', hideGrantMicAccessPopup);
+            overlayCloseIcon.removeEventListener('click', hidePopup);
         }
         if (overlay) {
             overlay.remove();
@@ -2445,7 +2482,7 @@ function alanBtn(options) {
 
     function onMicStart() {
         // console.log('BTN: mic. started', new Date());
-        hideGrantMicAccessPopup();
+        hidePopup();
         switchState(LISTENING);
         playSoundNext();
         isAlanActive = true;
@@ -2472,6 +2509,7 @@ function alanBtn(options) {
         alanAudio.off('playStart', onPlayStart);
         alanAudio.off('playStop', onPlayStop);
         alanAudio.off('command', onCommandCbInMicBtn);
+        alanAudio.off('popup', onPopup);
         hideRecognisedText();
 
         switchState(DEFAULT);
@@ -2496,7 +2534,7 @@ function alanBtn(options) {
         onMicStop();
 
         if (err) {
-            hideGrantMicAccessPopup();
+            hidePopup();
             if (err.name === 'NotAllowedError') {
                 switchState(PERMISSION_DENIED);
                 setTimeout(function () { if(firstClick){alert(MIC_BLOCKED_MSG);} }, 300);
@@ -3143,16 +3181,6 @@ function alanBtn(options) {
     //#endregion
 
     //#region Drag-n-drop btn logic
-    var dndInitMousePos = [0, 0];
-    var dndIsDown = false;
-    var afterMouseMove = false;
-    var dndFinalHorPos = null;
-    var dndBtnLeftPos = 0;
-    var dndBtnTopPos;
-    var dndAnimDelay = 300;
-    var tempDeltaX = 0, tempDeltaY = 0;
-    var dndAnimTransition = dndAnimDelay + 'ms';
-    var dndBackAnimFinished = true;
 
     if (!pinned) {
         rootEl.addEventListener('mousedown', onMouseDown, true);
@@ -3235,6 +3263,7 @@ function alanBtn(options) {
                 isLeftAligned = true;
                 isRightAligned = false;
                 setTextPanelPosition(recognisedTextHolder, curY);
+                btnWasMoved = true;
             } else {
                 rootEl.style.setProperty('left', window.innerWidth - dndFinalHorPos - btnSize - (window.innerWidth - document.documentElement.clientWidth) + 'px', 'important');
                 setTimeout(function () {
@@ -3243,6 +3272,7 @@ function alanBtn(options) {
                     isLeftAligned = false;
                     isRightAligned = true;
                     setTextPanelPosition(recognisedTextHolder, curY);
+                    btnWasMoved = true;
                     dndBackAnimFinished = true;
                 }, dndAnimDelay);
             }
