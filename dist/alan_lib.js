@@ -744,7 +744,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.24';
+    var alanButtonVersion = '1.8.25';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -956,6 +956,16 @@ function alanBtn(options) {
     if (options.position === 'absolute') {
         absolutePosition = true;
     }
+
+    var btnStateMapping = {
+        'default': 'ONLINE',
+        'offline': 'OFFLINE',
+        'disconnected': 'CONNECTING',
+        'listening': 'LISTEN',
+        'understood': 'PROCESS',
+        'intermediate': 'PROCESS',
+        'speaking': 'REPLY',
+    };
 
     // Btn states
     var DEFAULT = 'default';
@@ -2291,14 +2301,13 @@ function alanBtn(options) {
         if (withOverlay) {
             rootEl.appendChild(overlay);
         }
-
-        document.getElementById('alan-overlay-ok-btn').addEventListener('click', hidePopup);
+        rootEl.querySelector('#alan-overlay-ok-btn').addEventListener('click', hidePopup);
     }
 
     function hidePopup() {
-        var overlay = document.getElementById('alan-overlay');
-        var popup = document.getElementById('alan-overlay-popup');
-        var overlayCloseIcon = document.getElementById('alan-overlay-ok-btn');
+        var overlay = rootEl.querySelector('#alan-overlay');
+        var popup = rootEl.querySelector('#alan-overlay-popup');
+        var overlayCloseIcon = rootEl.querySelector('#alan-overlay-ok-btn');
         if (overlayCloseIcon) {
             overlayCloseIcon.removeEventListener('click', hidePopup);
         }
@@ -2564,19 +2573,25 @@ function alanBtn(options) {
 
     function onTextCbInMicBtn(e) {
         // console.info('BTN: onTextCb', e, new Date());
+        if (options.onEvent) {
+            options.onEvent(Object.assign(e, { name: 'text' }));
+        }
         turnOffVoiceFn();
     }
 
     function onParsedCbInMicBtn(e) {
         // console.info('BTN: onParsedCb', e, new Date());
+        if (options.onEvent) {
+            options.onEvent(Object.assign(e, { name: 'parsed' }));
+        }
         turnOffVoiceFn();
         showRecognisedText(e);
     }
 
     function onRecognizedCbInMicBtn(e) {
         // console.info('BTN: onRecognizedTextCb', e, new Date());
-        if (options.onReceiveRecognisedText) {
-            options.onReceiveRecognisedText(e);
+        if (options.onEvent) {
+            options.onEvent(Object.assign(e, { name: 'recognized' }));
         }
 
         if (e.final === true) {
@@ -2648,6 +2663,10 @@ function alanBtn(options) {
     window.switchState = switchState;
 
     function switchState(newState) {
+
+        if (options.onButtonState) {
+            options.onButtonState(btnStateMapping[newState]);
+        }
 
         console.info('BTN: state', newState);
         

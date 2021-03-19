@@ -9,5 +9,7 @@ export interface AlanButtonOptions {
     pinned?: boolean;
     zIndex?: number;
     onCommand?(commandData: object): void;
+    onEvent?(event: object): void;
+    onButtonState?(state: string): void;
     onConnectionStatus?(status: string): void;
 }
