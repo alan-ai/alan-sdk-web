@@ -202,13 +202,13 @@
         baseURL: "wss://" +
             ((host.indexOf('$') === 0 || host === '') ? window.location.hostname : host ),
         codec: 'opus',
-        version: '2.0.43',
+        version: '2.0.45',
         platform: 'web',
     };
 
     function ConnectionWrapper() {
         var _this = this;
-        this._worker = new Worker(window.URL.createObjectURL(new Blob(["(function(ns) {\n    'use strict';\n\n    var SENT_TS    = 1;\n    var REMOTE_TS  = 2;\n    var TIMESTAMP  = 3;\n    var AUDIO_DATA = 4;\n    var JSON_DATA  = 5;\n\n    AlanFrame.fields = [\n        propUint64(SENT_TS,   'sentTs'),\n        propUint64(REMOTE_TS, 'remoteTs'),\n        propUint64(TIMESTAMP, 'timestamp'),\n        propBytes(AUDIO_DATA, 'audioData'),\n        propJson(JSON_DATA,   'jsonData'),\n    ];\n\n    function AlanFrameProp(type, name, sizeF, readF, writeF) {\n        this.type   = type;\n        this.name   = name;\n        this.sizeF  = sizeF;\n        this.writeF = writeF;\n        this.readF  = readF;\n    }\n\n    function fixedSize(size) {\n        return function() {\n            return size;\n        }\n    }\n\n    function bufferSize(buffer) {\n        return 4 + byteLength(buffer);\n    }\n\n    function writeUIntN(uint8array, value, nBytes, offset) {\n        for (var i = 0; i < nBytes; i++ ) {\n            uint8array[offset + i] = 0xFF & value;\n            value /= 256;\n        }\n    }\n\n    function readUIntN(uint8array, nBytes, offset) {\n        var r = 0;\n        for (var i = nBytes - 1; i >= 0; i-- ) {\n            r *= 256;\n            r += 0xFF & uint8array[offset + i];\n        }\n        return r;\n    }\n\n    function writeUInt64(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 8, offset);\n    }\n\n    function readUInt64(uint8array, offset) {\n        return readUIntN(uint8array, 8, offset);\n    }\n\n    function writeUInt32(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 4, offset);\n    }\n\n    function readUInt32(uint8array, offset) {\n        return readUIntN(uint8array, 4, offset);\n    }\n\n    function writeBuffer(uint8array, buffer, offset) {\n        buffer = toUint8(buffer);\n        writeUInt32(uint8array, buffer.length, offset);\n        for (var i = 0; i < buffer.length; i++ ) {\n            uint8array[offset + 4 + i] = buffer[i];\n        }\n    }\n\n    function readBuffer(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('buffer too big');\n        }\n        return uint8array.subarray(offset + 4, offset + 4 + size);\n    }\n\n    function readUTF8(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('string too big');\n        }\n        return String.fromCharCode.apply(null, uint8array.slice(offset + 4, offset + 4 + size));\n    }\n\n    function writeUTF8(uint8array, string, offset) {\n        writeUInt32(uint8array, string.length, offset);\n        for (var i = 0; i < string.length; i++ ) {\n            uint8array[offset + 4 + i] = string.charCodeAt(i);\n        }\n    }\n\n    function sizeUTF8(string) {\n        return 4 + string.length;\n    }\n\n    function propUint32(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(4), readUInt32, writeUInt32);\n    }\n\n    function propUint64(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(8), readUInt64, writeUInt64);\n    }\n\n    function propBytes(type, name) {\n        return new AlanFrameProp(type, name, bufferSize, readBuffer, writeBuffer);\n    }\n\n    function propJson(type, name) {\n        return new AlanFrameProp(type, name, sizeUTF8, readUTF8, writeUTF8);\n    }\n\n    AlanFrame.fieldByType = function(type) {\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var frame = AlanFrame.fields[i];\n            if (frame.type === type) {\n                return frame;\n            }\n        }\n        throw new Error('invalid field: ' + type);\n    };\n\n    function AlanFrame() {\n        this.version = 1;\n    }\n\n    AlanFrame.prototype.write = function() {\n        var result = new Uint8Array(this.writeSize());\n        var offset = 1;\n        result[0]  = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                result[offset++] = field.type;\n                field.writeF(result, value, offset);\n                offset += field.sizeF(value);\n            }\n        }\n        return result.buffer;\n    };\n\n    /**\n     * @returns UInt8Array\n     */\n    AlanFrame.prototype.writeSize = function() {\n        var size = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                size += 1 + field.sizeF(value);\n            }\n        }\n        return size;\n    };\n\n    AlanFrame.prototype.toString = function() {\n        var first = true, str = '';\n        for (var k in this) {\n            if (this.hasOwnProperty(k)) {\n                if (first) {\n                    str += k + ' = ';\n                    first = false;\n                } else {\n                    str += ', ' + k + ' = ';\n                }\n                var v = this[k];\n                if (typeof(v) === 'object') {\n                    str += 'bytes[' + byteLength(v) + ']';\n                } else {\n                    str += v;\n                }\n            }\n        }\n        return str;\n    };\n\n    function byteLength(b) {\n        if (b instanceof Uint8Array) {\n            return b.length;\n        }\n        if (b instanceof ArrayBuffer) {\n            return b.byteLength;\n        }\n    }\n\n    function toArrayBuffer(buffer) {\n        if (buffer instanceof ArrayBuffer) {\n            return buffer;\n        }\n        return buffer.buffer;\n    }\n\n    function toUint8(buffer) {\n        if (buffer instanceof Uint8Array) {\n            return buffer;\n        }\n        if (buffer instanceof ArrayBuffer) {\n            return new Uint8Array(buffer);\n        }\n        throw new Error('invalid buffer type');\n    }\n\n    function parse(uint8array) {\n        uint8array = toUint8(uint8array);\n        var r = new AlanFrame();\n        var offset = 0;\n        r.version = uint8array[offset++];\n        while (offset < uint8array.length) {\n            var frame = AlanFrame.fieldByType(uint8array[offset++]);\n            r[frame.name] = frame.readF(uint8array, offset);\n            offset += frame.sizeF(r[frame.name]);\n        }\n        return r;\n    }\n\n    ns.create = function() {\n        return new AlanFrame();\n    };\n\n    ns.parse = parse;\n\n})(typeof(window)            !== 'undefined' ? (function() {window.alanFrame = {}; return window.alanFrame; })() :\n   typeof(WorkerGlobalScope) !== 'undefined' ? (function() {alanFrame = {}; return alanFrame; })() :\n   exports);\n\n\n'use strict';\n\nvar ALAN_OFF       = 'off';\nvar ALAN_SPEAKING  = 'speaking';\nvar ALAN_LISTENING = 'listening';\n\nfunction ConnectionImpl(config, auth, mode) {\n    var _this = this;\n    this._config = config;\n    this._auth = auth;\n    this._mode = mode;\n    this._projectId = config.projectId;\n    this._url = config.url;\n    this._connected = false;\n    this._authorized = false;\n    this._dialogId = null;\n    this._callId = 1;\n    this._callSent = {};\n    this._callWait = [];\n    this._failed = false;\n    this._closed = false;\n    this._reconnectTimeout = 100;\n    this._cleanups = [];\n    this._format = null;\n    this._formatSent = false;\n    this._frameQueue = [];\n    this._remoteSentTs = 0;\n    this._remoteRecvTs = 0;\n    this._rtt = 25;\n    this._rttAlpha = 1./16;\n    this._alanState = ALAN_OFF;\n    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 50);\n    this._visualState = {};\n    this._addCleanup(function() {clearInterval(_this._sendTimer);});\n    this._connect();\n    console.log('Alan: connection created: ' + this._url);\n}\n\nConnectionImpl.prototype._addCleanup = function(f) {\n    this._cleanups.push(f);\n};\n\nConnectionImpl.prototype._onConnectStatus = function(s) {\n    console.log('Alan: connection status: ' + s);\n    this._fire('connectStatus', s);\n};\n\nConnectionImpl.prototype._fire = function(event, object) {\n    if (event === 'options') {\n        if (object.versions) {\n            object.versions['alanbase:web'] = this._config.version;\n        }\n    }\n    postMessage(['fireEvent', event, object]);\n};\n\nConnectionImpl.prototype._connect = function() {\n    var _this = this;\n    if (this._socket) {\n        console.error('socket is already connected');\n        return;\n    }\n    console.log('Alan: connecting to ' + this._url);\n    this._socket = new WebSocket(this._url);\n    this._socket.binaryType = 'arraybuffer';\n    this._socket.onopen = function(e) {\n        console.info('Alan: connected', e.target === _this._socket);\n        _this._connected = true;\n        _this._reconnectTimeout = 100;\n        _this._fire('connection', {status: 'connected'});\n        if (_this._auth) {\n            _this._fire('connection', {status: 'authorizing'});\n            _this._callAuth();\n        } else {\n            _this._callWait.forEach(function(c) {  _this._sendCall(c); });\n            _this._callWait = [];\n        }\n    };\n    this._socket.onmessage = function(msg) {\n        if (msg.data instanceof ArrayBuffer) {\n            var f = alanFrame.parse(msg.data);\n            if (f.sentTs > 0) {\n                _this._remoteSentTs = f.sentTs;\n                _this._remoteRecvTs = Date.now();\n            } else {\n                _this._remoteSentTs = null;\n                _this._remoteRecvTs = null;\n            }\n            var rtt = 0;\n            if (f.remoteTs) {\n                rtt = Date.now() - f.remoteTs;\n            }\n            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;\n            var uint8 = new Uint8Array(f.audioData);\n            var frame = [];\n            var batch = 10000;\n            for (var offset = 0; offset < uint8.byteLength; offset += batch) {\n                var b = uint8.subarray(offset, Math.min(uint8.byteLength, offset + batch));\n                let a = String.fromCharCode.apply(null, b);\n                frame.push(a);\n            }\n            frame = frame.join('');\n            postMessage(['alanAudio', 'playFrame', frame]);\n        } else if (typeof(msg.data) === 'string') {\n            msg = JSON.parse(msg.data);\n            if (msg.i) {\n                var c = _this._callSent[msg.i];\n                delete _this._callSent[msg.i];\n                if (c && c.callback) {\n                    c.callback(msg.e, msg.r);\n                }\n            } else if (msg.e) {\n                if (msg.e === 'text') {\n                    postMessage(['alanAudio', 'playText', msg.p])\n                } else if (msg.e === 'command') {\n                    postMessage(['alanAudio', 'playCommand', msg.p]);\n                } else if (msg.e === 'inactivity') {\n                    postMessage(['alanAudio', 'stop']);\n                } else {\n                    _this._fire(msg.e, msg.p);\n                }\n            }\n        } else {\n            console.error('invalid message type');\n        }\n    };\n    this._socket.onerror = function(evt) {\n        console.error('Alan: connection closed due to error: ', evt);\n    };\n    this._socket.onclose = function(evt) {\n        console.info('Alan: connection closed');\n        _this._connected = false;\n        _this._authorized = false;\n        _this._socket = null;\n        _this._onConnectStatus('disconnected');\n        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {\n            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);\n            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);\n            if (_this._reconnectTimeout < 3000) {\n                _this._reconnectTimeout *= 2;\n            } else {\n                _this._reconnectTimeout += 500;\n            }\n            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);\n        }\n    };\n    this._addCleanup(function() {\n        if (this._socket) {\n            this._socket.close();\n            this._socket = null;\n        }\n    });\n};\n\nConnectionImpl.prototype._callAuth = function() {\n    var _this = this;\n    var callback = function(err, r) {\n        if (!err && r.status === 'authorized') {\n            _this._authorized = true;\n            _this._formatSent = false;\n            if (r.dialogId) {\n                postMessage(['setDialogId', r.dialogId]);\n                _this._dialogId = r.dialogId;\n            }\n            _this._onAuthorized();\n            _this._onConnectStatus('authorized');\n        } else if (err === 'auth-failed') {\n            _this._onConnectStatus('auth-failed');\n            if (_this._socket) {\n                _this._socket.close();\n                _this._socket = null;\n                _this._failed = true;\n            }\n        } else {\n            _this._onConnectStatus('invalid-auth-response');\n            console.log('Alan: invalid auth response', err, r);\n        }\n    };\n    var authParam = this._auth;\n    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;\n    if (this._dialogId) {\n        authParam.dialogId = this._dialogId;\n    }\n    authParam.mode = this._mode;\n    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});\n    return this;\n};\n\nConnectionImpl.prototype._sendCall = function(call) {\n    this._sendFormatIfNeeded(false);\n    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));\n    if (call.callback) {\n        this._callSent[call.cid] = call;\n    }\n};\n\nConnectionImpl.prototype._onAuthorized = function() {\n    console.log('Alan: authorized');\n    var _this = this;\n    this._callWait.forEach(function(c) {\n        _this._sendCall(c);\n    });\n    this._callWait = [];\n};\n\nConnectionImpl.prototype.close = function() {\n    for (var i = 0; i < this._cleanups.length; i++ ) {\n        this._cleanups[i]();\n    }\n    this._cleanups = [];\n    this._closed = true;\n    \n    if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {\n        this._socket.close();\n        this._socket = null;\n    }\n    console.log('Alan: closed connection to: ' + this._url);\n    //close(); TODO: delete it!\n};\n\nConnectionImpl.prototype.call = function(cid, method, param) {\n    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {\n        if (cid) {\n            postMessage(['callback', cid, err, obj]);\n        }\n    }};\n    if (this._authorized || this._connected && !this._auth) {\n        this._sendCall(call);\n    } else {\n        this._callWait.push(call);\n    }\n};\n\nConnectionImpl.prototype.setVisual = function(state) {\n    this._visualState = state;\n    this.call(null, '_visual_', state);\n};\n\nConnectionImpl.prototype._sendFrame = function(frame) {\n    if (!this._socket) {\n        console.error('sendFrame to closed socket');\n        return;\n    }\n    frame.sentTs = Date.now();\n    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {\n        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;\n    }\n    this._socket.send(frame.write());\n};\n\nConnectionImpl.prototype._listen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'listen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_LISTENING;\n};\n\nConnectionImpl.prototype._stopListen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'stopListen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_OFF;\n};\n\nConnectionImpl.prototype._onAudioFormat = function(format) {\n    console.log('_onAudioFormat', format);\n    this._formatSent = false;\n    this._format = format;\n};\n\nConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {\n    if (this._alanState === ALAN_SPEAKING) {\n        return;\n    }\n    if (this._alanState === ALAN_OFF) {\n        this._listen();\n    }\n    if (this._alanState !== ALAN_LISTENING) {\n        console.error('invalid alan state: ' + this._alanState);\n        return;\n    }\n    this._sendFormatIfNeeded(true);\n    var f = alanFrame.create();\n    f.audioData = frame;\n    this._frameQueue.push(f);\n};\n\nConnectionImpl.prototype._sendFormatIfNeeded = function(inQueue) {\n    if (!this._format || this._formatSent) {\n        return;\n    }\n    this._formatSent = true;\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({format: this._format});\n    if (inQueue) {\n        this._frameQueue.push(f);\n    } else {\n        this._sendFrame(f);\n    }\n};\n\nConnectionImpl.prototype._flushQueue = function() {\n    if (!this._socket || !this._connected) {\n        var d = 0;\n        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {\n            this._frameQueue.shift();\n            d++;\n        }\n        if (d > 0) {\n            console.error('dropped: %s, frames', d);\n        }\n        return;\n    }\n    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {\n        this._sendFrame(this._frameQueue.shift());\n    }\n};\n\nfunction connectProject(config, auth, mode) {\n    var c = new ConnectionImpl(config, auth, mode);\n    c.onAudioEvent = function(event, arg1, arg2) {\n        if (event === 'format') {\n            c._onAudioFormat(arg1);\n        } else if (event === 'frame') {\n            c._onMicFrame(arg1, arg2);\n        } else if (event === 'micStop' || event === 'playStart') {\n            c._stopListen();\n        } else {\n            console.error('unknown audio event: ' + event, arg1, arg2);\n        }\n    };\n    return c;\n}\n\nvar factories = {\n    connectProject: connectProject,\n};\n\nvar currentConnect = null;\n\nonmessage = function(e) {\n    var name = e.data[0];\n    try {\n        if (!currentConnect) {\n            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));\n        } else {\n            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));\n        }\n    } catch(e) {\n        console.error('error calling: ' + name, e);\n    }\n};\n"]),{type: 'text/javascript'}));
+        this._worker = new Worker(window.URL.createObjectURL(new Blob(["(function(ns) {\n    'use strict';\n\n    var SENT_TS    = 1;\n    var REMOTE_TS  = 2;\n    var TIMESTAMP  = 3;\n    var AUDIO_DATA = 4;\n    var JSON_DATA  = 5;\n\n    AlanFrame.fields = [\n        propUint64(SENT_TS,   'sentTs'),\n        propUint64(REMOTE_TS, 'remoteTs'),\n        propUint64(TIMESTAMP, 'timestamp'),\n        propBytes(AUDIO_DATA, 'audioData'),\n        propJson(JSON_DATA,   'jsonData'),\n    ];\n\n    function AlanFrameProp(type, name, sizeF, readF, writeF) {\n        this.type   = type;\n        this.name   = name;\n        this.sizeF  = sizeF;\n        this.writeF = writeF;\n        this.readF  = readF;\n    }\n\n    function fixedSize(size) {\n        return function() {\n            return size;\n        }\n    }\n\n    function bufferSize(buffer) {\n        return 4 + byteLength(buffer);\n    }\n\n    function writeUIntN(uint8array, value, nBytes, offset) {\n        for (var i = 0; i < nBytes; i++ ) {\n            uint8array[offset + i] = 0xFF & value;\n            value /= 256;\n        }\n    }\n\n    function readUIntN(uint8array, nBytes, offset) {\n        var r = 0;\n        for (var i = nBytes - 1; i >= 0; i-- ) {\n            r *= 256;\n            r += 0xFF & uint8array[offset + i];\n        }\n        return r;\n    }\n\n    function writeUInt64(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 8, offset);\n    }\n\n    function readUInt64(uint8array, offset) {\n        return readUIntN(uint8array, 8, offset);\n    }\n\n    function writeUInt32(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 4, offset);\n    }\n\n    function readUInt32(uint8array, offset) {\n        return readUIntN(uint8array, 4, offset);\n    }\n\n    function writeBuffer(uint8array, buffer, offset) {\n        buffer = toUint8(buffer);\n        writeUInt32(uint8array, buffer.length, offset);\n        for (var i = 0; i < buffer.length; i++ ) {\n            uint8array[offset + 4 + i] = buffer[i];\n        }\n    }\n\n    function readBuffer(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('buffer too big');\n        }\n        return uint8array.subarray(offset + 4, offset + 4 + size);\n    }\n\n    function readUTF8(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('string too big');\n        }\n        return String.fromCharCode.apply(null, uint8array.slice(offset + 4, offset + 4 + size));\n    }\n\n    function writeUTF8(uint8array, string, offset) {\n        writeUInt32(uint8array, string.length, offset);\n        for (var i = 0; i < string.length; i++ ) {\n            uint8array[offset + 4 + i] = string.charCodeAt(i);\n        }\n    }\n\n    function sizeUTF8(string) {\n        return 4 + string.length;\n    }\n\n    function propUint32(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(4), readUInt32, writeUInt32);\n    }\n\n    function propUint64(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(8), readUInt64, writeUInt64);\n    }\n\n    function propBytes(type, name) {\n        return new AlanFrameProp(type, name, bufferSize, readBuffer, writeBuffer);\n    }\n\n    function propJson(type, name) {\n        return new AlanFrameProp(type, name, sizeUTF8, readUTF8, writeUTF8);\n    }\n\n    AlanFrame.fieldByType = function(type) {\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var frame = AlanFrame.fields[i];\n            if (frame.type === type) {\n                return frame;\n            }\n        }\n        throw new Error('invalid field: ' + type);\n    };\n\n    function AlanFrame() {\n        this.version = 1;\n    }\n\n    AlanFrame.prototype.write = function() {\n        var result = new Uint8Array(this.writeSize());\n        var offset = 1;\n        result[0]  = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                result[offset++] = field.type;\n                field.writeF(result, value, offset);\n                offset += field.sizeF(value);\n            }\n        }\n        return result.buffer;\n    };\n\n    /**\n     * @returns UInt8Array\n     */\n    AlanFrame.prototype.writeSize = function() {\n        var size = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                size += 1 + field.sizeF(value);\n            }\n        }\n        return size;\n    };\n\n    AlanFrame.prototype.toString = function() {\n        var first = true, str = '';\n        for (var k in this) {\n            if (this.hasOwnProperty(k)) {\n                if (first) {\n                    str += k + ' = ';\n                    first = false;\n                } else {\n                    str += ', ' + k + ' = ';\n                }\n                var v = this[k];\n                if (typeof(v) === 'object') {\n                    str += 'bytes[' + byteLength(v) + ']';\n                } else {\n                    str += v;\n                }\n            }\n        }\n        return str;\n    };\n\n    function byteLength(b) {\n        if (b instanceof Uint8Array) {\n            return b.length;\n        }\n        if (b instanceof ArrayBuffer) {\n            return b.byteLength;\n        }\n    }\n\n    function toArrayBuffer(buffer) {\n        if (buffer instanceof ArrayBuffer) {\n            return buffer;\n        }\n        return buffer.buffer;\n    }\n\n    function toUint8(buffer) {\n        if (buffer instanceof Uint8Array) {\n            return buffer;\n        }\n        if (buffer instanceof ArrayBuffer) {\n            return new Uint8Array(buffer);\n        }\n        throw new Error('invalid buffer type');\n    }\n\n    function parse(uint8array) {\n        uint8array = toUint8(uint8array);\n        var r = new AlanFrame();\n        var offset = 0;\n        r.version = uint8array[offset++];\n        while (offset < uint8array.length) {\n            var frame = AlanFrame.fieldByType(uint8array[offset++]);\n            r[frame.name] = frame.readF(uint8array, offset);\n            offset += frame.sizeF(r[frame.name]);\n        }\n        return r;\n    }\n\n    ns.create = function() {\n        return new AlanFrame();\n    };\n\n    ns.parse = parse;\n\n})(typeof(window)            !== 'undefined' ? (function() {window.alanFrame = {}; return window.alanFrame; })() :\n   typeof(WorkerGlobalScope) !== 'undefined' ? (function() {alanFrame = {}; return alanFrame; })() :\n   exports);\n\n\n'use strict';\n\nvar ALAN_OFF       = 'off';\nvar ALAN_SPEAKING  = 'speaking';\nvar ALAN_LISTENING = 'listening';\n\nfunction ConnectionImpl(config, auth, mode) {\n    var _this = this;\n    this._config = config;\n    this._auth = auth;\n    this._mode = mode;\n    this._projectId = config.projectId;\n    this._url = config.url;\n    this._connected = false;\n    this._authorized = false;\n    this._dialogId = null;\n    this._callId = 1;\n    this._callSent = {};\n    this._callWait = [];\n    this._failed = false;\n    this._closed = false;\n    this._reconnectTimeout = 100;\n    this._cleanups = [];\n    this._format = null;\n    this._formatSent = false;\n    this._frameQueue = [];\n    this._remoteSentTs = 0;\n    this._remoteRecvTs = 0;\n    this._rtt = 25;\n    this._rttAlpha = 1./16;\n    this._alanState = ALAN_OFF;\n    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 50);\n    this._visualState = {};\n    this._addCleanup(function() {clearInterval(_this._sendTimer);});\n    this._connect();\n    console.log('Alan: connection created: ' + this._url);\n}\n\nConnectionImpl.prototype._addCleanup = function(f) {\n    this._cleanups.push(f);\n};\n\nConnectionImpl.prototype._onConnectStatus = function(s) {\n    console.log('Alan: connection status: ' + s);\n    this._fire('connectStatus', s);\n};\n\nConnectionImpl.prototype._fire = function(event, object) {\n    if (event === 'options') {\n        if (object.versions) {\n            object.versions['alanbase:web'] = this._config.version;\n        }\n    }\n    postMessage(['fireEvent', event, object]);\n};\n\nConnectionImpl.prototype._connect = function() {\n    var _this = this;\n    if (this._socket) {\n        console.error('socket is already connected');\n        return;\n    }\n    console.log('Alan: connecting to ' + this._url);\n    this._socket = new WebSocket(this._url);\n    this._socket.binaryType = 'arraybuffer';\n    this._socket.onopen = function(e) {\n        console.info('Alan: connected', e.target === _this._socket);\n        _this._connected = true;\n        _this._reconnectTimeout = 100;\n        _this._fire('connection', {status: 'connected'});\n        if (_this._auth) {\n            _this._fire('connection', {status: 'authorizing'});\n            _this._callAuth();\n        } else {\n            _this._callWait.forEach(function(c) {  _this._sendCall(c); });\n            _this._callWait = [];\n        }\n    };\n    this._socket.onmessage = function(msg) {\n        if (msg.data instanceof ArrayBuffer) {\n            var f = alanFrame.parse(msg.data);\n            if (f.sentTs > 0) {\n                _this._remoteSentTs = f.sentTs;\n                _this._remoteRecvTs = Date.now();\n            } else {\n                _this._remoteSentTs = null;\n                _this._remoteRecvTs = null;\n            }\n            var rtt = 0;\n            if (f.remoteTs) {\n                rtt = Date.now() - f.remoteTs;\n            }\n            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;\n            var uint8 = new Uint8Array(f.audioData);\n            var frame = [];\n            var batch = 10000;\n            for (var offset = 0; offset < uint8.byteLength; offset += batch) {\n                var b = uint8.subarray(offset, Math.min(uint8.byteLength, offset + batch));\n                let a = String.fromCharCode.apply(null, b);\n                frame.push(a);\n            }\n            frame = frame.join('');\n            postMessage(['alanAudio', 'playFrame', frame]);\n        } else if (typeof(msg.data) === 'string') {\n            msg = JSON.parse(msg.data);\n            if (msg.i) {\n                var c = _this._callSent[msg.i];\n                delete _this._callSent[msg.i];\n                if (c && c.callback) {\n                    c.callback(msg.e, msg.r);\n                }\n            } else if (msg.e) {\n                if (msg.e === 'text') {\n                    postMessage(['alanAudio', 'playText', msg.p]);\n                } else if (msg.e === 'showPopup') {\n                    postMessage(['alanAudio', 'showPopup', msg.p]);\n                } else if (msg.e === 'command') {\n                    postMessage(['alanAudio', 'playCommand', msg.p]);\n                } else if (msg.e === 'inactivity') {\n                    postMessage(['alanAudio', 'stop']);\n                } else {\n                    _this._fire(msg.e, msg.p);\n                }\n            }\n        } else {\n            console.error('invalid message type');\n        }\n    };\n    this._socket.onerror = function(evt) {\n        console.error('Alan: connection closed due to error: ', evt);\n    };\n    this._socket.onclose = function(evt) {\n        console.info('Alan: connection closed');\n        _this._connected = false;\n        _this._authorized = false;\n        _this._socket = null;\n        _this._onConnectStatus('disconnected');\n        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {\n            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);\n            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);\n            if (_this._reconnectTimeout < 3000) {\n                _this._reconnectTimeout *= 2;\n            } else {\n                _this._reconnectTimeout += 500;\n            }\n            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);\n        }\n    };\n    this._addCleanup(function() {\n        if (this._socket) {\n            this._socket.close();\n            this._socket = null;\n        }\n    });\n};\n\nConnectionImpl.prototype._callAuth = function() {\n    var _this = this;\n    var callback = function(err, r) {\n        if (!err && r.status === 'authorized') {\n            _this._authorized = true;\n            _this._formatSent = false;\n            if (r.dialogId) {\n                postMessage(['setDialogId', r.dialogId]);\n                _this._dialogId = r.dialogId;\n            }\n            _this._onAuthorized();\n            _this._onConnectStatus('authorized');\n        } else if (err === 'auth-failed') {\n            _this._onConnectStatus('auth-failed');\n            if (_this._socket) {\n                _this._socket.close();\n                _this._socket = null;\n                _this._failed = true;\n            }\n        } else {\n            _this._onConnectStatus('invalid-auth-response');\n            console.log('Alan: invalid auth response', err, r);\n        }\n    };\n    var authParam = this._auth;\n    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;\n    if (this._dialogId) {\n        authParam.dialogId = this._dialogId;\n    }\n    authParam.mode = this._mode;\n    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});\n    return this;\n};\n\nConnectionImpl.prototype._sendCall = function(call) {\n    this._sendFormatIfNeeded(false);\n    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));\n    if (call.callback) {\n        this._callSent[call.cid] = call;\n    }\n};\n\nConnectionImpl.prototype._onAuthorized = function() {\n    console.log('Alan: authorized');\n    var _this = this;\n    this._callWait.forEach(function(c) {\n        _this._sendCall(c);\n    });\n    this._callWait = [];\n};\n\nConnectionImpl.prototype.close = function() {\n    for (var i = 0; i < this._cleanups.length; i++ ) {\n        this._cleanups[i]();\n    }\n    this._cleanups = [];\n    this._closed = true;\n    \n    if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {\n        this._socket.close();\n        this._socket = null;\n    }\n    console.log('Alan: closed connection to: ' + this._url);\n    //close(); TODO: delete it!\n};\n\nConnectionImpl.prototype.call = function(cid, method, param) {\n    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {\n        if (cid) {\n            postMessage(['callback', cid, err, obj]);\n        }\n    }};\n    if (this._authorized || this._connected && !this._auth) {\n        this._sendCall(call);\n    } else {\n        this._callWait.push(call);\n    }\n};\n\nConnectionImpl.prototype.setVisual = function(state) {\n    this._visualState = state;\n    this.call(null, '_visual_', state);\n};\n\nConnectionImpl.prototype._sendFrame = function(frame) {\n    if (!this._socket) {\n        console.error('sendFrame to closed socket');\n        return;\n    }\n    frame.sentTs = Date.now();\n    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {\n        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;\n    }\n    this._socket.send(frame.write());\n};\n\nConnectionImpl.prototype._listen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'listen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_LISTENING;\n};\n\nConnectionImpl.prototype._stopListen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'stopListen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_OFF;\n};\n\nConnectionImpl.prototype._onAudioFormat = function(format) {\n    console.log('_onAudioFormat', format);\n    this._formatSent = false;\n    this._format = format;\n};\n\nConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {\n    if (this._alanState === ALAN_SPEAKING) {\n        return;\n    }\n    if (this._alanState === ALAN_OFF) {\n        this._listen();\n    }\n    if (this._alanState !== ALAN_LISTENING) {\n        console.error('invalid alan state: ' + this._alanState);\n        return;\n    }\n    this._sendFormatIfNeeded(true);\n    var f = alanFrame.create();\n    f.audioData = frame;\n    this._frameQueue.push(f);\n};\n\nConnectionImpl.prototype._sendFormatIfNeeded = function(inQueue) {\n    if (!this._format || this._formatSent) {\n        return;\n    }\n    this._formatSent = true;\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({format: this._format});\n    if (inQueue) {\n        this._frameQueue.push(f);\n    } else {\n        this._sendFrame(f);\n    }\n};\n\nConnectionImpl.prototype._flushQueue = function() {\n    if (!this._socket || !this._connected) {\n        var d = 0;\n        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {\n            this._frameQueue.shift();\n            d++;\n        }\n        if (d > 0) {\n            console.error('dropped: %s, frames', d);\n        }\n        return;\n    }\n    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {\n        this._sendFrame(this._frameQueue.shift());\n    }\n};\n\nfunction connectProject(config, auth, mode) {\n    var c = new ConnectionImpl(config, auth, mode);\n    c.onAudioEvent = function(event, arg1, arg2) {\n        if (event === 'format') {\n            c._onAudioFormat(arg1);\n        } else if (event === 'frame') {\n            c._onMicFrame(arg1, arg2);\n        } else if (event === 'micStop' || event === 'playStart') {\n            c._stopListen();\n        } else {\n            console.error('unknown audio event: ' + event, arg1, arg2);\n        }\n    };\n    return c;\n}\n\nvar factories = {\n    connectProject: connectProject,\n};\n\nvar currentConnect = null;\n\nonmessage = function(e) {\n    var name = e.data[0];\n    try {\n        if (!currentConnect) {\n            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));\n        } else {\n            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));\n        }\n    } catch(e) {\n        console.error('error calling: ' + name, e);\n    }\n};\n"]),{type: 'text/javascript'}));
         this._worker.onmessage = function(e) {
             if (e.data[0] === 'fireEvent') {
                 _this._fire(e.data[1], e.data[2]);
@@ -225,6 +225,10 @@
                 }
                 if (e.data[1] === 'playEvent' || e.data[1] === 'playCommand') {
                     alanAudio.playEvent(e.data[2]);
+                    return;
+                }
+                if (e.data[1] === 'showPopup') {
+                    alanAudio.showPopup(e.data[2]);
                     return;
                 }
                 if (e.data[1] === 'stop') {
@@ -584,6 +588,8 @@
                 fireEvent('command', o.event);
             } else if (o.text) {
                 fireEvent('text', o.text);
+            } else if (o.popup) {
+                fireEvent('popup', o.popup);
             } else if (o.audio) {
                 if (playState === PLAY_IDLE) {
                     playState = PLAY_ACTIVE;
@@ -648,6 +654,17 @@
         });
     };
 
+    ns.showPopup = function(popup) {
+        if (popup.popup.force) {
+            fireEvent("popup", popup);
+        } else {
+            audioContext.resume().then(()=> {
+                audioQueue.push({popup: popup});
+                _handleQueue();
+            });
+        }
+    };
+
     ns.playEvent = function(event) {
         ns.playCommand(event);
     };
@@ -678,19 +695,32 @@
         }
     };
 
+    var micAllowed = false;
+
+    function setMicAllowed(value) {
+        micAllowed = value;
+    }
+
+    ns.isMicAllowed = function() {
+        return micAllowed;
+    }
+
     ns.start = function(onStarted) {
         if (stopMicTimer) {
             clearTimeout(stopMicTimer);
             stopMicTimer = null;
         }
-        if (micState === MIC_ACTIVE) {
-            return;
-        }
+        // if (micState === MIC_ACTIVE) {
+        //     return;
+        // }
         getAudioElement().setAttribute("src", "");
         playState = PLAY_IDLE;
         openMicrophone()
-            .then(()=> { micState = MIC_ACTIVE; fireEvent('micStart'); })
-            .then(()=> audioContext.resume())
+            .then(()=> { 
+                micState = MIC_ACTIVE;
+                fireEvent('micStart');
+            })
+            .then(()=> { setMicAllowed(true); audioContext.resume();})
             .catch(err => { fireEvent('micFail', err); });
         if (onStarted) {
             onStarted();
@@ -744,7 +774,7 @@
 (function(ns) {
     "use strict";
     
-    var alanButtonVersion = '1.8.25';
+    var alanButtonVersion = '1.8.26';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -752,7 +782,27 @@
 
     var alanAltText = 'Alan voice assistant';
     var currentProjectId = null;
+    var deviceId;
     var firstClick = null;
+
+    // Define base properties for disable/enable button functionality
+    var isLocalStorageAvailable = false;
+
+    try {
+        localStorage.getItem('test');
+        isLocalStorageAvailable = true;
+    } catch (e) {
+        isLocalStorageAvailable = false;
+    }
+
+    var isSessionStorageAvailable = false;
+
+    try {
+        sessionStorage.getItem('test');
+        isSessionStorageAvailable = true;
+    } catch (e) {
+        isSessionStorageAvailable = false;
+    }
 
     function getDebugInfo() {
         var info = '\nDebug Info:\n';
@@ -760,6 +810,7 @@
         info += 'alanBtn: v.' + alanButtonVersion + '\n';
         info += 'alanSDK: v.' + window.alanSDKVersion + '\n';
         info += 'projectId: ' + (currentProjectId || 'unknown')  + '\n';
+        info += 'deviceId: ' + getDeviceId()  + '\n';
 
         info += 'navigator: \n';
 
@@ -807,6 +858,33 @@
         return info;
     }
 
+    function getDeviceId() {
+        var deviceIdKey = 'alan-btn-uuid-' + currentProjectId;
+
+        if (isLocalStorageAvailable) {
+            deviceId = localStorage.getItem(deviceIdKey);
+        }
+
+        if (!deviceId) {
+            deviceId = guid();
+            if (isLocalStorageAvailable) {
+                localStorage.setItem(deviceIdKey, deviceId);
+            }
+        }
+        return deviceId;
+    }
+
+    function guid() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                       .toString(16)
+                       .substring(1);
+        }
+    
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+            s4() + '-' + s4() + s4() + s4();
+    }
+
 
 function alanBtn(options) {
 
@@ -816,6 +894,8 @@ function alanBtn(options) {
     var hideS2TPanel = false;
     var pinned = false;
     var absolutePosition = false;
+    var micWasStoppedByTimeout = false;
+    var keepButtonPositionAfterDnD = false;
     
     console.log('Alan: v.' + alanButtonVersion);
 
@@ -925,7 +1005,11 @@ function alanBtn(options) {
     };
 
     function sendClientEvent(param) {
-        window.tutorProject.call('clientEvent', param);
+        if (window.tutorProject) {
+            window.tutorProject.call('clientEvent', param);
+        } else {
+            setTimeout(() => sendClientEvent(param), 3000);
+        }
     }
 
 
@@ -1034,6 +1118,7 @@ function alanBtn(options) {
             } else {
                 // console.info('BTN: STOP alanAudio', new Date());
                 alanAudio.stop();
+                micWasStoppedByTimeout = true;
             }
         }, turnOffTimeout);
     }
@@ -1144,17 +1229,7 @@ function alanBtn(options) {
     var btnTextPanelsZIndex;
     var btnBgLayerZIndex;
 
-    var overlayIsVisible = false;
-
-    // Define base properties for disable/enable button functionality
-    var isLocalStorageAvailable = false;
-
-    try {
-        localStorage.getItem('test');
-        isLocalStorageAvailable = true;
-    } catch (e) {
-        isLocalStorageAvailable = false;
-    }
+    var popupIsVisible = false;
 
     //#region Listen online/offline events to manage connected/disconnected states
     window.addEventListener('online', updateOnlineStatus);
@@ -1220,28 +1295,6 @@ function alanBtn(options) {
     //#region Set styles for base layers
 
     btnSize = btnModes[mode].btnSize;
-    
-    if (options.left !== undefined) {
-        isLeftAligned = true;
-        isRightAligned = false;
-    }
-    if (options.top !== undefined) {
-        isTopAligned = true;
-        isBottomAligned = false;
-    }
-
-    if (isLeftAligned) {
-        sideBtnPos = setDefautlPositionProps(options.left !== undefined ? options.left : btnModes[mode].leftPos);
-    } else {
-        sideBtnPos = setDefautlPositionProps(options.right !== undefined ? options.right : btnModes[mode].rightPos);
-        initRightPos = parseInt(sideBtnPos, 10);
-    }
-
-    if (isTopAligned) {
-        topBtnPos = setDefautlPositionProps(options.top !== undefined ? options.top : btnModes[mode].topPos);
-    } else {
-        bottomBtnPos = setDefautlPositionProps(options.bottom !== undefined ? options.bottom : btnModes[mode].bottomPos);
-    }
 
     function setDefautlPositionProps(value) {
         if (/^\d+$/.test(value)) {
@@ -1271,24 +1324,64 @@ function alanBtn(options) {
     btnBgLayerZIndex = btnZIndex - 3;
 
     // Define styles for root element
-    rootEl.style[isLeftAligned ? 'left' : 'right'] = sideBtnPos;
-
-    if (isTopAligned) {
-        rootEl.style.top = topBtnPos;
-    } else {
-        rootEl.style.bottom = bottomBtnPos;
-    }
 
     if (btnZIndex) {
         rootEl.style.zIndex =  btnZIndex;
     }
     
     rootEl.style.position = options.position ? options.position : 'fixed';
+    setButtonPosition();
 
     // Define styles for block with recognised text
     recognisedTextContent.classList.add('alanBtn-recognised-text-content');
     recognisedTextHolder.classList.add('alanBtn-recognised-text-holder');
+
     setTextPanelPosition(recognisedTextHolder);
+
+    function setButtonPosition(keepBtnPosition) {
+        var _savedBtnPosition = keepBtnPosition ? getSavedBtnPosition() : null;
+
+        if (_savedBtnPosition) {
+            if (_savedBtnPosition.orientation === 'left') {
+                options.left = _savedBtnPosition.x;
+                options.top = _savedBtnPosition.y;
+            }
+            if (_savedBtnPosition.orientation === 'right') {
+                options.right = _savedBtnPosition.x;
+                options.top = _savedBtnPosition.y;
+            }
+        }
+
+        if (options.left !== undefined) {
+            isLeftAligned = true;
+            isRightAligned = false;
+        }
+        if (options.top !== undefined) {
+            isTopAligned = true;
+            isBottomAligned = false;
+        }
+
+        if (isLeftAligned) {
+            sideBtnPos = setDefautlPositionProps(options.left !== undefined ? options.left : btnModes[mode].leftPos);
+        } else {
+            sideBtnPos = setDefautlPositionProps(options.right !== undefined ? options.right : btnModes[mode].rightPos);
+            initRightPos = parseInt(sideBtnPos, 10);
+        }
+
+        if (isTopAligned) {
+            topBtnPos = setDefautlPositionProps(options.top !== undefined ? options.top : btnModes[mode].topPos);
+        } else {
+            bottomBtnPos = setDefautlPositionProps(options.bottom !== undefined ? options.bottom : btnModes[mode].bottomPos);
+        }
+
+        rootEl.style[isLeftAligned ? 'left' : 'right'] = sideBtnPos;
+
+        if (isTopAligned) {
+            rootEl.style.top = topBtnPos;
+        } else {
+            rootEl.style.bottom = bottomBtnPos;
+        }
+    }
 
     function setTextPanelPosition(el, topPos) {
         var _btnSize = parseInt(btnSize, 10);
@@ -1657,7 +1750,7 @@ function alanBtn(options) {
     offlineIconImg.alt = alanAltText + ' offline icon';
     offlineIconImg.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1uZXR3b3JrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLW5vLW5ldHdvcmsiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJpY29uIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMS4wMDAwMDAsIDIyLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMzMsMiBDMzQuNjU2ODU0MiwyIDM2LDMuMzQzMTQ1NzUgMzYsNSBMMzYsMjkgQzM2LDMwLjY1Njg1NDIgMzQuNjU2ODU0MiwzMiAzMywzMiBDMzEuMzQzMTQ1OCwzMiAzMCwzMC42NTY4NTQyIDMwLDI5IEwzMCw1IEMzMCwzLjM0MzE0NTc1IDMxLjM0MzE0NTgsMiAzMywyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjQiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTIzLDggQzI0LjY1Njg1NDIsOCAyNiw5LjM0MzE0NTc1IDI2LDExIEwyNiwyOSBDMjYsMzAuNjU2ODU0MiAyNC42NTY4NTQyLDMyIDIzLDMyIEMyMS4zNDMxNDU4LDMyIDIwLDMwLjY1Njg1NDIgMjAsMjkgTDIwLDExIEMyMCw5LjM0MzE0NTc1IDIxLjM0MzE0NTgsOCAyMyw4IFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTEzLDE2IEMxNC42NTY4NTQyLDE2IDE2LDE3LjM0MzE0NTggMTYsMTkgTDE2LDI5IEMxNiwzMC42NTY4NTQyIDE0LjY1Njg1NDIsMzIgMTMsMzIgQzExLjM0MzE0NTgsMzIgMTAsMzAuNjU2ODU0MiAxMCwyOSBMMTAsMTkgQzEwLDE3LjM0MzE0NTggMTEuMzQzMTQ1OCwxNiAxMywxNiBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC44Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLDIyIEM0LjY1Njg1NDI1LDIyIDYsMjMuMzQzMTQ1OCA2LDI1IEw2LDI5IEM2LDMwLjY1Njg1NDIgNC42NTY4NTQyNSwzMiAzLDMyIEMxLjM0MzE0NTc1LDMyIDIuMDI5MDYxMjVlLTE2LDMwLjY1Njg1NDIgMCwyOSBMMCwyNSBDLTIuMDI5MDYxMjVlLTE2LDIzLjM0MzE0NTggMS4zNDMxNDU3NSwyMiAzLDIyIFoiIGlkPSJTaGFwZSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNNS44MSwxLjI3IEwzNi43MywzMi4xOSBDMzcuNDMxNDAxNiwzMi44OTE0MDE2IDM3LjQzMTQwMTYsMzQuMDI4NTk4NCAzNi43MywzNC43MyBDMzYuMDI4NTk4NCwzNS40MzE0MDE2IDM0Ljg5MTQwMTYsMzUuNDMxNDAxNiAzNC4xOSwzNC43MyBMMy4yNywzLjgxIEMyLjU2ODU5ODM3LDMuMTA4NTk4MzcgMi41Njg1OTgzNywxLjk3MTQwMTYzIDMuMjcsMS4yNyBDMy45NzE0MDE2MywwLjU2ODU5ODM2OCA1LjEwODU5ODM3LDAuNTY4NTk4MzY4IDUuODEsMS4yNyBaIiBpZD0iUGF0aCIgZmlsbC1ydWxlPSJub256ZXJvIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
 
-    var crossImgSrc = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuNzczNDUgNy4wMDAwM0wxMy44Mzk4IDAuOTMzNjA0QzE0LjA1MzQgMC43MjAwMjIgMTQuMDUzNCAwLjM3Mzc0MSAxMy44Mzk4IDAuMTYwMTg2QzEzLjYyNjMgLTAuMDUzMzY4MSAxMy4yOCAtMC4wNTMzOTU1IDEzLjA2NjQgMC4xNjAxODZMNyA2LjIyNjYxTDAuOTMzNjA0IDAuMTYwMTg2QzAuNzIwMDIyIC0wLjA1MzM5NTUgMC4zNzM3NDEgLTAuMDUzMzk1NSAwLjE2MDE4NiAwLjE2MDE4NkMtMC4wNTMzNjgxIDAuMzczNzY4IC0wLjA1MzM5NTUgMC43MjAwNDkgMC4xNjAxODYgMC45MzM2MDRMNi4yMjY1OSA3TDAuMTYwMTg2IDEzLjA2NjRDLTAuMDUzMzk1NSAxMy4yOCAtMC4wNTMzOTU1IDEzLjYyNjMgMC4xNjAxODYgMTMuODM5OEMwLjI2Njk2NCAxMy45NDY2IDAuNDA2OTM2IDE0IDAuNTQ2OTA5IDE0QzAuNjg2ODgxIDE0IDAuODI2ODI3IDEzLjk0NjYgMC45MzM2MzEgMTMuODM5OEw3IDcuNzczNDVMMTMuMDY2NCAxMy44Mzk4QzEzLjE3MzIgMTMuOTQ2NiAxMy4zMTMyIDE0IDEzLjQ1MzEgMTRDMTMuNTkzMSAxNCAxMy43MzMgMTMuOTQ2NiAxMy44Mzk4IDEzLjgzOThDMTQuMDUzNCAxMy42MjYzIDE0LjA1MzQgMTMuMjggMTMuODM5OCAxMy4wNjY0TDcuNzczNDUgNy4wMDAwM1oiIGZpbGw9IiNCQkNGRTciLz4KPC9zdmc+Cg==";
+    var popupCloseIconImgBase64 = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuNzczNDUgNy4wMDAwM0wxMy44Mzk4IDAuOTMzNjA0QzE0LjA1MzQgMC43MjAwMjIgMTQuMDUzNCAwLjM3Mzc0MSAxMy44Mzk4IDAuMTYwMTg2QzEzLjYyNjMgLTAuMDUzMzY4MSAxMy4yOCAtMC4wNTMzOTU1IDEzLjA2NjQgMC4xNjAxODZMNyA2LjIyNjYxTDAuOTMzNjA0IDAuMTYwMTg2QzAuNzIwMDIyIC0wLjA1MzM5NTUgMC4zNzM3NDEgLTAuMDUzMzk1NSAwLjE2MDE4NiAwLjE2MDE4NkMtMC4wNTMzNjgxIDAuMzczNzY4IC0wLjA1MzM5NTUgMC43MjAwNDkgMC4xNjAxODYgMC45MzM2MDRMNi4yMjY1OSA3TDAuMTYwMTg2IDEzLjA2NjRDLTAuMDUzMzk1NSAxMy4yOCAtMC4wNTMzOTU1IDEzLjYyNjMgMC4xNjAxODYgMTMuODM5OEMwLjI2Njk2NCAxMy45NDY2IDAuNDA2OTM2IDE0IDAuNTQ2OTA5IDE0QzAuNjg2ODgxIDE0IDAuODI2ODI3IDEzLjk0NjYgMC45MzM2MzEgMTMuODM5OEw3IDcuNzczNDVMMTMuMDY2NCAxMy44Mzk4QzEzLjE3MzIgMTMuOTQ2NiAxMy4zMTMyIDE0IDEzLjQ1MzEgMTRDMTMuNTkzMSAxNCAxMy43MzMgMTMuOTQ2NiAxMy44Mzk4IDEzLjgzOThDMTQuMDUzNCAxMy42MjYzIDE0LjA1MzQgMTMuMjggMTMuODM5OCAxMy4wNjY0TDcuNzczNDUgNy4wMDAwM1oiIGZpbGw9IiNCQkNGRTciLz4KPC9zdmc+Cg==";
 
     btnBgDefault.classList.add('alanBtn-bg-default');
     btnBgListening.classList.add('alanBtn-bg-listening');
@@ -1758,7 +1851,7 @@ function alanBtn(options) {
         style.setAttribute('id', 'alan-stylesheet-' + projectId);
         style.type = 'text/css';
 
-        keyFrames += '.alanBtn-root * {  box-sizing: border-box; font-family: \'Lato\', sans-serif; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}';
+        keyFrames += '.alanBtn-root * {  box-sizing: border-box; font-family: Helvetica, Arial, sans-serif; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}';
         
         var hoverSelector = !isMobile() ? ':hover' : ':active';
         
@@ -1766,7 +1859,7 @@ function alanBtn(options) {
             keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;} .alanBtn' + hoverSelector + '{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
         }
         
-        keyFrames += getStyleSheetMarker() + '.alanBtn-recognised-text-holder { position:fixed; transform: translateY(' + (isTopAligned ? '-' : '') +'50%); max-width:236px; font-family: \'Lato\', sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
+        keyFrames += getStyleSheetMarker() + '.alanBtn-recognised-text-holder { position:fixed; transform: translateY(' + (isTopAligned ? '-' : '') +'50%); max-width:236px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
         
         keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.with-text.left-side { text-align: left;}';
         keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.with-text.right-side { text-align: right;}';
@@ -1798,11 +1891,21 @@ function alanBtn(options) {
         keyFrames += getStyleSheetMarker() + ' img {pointer-events: none;}';
         keyFrames += getStyleSheetMarker() + '' + hoverSelector + ' .triangleMicIconBg-default {opacity:0!important;}';
         
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-for-alert {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
+        keyFrames += getStyleSheetMarker() + '.alan-alert-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:12px;padding-right:24px;text-align: center;width: 220px;background: rgb(255 255 255);position: fixed;left: 50%;transform: translateX(-50%);top: 10%;    color: #000;font-size: 14px;line-height: 18px;}';
+        keyFrames += getStyleSheetMarker() + '.alan-alert-popup__close-btn {background:url("' + popupCloseIconImgBase64 + '") no-repeat center;cursor:pointer; background-size:100% 100%;position: absolute;top: 12px;right: 12px;width: 14px;height: 14px;}';
+        
         keyFrames += getStyleSheetMarker() + '.alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
-        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup {box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.default-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.top.right {border-top-right-radius: 0!important;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.top.left {border-top-left-radius: 0!important;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.bottom.left {border-bottom-left-radius: 0!important;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.bottom.right {border-bottom-right-radius: 0!important;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup {position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
         keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__body {position:relative;color: #0D1940;font-size: 16px;line-height: 20px;}';
-        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {position:absolute;top:2px;right:-20px;cursor: pointer;pointer-events: auto!important;}';
-        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok:hover {color: rgb(0, 0, 0, 90%);}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {background:url("' + popupCloseIconImgBase64 + '") no-repeat center; background-size:100% 100%;min-height:14px;height:14px;max-height:14px;min-width:14px;width:14px;max-width:14px;opacity:0;transition:opacity 300ms ease-in-out;position:absolute;top:8px;right:8px;cursor: pointer;pointer-events: auto!important;}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok:hover {opacity:0.9}';
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup:hover .alan-overlay-popup__ok{opacity:1;transition:opacity 300ms ease-in-out;}';
         
         keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-gradient', '0%{backgroundPosition: 0 0;}50%{backgroundPosition: -100% 0;}100%{backgroundPosition: 0 0;}');
         keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-pulsating', '0%{transform: scale(1.11111);}50%{transform: scale(1.0);}100%{transform: scale(1.11111);}');
@@ -2068,6 +2171,7 @@ function alanBtn(options) {
             window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host, null, { platform: (mode === 'demo' ? 'alanplayground' : null), appName: window.location.hostname });
             window.tutorProject.on('connectStatus', onConnectStatusChange);
             window.tutorProject.on('options', onOptionsReceived);
+            //window.tutorProject.on('popup', onPopup);
 
             // console.info('BTN: tutorProject', options.key);
         } else {
@@ -2075,34 +2179,9 @@ function alanBtn(options) {
         }
     }
 
-    function guid() {
-        function s4() {
-            return Math.floor((1 + Math.random()) * 0x10000)
-                       .toString(16)
-                       .substring(1);
-        }
-    
-        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-            s4() + '-' + s4() + s4() + s4();
-    }
-
     function getAuthData(data) {
         var authData = data || {};
-        var curUuid, uuidKey;
-
-        if (isLocalStorageAvailable && authData) {
-            uuidKey = 'alan-btn-uuid-' + getProjectId();
-            curUuid = localStorage.getItem(uuidKey);
-            if (curUuid) {
-                authData.uuid = curUuid;
-            } else {
-                authData.uuid = guid();
-                localStorage.setItem(uuidKey, authData.uuid);
-            }
-        } else {
-            authData.uuid = guid();
-        }
-
+        authData.uuid = getDeviceId();
         return authData;
     }
 
@@ -2127,24 +2206,40 @@ function alanBtn(options) {
         };
     }
 
+    var onresizeDebounced = debounce(function (e) {
+        togglePopupVisibility(true);
+    }, 400);
+
     window.onresize = function () {
         if (btnWasMoved) {
             var rootElClientRect = rootEl.getBoundingClientRect();
             rootEl.style.setProperty('top', correctYPos(rootElClientRect.top) + 'px', 'important');
         }
+        togglePopupVisibility(false);
+        onresizeDebounced();
     };
 
     function checkPerrmissions() {
         if (navigator.permissions) {
             navigator.permissions.query({ name: 'microphone' }).then(function (result) {
+                if (result.state === 'prompt') {
+                    sendClientEvent({ micPermissionPrompt: true });
+                }
                 if (result.state !== 'granted') {
-                    showGrantMicAccessPopup();
+                    sendClientEvent({ buttonClicked: true,  micAllowed: false});
+                } else {
+                    sendClientEvent({ buttonClicked: true,  micAllowed: true});
                 }
             }).catch(function () {
                 console.warn('Not possible to detect mic permissions');
+                setTimeout(() => sendClientEvent({ buttonClicked: true,  micAllowed: alanAudio.isMicAllowed()}), 300);
             });
+        } else {
+            setTimeout(() => sendClientEvent({ buttonClicked: true,  micAllowed: alanAudio.isMicAllowed()}), 300);
         }
     }
+
+    alanAudio.on('popup', onPopup);
 
     function _activateAlanButton(resolve) {
         //playSoundOn();
@@ -2161,7 +2256,6 @@ function alanBtn(options) {
         alanAudio.on('playStart', onPlayStart);
         alanAudio.on('playStop', onPlayStop);
         alanAudio.on('command', onCommandCbInMicBtn);
-        alanAudio.on('popup', onPopup);
         alanAudio.start(resolve);
         if (options.onMicStarted) {
             options.onMicStarted();
@@ -2170,7 +2264,7 @@ function alanBtn(options) {
 
     function activateAlanButton() {
         var activatePromise = new Promise(function (resolve, reject) {
-            
+
             if (btnDisabled) {
                 reject({err: BTN_IS_DISABLED_CODE});
                 return;
@@ -2204,13 +2298,14 @@ function alanBtn(options) {
                         break;
                     case PERMISSION_DENIED:
                         reject({ err: MIC_BLOCKED_CODE });
+                        sendClientEvent({ buttonClicked: true,  micAllowed: false});
                         break;
-
                     case LISTENING:
                     case SPEAKING:
                     case INTERMEDIATE:
                     case UNDERSTOOD:
                         resolve();
+                        sendClientEvent({ buttonClicked: true,  micAllowed: true});
                         break;
                     default:
                 }
@@ -2228,20 +2323,20 @@ function alanBtn(options) {
         }
     }
 
-    function onPopup(popupOptions) {
+    function onPopup(p) {
         hidePopup();
-        showPopup(popupOptions);
-    }
-
-    function showGrantMicAccessPopup() {
-        showPopup({
-            message: 'Please allow access to your mic to continue...',
-            overlay: true
-        });
+        if (isMobile() || isTutorMode()) {
+            return;
+        }
+        if (p) {
+            showPopup(p.popup ? p.popup : p);
+        }
     }
 
     function showPopup(popupOptions) {
+        savedPopupOptions = popupOptions;
         var message = popupOptions.message;
+        var buttonMarginInPopup = popupOptions.buttonMarginInPopup;
         var withOverlay = popupOptions.overlay;
         var _btnSize = parseInt(btnSize, 10);
         var overlay = document.createElement('div');
@@ -2250,90 +2345,140 @@ function alanBtn(options) {
         var maxZIndex = 2147483647;
         var popup2BtnMargin = 12;
 
-        overlayIsVisible = true;
+        popupIsVisible = true;
 
         overlay.id = 'alan-overlay';
         popup.id = 'alan-overlay-popup';
         overlay.classList.add('alan-overlay');
         popup.classList.add('alan-overlay-popup');
 
-        overlay.style.zIndex = maxZIndex - 1;
         btn.style.zIndex = maxZIndex;
-        btn.style.pointerEvents = 'none';
-        popup.style.zIndex = maxZIndex;
-        popup.style.borderRadius = '10px';
+        overlay.style.zIndex = maxZIndex - 3;
+        popup.style.zIndex = maxZIndex - 2;
 
-        if (!absolutePosition) {
-            if (!isLeftAligned) {
-                popup.style.right = initRightPos + 'px';
-            } else {
-                popup.style.left = rootElClientRect.x + 'px';
-            }
+        if (popupOptions.preventClick) {
+            btn.style.pointerEvents = 'none';
+        }
 
-            if (rootElClientRect.top > 80) {
-                popup.style.top = rootElClientRect.top - popup2BtnMargin + 'px';
-                popup.style.setProperty('transform', 'translateY(-100%)', 'important');
-                popup.style[isLeftAligned ? 'borderBottomLeftRadius' : 'borderBottomRightRadius'] = 0;
-            } else {
-                popup.style.top = rootElClientRect.top + _btnSize + popup2BtnMargin + 'px';
-                popup.style[isLeftAligned ? 'borderTopLeftRadius' : 'borderTopRightRadius'] = 0;
-            }
-        } else {
-            popup.style.position = 'absolute';
-            if (isLeftAligned) {
-                popup.style.left = 0;
-            } else {
-                popup.style.right = 0;
-            }
+        if (popupOptions.style) {
+            var popupStyle = document.createElement('style');
+            popupStyle.setAttribute('id', 'alan-stylesheet-popup');
+            popupStyle.type = 'text/css';
+            const parentClass = 'alan-popup-' + guid();
+            popup.classList.add(parentClass);
+            popupStyle.innerHTML = popupOptions.style.replace(/(\.-?[_a-zA-Z]+[_a-zA-Z0-9-:]*\s*\{)/gi, `.${parentClass} $&`);
 
-            if (isTopAligned) {
-                popup.style.top = _btnSize + popup2BtnMargin + 'px';
-                popup.style[isLeftAligned ? 'borderTopLeftRadius' : 'borderTopRightRadius'] = 0;
+            if (options.shadowDOM) {
+                options.shadowDOM.prepend(popupStyle);
             } else {
-                popup.style.bottom = _btnSize + popup2BtnMargin + 'px';
-                popup.style[isLeftAligned ? 'borderBottomLeftRadius' : 'borderBottomRightRadius'] = 0;
+                document.getElementsByTagName('head')[0].appendChild(popupStyle);
             }
         }
 
-        popup.innerHTML = '<div class="alan-overlay-popup__body">' + message + '<img id="alan-overlay-ok-btn" src="' + crossImgSrc + '" class="alan-overlay-popup__ok"/></div>';
+        popup.classList.add(isLeftAligned ? 'left' : 'right');
+
+        if (!absolutePosition) {
+            if (!isLeftAligned) {
+                popup.style.right = initRightPos + (-buttonMarginInPopup || 0) + 'px';
+            } else {
+                popup.style.left = rootElClientRect.x + (-buttonMarginInPopup || 0) + 'px';
+            }
+
+            if (rootElClientRect.top > 80) {
+                popup.classList.add('bottom');
+                popup.style.top = rootElClientRect.top + (buttonMarginInPopup ? (_btnSize + buttonMarginInPopup) : (-popup2BtnMargin)) + 'px';
+                popup.style.setProperty('transform', 'translateY(-100%)', 'important');
+            } else {
+                popup.classList.add('top');
+                popup.style.top = rootElClientRect.top + (buttonMarginInPopup ? (-buttonMarginInPopup) : (_btnSize + popup2BtnMargin)) + 'px';
+            }
+        } else {
+            popup.style.position = 'absolute';
+            popup.style[isLeftAligned ? 'left' : 'right'] = (-buttonMarginInPopup || 0) + 'px';
+            popup.style[isTopAligned ? 'top' : 'bottom'] = (buttonMarginInPopup ? -buttonMarginInPopup : (_btnSize + popup2BtnMargin)) + 'px';
+            popup.classList.add(isTopAligned ? 'top' : 'bottom');
+        }
+
+        if (!popupOptions.html) {
+            popup.classList.add('default-popup');
+            popup.innerHTML = '<div class="alan-overlay-popup__body">' + message + '</div>';
+        } else {
+            popup.innerHTML = popupOptions.html;
+        }
+
+        var closeIconImg = document.createElement('div');
+        closeIconImg.id = 'alan-overlay-ok-btn';
+        closeIconImg.classList.add('alan-overlay-popup__ok');
+        popup.appendChild(closeIconImg);
 
         rootEl.appendChild(popup);
         if (withOverlay) {
             rootEl.appendChild(overlay);
         }
-        rootEl.querySelector('#alan-overlay-ok-btn').addEventListener('click', hidePopup);
+        closeIconImg.addEventListener('click', hidePopup);
+        overlay.addEventListener('click', hidePopup);
+        document.addEventListener('keyup', hidePopupByEsc);
     }
 
-    function hidePopup() {
+    function hidePopupByEsc(e) {
+        if (e.keyCode === 27) {
+            hidePopup();
+        }
+    }
+
+    function hidePopup(keepOptionsInMemory) {
+        if (keepOptionsInMemory !== true) {
+            savedPopupOptions = null;
+        }
         var overlay = rootEl.querySelector('#alan-overlay');
         var popup = rootEl.querySelector('#alan-overlay-popup');
+        if (!popup) return;
         var overlayCloseIcon = rootEl.querySelector('#alan-overlay-ok-btn');
         if (overlayCloseIcon) {
             overlayCloseIcon.removeEventListener('click', hidePopup);
         }
         if (overlay) {
             overlay.remove();
+            overlay.removeEventListener('click', hidePopup);
         }
         if (popup) {
             popup.remove();
         }
+        document.removeEventListener('keyup', hidePopupByEsc);
         btn.style.zIndex = btnZIndex;
         btn.style.pointerEvents = 'auto';
-        overlayIsVisible = false;
+        popupIsVisible = false;
+    }
+
+    var savedPopupOptions;
+
+    function togglePopupVisibility(isVisible) {
+        var popup = rootEl.querySelector('#alan-overlay-popup');
+        if (popup) {
+            popup.style.visibility = isVisible ? 'visible' : 'hidden';
+            if (isVisible) {
+                hidePopup(true);
+                if (savedPopupOptions) {
+                    showPopup(savedPopupOptions);
+                }
+            }
+        }
     }
 
     btn.addEventListener('click', function (e) {
+        if (afterMouseMove) return;
+        if (!dndBackAnimFinished) return;
+        hidePopup();
         if (!firstClick) {
             firstClick = true;
             sendClientEvent({ firstClick: true });
         }
-        if (afterMouseMove) return;
-        if (!dndBackAnimFinished) return;
         if (currentErrMsg) {
             if (currentErrMsg === MIC_BLOCKED_MSG) {
-                showGrantMicAccessPopup();
+                sendClientEvent({ buttonClicked: true,  micAllowed: false});
+                showAlert(currentErrMsg);
             } else {
-                alert(currentErrMsg);
+                showAlert(currentErrMsg);
             }
             return;
         }
@@ -2421,6 +2566,16 @@ function alanBtn(options) {
     }
 
     function onOptionsReceived(data) {
+        if (data && data.web) {
+            keepButtonPositionAfterDnD = data.web.keepButtonPositionAfterDnD;
+            if (!keepButtonPositionAfterDnD) {
+                clearSavedBtnPosition();
+            }
+            setButtonPosition(data.web.keepButtonPositionAfterDnD);
+        } else {
+            setButtonPosition();
+        }
+
         if (data && data.web && data.web.hideS2TPanel === true) {
             hideSpeach2TextPanel();
         } else {
@@ -2432,16 +2587,16 @@ function alanBtn(options) {
             setTurnOffVoiceTimeout();
         }
 
-        if (data && data.web && data.web.btnOptions) {
+        if (data && data.web) {
             applyBtnOptions(data.web.btnOptions);
         }
 
-        console.info('OPTIONS',data.web);
+        console.info('OPTIONS', data.web);
         applyLogoOptions(data);
 
         if (options.mode !== 'tutor') {
-            if (data && data.web && data.web.buttonSize) {
-                applyBtnSizeOptions(data.web.buttonSize);
+            if (data && data.web) {
+                applyBtnSizeOptions(data.web.buttonSize || btnModes[mode].btnSize);
             }
         }
 
@@ -2456,7 +2611,7 @@ function alanBtn(options) {
         if (data && data.web && data.web.hidden === true) {
             hideAlanBtn();
         } else {
-            sendClientEvent({ buttonReady: true });
+            // sendClientEvent({ buttonReady: true });
             showAlanBtn();
         }
     }
@@ -2491,6 +2646,12 @@ function alanBtn(options) {
 
     function onMicStart() {
         // console.log('BTN: mic. started', new Date());
+        if (micWasStoppedByTimeout) {
+            micWasStoppedByTimeout = false;
+            alanAudio.start();
+            return;
+        }
+
         hidePopup();
         switchState(LISTENING);
         playSoundNext();
@@ -2518,7 +2679,7 @@ function alanBtn(options) {
         alanAudio.off('playStart', onPlayStart);
         alanAudio.off('playStop', onPlayStop);
         alanAudio.off('command', onCommandCbInMicBtn);
-        alanAudio.off('popup', onPopup);
+        //alanAudio.off('popup', onPopup);
         hideRecognisedText();
 
         switchState(DEFAULT);
@@ -2546,14 +2707,69 @@ function alanBtn(options) {
             hidePopup();
             if (err.name === 'NotAllowedError') {
                 switchState(PERMISSION_DENIED);
-                setTimeout(function () { if(firstClick){alert(MIC_BLOCKED_MSG);} }, 300);
+                // setTimeout(function () { if(firstClick){showAlert(MIC_BLOCKED_MSG);} }, 300);
             } else if(err.name === 'SecurityError') {
                 switchState(NOT_SECURE_ORIGIN);
-                setTimeout(function () { alert(NOT_SECURE_ORIGIN_MSG); }, 300);
+                setTimeout(function () { showAlert(NOT_SECURE_ORIGIN_MSG); }, 300);
             } else {
                 console.error(err.name + ' ' + err.message);
             }
         }
+    }
+
+    function showAlert(msg){
+        var alertPopup = rootEl.querySelector('#alan-alert-popup');
+        if (alertPopup) return;
+        var overlay = document.createElement('div');
+        alertPopup = document.createElement('div');
+        var maxZIndex = 2147483647;
+
+        overlay.id = 'alan-overlay-for-alert';
+        overlay.classList.add('alan-overlay-for-alert');
+        alertPopup.id = 'alan-alert-popup';
+        alertPopup.classList.add('alan-alert-popup');
+
+        btn.style.zIndex = maxZIndex;
+        overlay.style.zIndex = maxZIndex - 3;
+        alertPopup.style.zIndex = maxZIndex - 2;
+        alertPopup.innerHTML = msg;
+
+        var closeIconImg = document.createElement('div');
+        closeIconImg.id = 'alan-alert-popup-close-btn';
+        closeIconImg.classList.add('alan-alert-popup__close-btn');
+        alertPopup.appendChild(closeIconImg);
+
+        rootEl.appendChild(alertPopup);
+        rootEl.appendChild(overlay);
+
+        closeIconImg.addEventListener('click', hideAlert);
+        overlay.addEventListener('click', hideAlert);
+        document.addEventListener('keyup', hideAlertByEsc);
+    }
+
+    function hideAlertByEsc(e) {
+        if (e.keyCode === 27) {
+            hideAlert();
+        }
+    }
+
+    function hideAlert() {
+        var overlay = rootEl.querySelector('#alan-overlay-for-alert');
+        var alertPopup = rootEl.querySelector('#alan-alert-popup');
+        var overlayCloseIcon = rootEl.querySelector('#alan-alert-popup-close-btn');
+        if (overlayCloseIcon) {
+            overlayCloseIcon.removeEventListener('click', hidePopup);
+        }
+        if (overlay) {
+            overlay.remove();
+            overlay.removeEventListener('click', hidePopup);
+        }
+        if (alertPopup) {
+            alertPopup.remove();
+        }
+        btn.style.zIndex = btnZIndex;
+        btn.style.pointerEvents = 'auto';
+        document.removeEventListener('keyup', hideAlertByEsc);
     }
 
     function onPlayStart(e) {
@@ -3089,6 +3305,7 @@ function alanBtn(options) {
         rootEl.appendChild(recognisedTextHolder);
         rootEl.appendChild(btn);
         btnDisabled = false;
+        sendClientEvent({ buttonReady: true });
     }
 
     function hideAlanBtn() {
@@ -3111,6 +3328,8 @@ function alanBtn(options) {
     function applyBtnOptions(btnOptions) {
         if (btnOptions) {
             createAlanStyleSheet(btnOptions);
+        } else {
+            createAlanStyleSheet();
         }
     }
 
@@ -3215,7 +3434,6 @@ function alanBtn(options) {
     function onMouseDown(e) {
         var posInfo = e.touches ? e.touches[0] : e,
             rootElClientRect;
-        if (overlayIsVisible) return;
         if (!posInfo) return;
         if (!dndBackAnimFinished || (e.buttons !== undefined && e.buttons !== 1)) return;
         dndIsDown = true;
@@ -3231,7 +3449,6 @@ function alanBtn(options) {
             }
 
             dndBtnLeftPos = rootElPosX;
-
             rootEl.style.setProperty('left', rootElPosX + 'px', 'important');
             rootEl.style.setProperty('right', 'auto', 'important');
 
@@ -3251,7 +3468,9 @@ function alanBtn(options) {
         var posInfo = e.touches ? e.touches[0] : e;
         var newLeftPos, newTopPos;
         if (!posInfo) return;
+
         if (dndIsDown) {
+            togglePopupVisibility(false);
             hideRecognisedText(0, true);
             e.preventDefault();
             afterMouseMove = true;
@@ -3283,6 +3502,10 @@ function alanBtn(options) {
                 isRightAligned = false;
                 setTextPanelPosition(recognisedTextHolder, curY);
                 btnWasMoved = true;
+                setTimeout(function () {
+                    togglePopupVisibility(true);
+                    saveBtnPosition('left', dndFinalHorPos, curY);
+                }, dndAnimDelay);
             } else {
                 rootEl.style.setProperty('left', window.innerWidth - dndFinalHorPos - btnSize - (window.innerWidth - document.documentElement.clientWidth) + 'px', 'important');
                 setTimeout(function () {
@@ -3291,8 +3514,10 @@ function alanBtn(options) {
                     isLeftAligned = false;
                     isRightAligned = true;
                     setTextPanelPosition(recognisedTextHolder, curY);
+                    saveBtnPosition('right', dndFinalHorPos, curY);
                     btnWasMoved = true;
                     dndBackAnimFinished = true;
+                    togglePopupVisibility(true);
                 }, dndAnimDelay);
             }
 
@@ -3300,7 +3525,7 @@ function alanBtn(options) {
                 afterMouseMove = false;
             }, 300);
 
-            if (Math.abs(tempDeltaX) < 5 || Math.abs(tempDeltaY) < 5) {
+            if (Math.abs(tempDeltaX) < 15 || Math.abs(tempDeltaY) < 15) {
                 afterMouseMove = false;
                 dndBackAnimFinished = true;
             }
@@ -3336,6 +3561,44 @@ function alanBtn(options) {
             rootEl.style.setProperty('left', 'auto', 'important');
         }
         setStylesBasedOnSide();
+    }
+
+    function saveBtnPosition(orientation, x, y) {
+        if (!keepButtonPositionAfterDnD) return;
+        if (isSessionStorageAvailable) {
+            var projectId = getProjectId();
+            sessionStorage.setItem('alan-btn-saved-orientation-' + projectId, orientation);
+            sessionStorage.setItem('alan-btn-saved-x-pos-' + projectId, Math.floor(x));
+            sessionStorage.setItem('alan-btn-saved-y-pos-' + projectId, Math.floor(y));
+        }
+    }
+
+    function clearSavedBtnPosition() {
+        if (isSessionStorageAvailable) {
+            var projectId = getProjectId();
+            sessionStorage.removeItem('alan-btn-saved-orientation-' + projectId);
+            sessionStorage.removeItem('alan-btn-saved-x-pos-' + projectId);
+            sessionStorage.removeItem('alan-btn-saved-y-pos-' + projectId);
+        }
+    }
+
+
+    function getSavedBtnPosition() {
+        if (isSessionStorageAvailable) {
+            var projectId = getProjectId();
+            var savedOptions = {
+                orientation: sessionStorage.getItem('alan-btn-saved-orientation-' + projectId),
+                x: +sessionStorage.getItem('alan-btn-saved-x-pos-' + projectId),
+                y: +sessionStorage.getItem('alan-btn-saved-y-pos-' + projectId),
+            };
+
+            if (savedOptions.orientation) {
+                return savedOptions;
+            }
+
+            return null;
+        }
+        return null;
     }
 
     //#endregion
