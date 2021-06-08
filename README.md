@@ -10,7 +10,7 @@
 
 Quickly add voice to your app or website. Create a voice assistant or build a multimodal interface with two input modes &mdash; speech and gestures &mdash; working in sync.
 
-<img src="https://alan.app/voice/images/github/tablet-tasks.gif" height="325px" align="right"/>
+<img src="https://storage.googleapis.com/alan-public-images/github/tablet-tasks.gif" height="325px" align="right"/>
 
 
 ## Alan is a Voice AI Platform
