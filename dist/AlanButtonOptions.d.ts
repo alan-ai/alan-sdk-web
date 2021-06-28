@@ -7,6 +7,7 @@ export interface AlanButtonOptions {
     top?: number | string;
     position?: string;
     pinned?: boolean;
+    showOverlayOnMicPermissionPrompt?: boolean;
     zIndex?: number;
     onCommand?(commandData: object): void;
     onEvent?(event: object): void;

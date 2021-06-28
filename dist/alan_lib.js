@@ -695,6 +695,10 @@
         }
     };
 
+    ns.resumeAudioCtx = function() {
+        audioContext.resume();
+    };
+
     var micAllowed = false;
 
     function setMicAllowed(value) {
@@ -773,8 +777,8 @@
 
 (function(ns) {
     "use strict";
-    
-    var alanButtonVersion = '1.8.26';
+
+    var alanButtonVersion = '1.8.27';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -1001,8 +1005,23 @@ function alanBtn(options) {
         },
         updateButtonState: function (state) {
             onConnectStatusChange(state);
-        }
+        },
+        sendEvent: sendUserEvent
     };
+
+    document.addEventListener('click', resumeAudioCtx);
+
+    function resumeAudioCtx() {
+        alanAudio.resumeAudioCtx();
+        document.removeEventListener('click', resumeAudioCtx);
+    }
+
+    function sendUserEvent(eventName, eventValue) {
+        var obj = eventValue ? {name: eventName, value: eventValue} : {name: eventName};
+        // var obj = {};
+        // obj[eventName] = eventValue ? eventValue : true;
+        sendClientEvent(obj);
+    }
 
     function sendClientEvent(param) {
         if (window.tutorProject) {
@@ -1457,6 +1476,7 @@ function alanBtn(options) {
     // Define base styles for btn
     btn.style.color = '#fff';
     btn.style.position = 'absolute';
+    var transitionCss = 'transform 0.4s ease-in-out, opacity 0.4s ease-in-out';
 
     applyBtnSizeOptions(btnSize);
 
@@ -1467,9 +1487,9 @@ function alanBtn(options) {
     }
     setStylesBasedOnSide();
     btn.style.borderRadius = '50%';
-    btn.style.boxShadow = '0 8px 10px 0 rgba(0, 75, 144, 0.35)';
+    // btn.style.boxShadow = '0 8px 10px 0 rgba(0, 75, 144, 0.35)';
     btn.style.textAlign = 'center';
-    btn.style.transition = 'all 0.4s ease-in-out';
+    btn.style.transition = transitionCss;
     btn.style.zIndex = btnZIndex;
 
     // Specify tabIndex if it exists in options
@@ -1494,7 +1514,7 @@ function alanBtn(options) {
     micIconDiv.style.left = '0%';
     micIconDiv.style.zIndex = btnIconsZIndex;
     micIconDiv.style.position = 'relative';
-    micIconDiv.style.transition = 'all 0.4s ease-in-out';
+    micIconDiv.style.transition = transitionCss;
 
     function setUpStylesForAnimatedLogoParts(logos) {
         for (var i = 0; i < logos.length; i++) {
@@ -1581,7 +1601,7 @@ function alanBtn(options) {
     roundedTriangleIconDiv.style.zIndex = btnIconsZIndex;
     roundedTriangleIconDiv.style.position = 'absolute';
     roundedTriangleIconDiv.style.opacity = 0;
-    roundedTriangleIconDiv.style.transition = 'all 0.4s ease-in-out';
+    roundedTriangleIconDiv.style.transition = transitionCss;
     roundedTriangleIconDiv.style.overflow = 'hidden';
     roundedTriangleIconDiv.style.borderRadius = '50%';
     roundedTriangleIconDiv.style.backgroundSize = '100% 100%';
@@ -1602,7 +1622,7 @@ function alanBtn(options) {
     circleIconDiv.style.zIndex = btnIconsZIndex;
     circleIconDiv.style.position = 'absolute';
     circleIconDiv.style.opacity = 0;
-    circleIconDiv.style.transition = 'all 0.4s ease-in-out';
+    circleIconDiv.style.transition = transitionCss;
     circleIconDiv.style.overflow = 'hidden';
     circleIconDiv.style.borderRadius = '50%';
     circleIconDiv.style.backgroundSize = '0% 0%';
@@ -1619,7 +1639,7 @@ function alanBtn(options) {
     disconnectedMicLoaderIconImg.style.left = '15%';
     disconnectedMicLoaderIconImg.style.zIndex = btnIconsZIndex;
     disconnectedMicLoaderIconImg.style.position = 'absolute';
-    disconnectedMicLoaderIconImg.style.transition = 'all 0.4s ease-in-out';
+    disconnectedMicLoaderIconImg.style.transition = transitionCss;
     disconnectedMicLoaderIconImg.style.opacity = '0';
     disconnectedMicLoaderIconImg.alt = alanAltText + ' disconnected microphone icon';
     disconnectedMicLoaderIconImg.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgICA8ZyBmaWxsPSIjRkZGIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZD0iTTk2IDBjNTMuMDIgMCA5NiA0Mi45OCA5NiA5NnMtNDIuOTggOTYtOTYgOTZTMCAxNDkuMDIgMCA5NiA0Mi45OCAwIDk2IDB6IiBvcGFjaXR5PSIuMDIiLz4KICAgICAgICA8cGF0aCBkPSJNMTMxLjk2NiAxOS4wOTJjLTMwLTE0LTY1LjI4NC05Ljg0OS05MS4xNDIgMTIuNTc1QzE0Ljk2NiA1NC4wOTIgNi44NSA4My44MSAxMi45MDggMTEzLjk1YzYuMDU4IDMwLjE0MiAzMC4zMDIgNTYuMTkgNjAuMDU4IDY0LjE0MiAzNS4xODMgOS40MDYgNzMtNCA5My0zNC0xNy45MjQgMjMuOTE2LTUyLjM2NiAzOC4yOTMtODMgMzMtMzAuMTY4LTUuMjEtNTcuMTA0LTMxLjExLTY0LTYxLTcuMzQ3LTMxLjgzNS43NzktNTYgMjctODBzODAtMjYgMTA5IDljNS41MzYgNi42ODEgMTMgMTkgMTUgMzQgMSA2IDEgNyAyIDEyIDAgMiAyIDQgNCA0IDMgMCA1LjM3NC0yLjI1NiA1LTYtMy0zMC0yMS41NTYtNTcuMTkzLTQ5LTcweiIgb3BhY2l0eT0iLjQiLz4KICAgIDwvZz4KPC9zdmc+Cg==";
@@ -1633,7 +1653,7 @@ function alanBtn(options) {
     lowVolumeMicIconImg.style.left = '0%';
     lowVolumeMicIconImg.style.zIndex = btnIconsZIndex;
     lowVolumeMicIconImg.style.position = 'absolute';
-    lowVolumeMicIconImg.style.transition = 'all 0.4s ease-in-out';
+    lowVolumeMicIconImg.style.transition = transitionCss;
     lowVolumeMicIconImg.style.opacity = '0';
     lowVolumeMicIconImg.alt = alanAltText + ' low volume icon';
     lowVolumeMicIconImg.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1taWM8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iQWxhbi1CdXR0b24tLy1BbmltYXRpb24tLy1idXR0b24tbm8tbWljIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8ZyBpZD0iaWNvbiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjIuMDAwMDAwLCAxOS4wMDAwMDApIiBmaWxsPSIjRkZGRkZGIiBmaWxsLXJ1bGU9Im5vbnplcm8iPgogICAgICAgICAgICA8cGF0aCBkPSJNMzIsMTguNDczNjg0MiBDMzIsMjUuNzE5NDczNyAyNi43OCwzMS42OTI2MzE2IDIwLDMyLjY5ODQyMTEgTDIwLDQwIEMyMCw0MS4xMDQ1Njk1IDE5LjEwNDU2OTUsNDIgMTgsNDIgQzE2Ljg5NTQzMDUsNDIgMTYsNDEuMTA0NTY5NSAxNiw0MCBMMTYsMzIuNjk4NDIxMSBDOS4yMiwzMS42OTI2MzE2IDQsMjUuNzE5NDczNyA0LDE4LjQ3MzY4NDIgTDQsMTggQzQsMTYuODk1NDMwNSA0Ljg5NTQzMDUsMTYgNiwxNiBDNy4xMDQ1Njk1LDE2IDgsMTYuODk1NDMwNSA4LDE4IEw4LDE4LjQ3MzY4NDIgQzgsMjQuMTQxODY5OCAxMi40NzcxNTI1LDI4LjczNjg0MjEgMTgsMjguNzM2ODQyMSBDMjMuNTIyODQ3NSwyOC43MzY4NDIxIDI4LDI0LjE0MTg2OTggMjgsMTguNDczNjg0MiBMMjgsMTggQzI4LDE2Ljg5NTQzMDUgMjguODk1NDMwNSwxNiAzMCwxNiBDMzEuMTA0NTY5NSwxNiAzMiwxNi44OTU0MzA1IDMyLDE4IEwzMiwxOC40NzM2ODQyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjgiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTE4LC00LjUyNzM3MjYzZS0xNCBDMjEuMzEzNzA4NSwtNC42MTg1Mjc3OGUtMTQgMjQsMi43NTY5ODMzOCAyNCw2LjE1Nzg5NDc0IEwyNCwxOC40NzM2ODQyIEMyNCwyMS44NzQ1OTU2IDIxLjMxMzcwODUsMjQuNjMxNTc4OSAxOCwyNC42MzE1Nzg5IEMxNC42ODYyOTE1LDI0LjYzMTU3ODkgMTIsMjEuODc0NTk1NiAxMiwxOC40NzM2ODQyIEwxMiw2LjE1Nzg5NDc0IEMxMiwyLjc1Njk4MzM4IDE0LjY4NjI5MTUsLTQuNTI3MzcyNjNlLTE0IDE4LC00LjYxODUyNzc4ZS0xNCBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC42Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLjgxLDMuMjcgTDM0LjczLDM0LjE5IEMzNS40MzE0MDE2LDM0Ljg5MTQwMTYgMzUuNDMxNDAxNiwzNi4wMjg1OTg0IDM0LjczLDM2LjczIEMzNC4wMjg1OTg0LDM3LjQzMTQwMTYgMzIuODkxNDAxNiwzNy40MzE0MDE2IDMyLjE5LDM2LjczIEwxLjI3LDUuODEgQzAuNTY4NTk4MzY4LDUuMTA4NTk4MzcgMC41Njg1OTgzNjgsMy45NzE0MDE2MyAxLjI3LDMuMjcgQzEuOTcxNDAxNjMsMi41Njg1OTgzNyAzLjEwODU5ODM3LDIuNTY4NTk4MzcgMy44MSwzLjI3IFoiIGlkPSJQYXRoIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
@@ -1646,7 +1666,7 @@ function alanBtn(options) {
     noVoiceSupportMicIconImg.style.left = '0%';
     noVoiceSupportMicIconImg.style.zIndex = btnIconsZIndex;
     noVoiceSupportMicIconImg.style.position = 'absolute';
-    noVoiceSupportMicIconImg.style.transition = 'all 0.4s ease-in-out';
+    noVoiceSupportMicIconImg.style.transition = transitionCss;
     noVoiceSupportMicIconImg.style.opacity = '0';
     noVoiceSupportMicIconImg.alt = alanAltText + ' no voice support icon';
     noVoiceSupportMicIconImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAIuSURBVHgB7dvxUYMwFAbwpxMwAhvoBtVJygZ1A92gI1Qn6AjoBO0GsEG7wfPlgCtNA7xASzX5fnf5oyThLp+BQDiJAAAAAAAAAAAAAAAAxmHmDyk5n+ykLAn6SUhpHVaXwrQhcBsIr5FTLGSwb1IOmpkj9RnrxXE5+1x+fH7Pwyw0+PKSLLpCrGeq1oFiwNWiUGhCZE8UC22I7IliogmRPVFshkJkTxSjvhDZE8WqJ0QEqNURIgL0MTVEgmkhElTGhkix4WqzoNlYWFp1k1fhvvMHgc9n2cFRPzXAou/8t/JAM7EH/SD66ocM9bfrb+WR7kTGm1iHjqR3HDjXbOYMsLR+p9bvPentr3iuSeYM0B7Uwvr9RXqfA+cqKTRyma2sdSB3tMlZJ7X62Ru3Qa7CiSOIF6uN9pmw4NMuTjYUcDAcM8wEkTjaZdasytm9AfHsOL6lUJkZx5c2yr7a2ZlSyGSAa8egt5qBK0JU/TH+Na7uha4QzLHBm7+0ee8Iz/Sf/XlwtjeRtnq2mVU4dVSXUr6l/NDpccS0e5KSSekKybR9lReQkmLAV9hU7ZiFKcWCq8t5zeOtWfndOWhczcYN6+VSFq2+RfQhGnUYWUeY5ph5m0k6+iHENjs9RXuE2OYbYN3HFeKOYjQmwLrfRYgUo7EB1n2bEM03khXd0F0epDXs0Obaovd1ty39UCDAif5ygO0PRyWBH64eqJuFAP9kAwAAAAAAAAAAAAAAU/wC52820szaQtwAAAAASUVORK5CYII=";
@@ -1730,7 +1750,7 @@ function alanBtn(options) {
             el.style.left = 0;
             el.style.zIndex = btnBgLayerZIndex;
             el.style.position = 'absolute';
-            el.style.transition = 'all 0.4s ease-in-out';
+            el.style.transition = transitionCss;
             el.style.opacity = '.5';
             el.style.borderRadius = '100px';
             el.classList.add('alanBtn-oval-bg-default');
@@ -1745,7 +1765,7 @@ function alanBtn(options) {
     offlineIconImg.style.left = '0%';
     offlineIconImg.style.zIndex = btnIconsZIndex;
     offlineIconImg.style.position = 'absolute';
-    offlineIconImg.style.transition = 'all 0.4s ease-in-out';
+    offlineIconImg.style.transition = transitionCss;
     offlineIconImg.style.opacity = '0';
     offlineIconImg.alt = alanAltText + ' offline icon';
     offlineIconImg.src = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1uZXR3b3JrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLW5vLW5ldHdvcmsiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJpY29uIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMS4wMDAwMDAsIDIyLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMzMsMiBDMzQuNjU2ODU0MiwyIDM2LDMuMzQzMTQ1NzUgMzYsNSBMMzYsMjkgQzM2LDMwLjY1Njg1NDIgMzQuNjU2ODU0MiwzMiAzMywzMiBDMzEuMzQzMTQ1OCwzMiAzMCwzMC42NTY4NTQyIDMwLDI5IEwzMCw1IEMzMCwzLjM0MzE0NTc1IDMxLjM0MzE0NTgsMiAzMywyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjQiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTIzLDggQzI0LjY1Njg1NDIsOCAyNiw5LjM0MzE0NTc1IDI2LDExIEwyNiwyOSBDMjYsMzAuNjU2ODU0MiAyNC42NTY4NTQyLDMyIDIzLDMyIEMyMS4zNDMxNDU4LDMyIDIwLDMwLjY1Njg1NDIgMjAsMjkgTDIwLDExIEMyMCw5LjM0MzE0NTc1IDIxLjM0MzE0NTgsOCAyMyw4IFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTEzLDE2IEMxNC42NTY4NTQyLDE2IDE2LDE3LjM0MzE0NTggMTYsMTkgTDE2LDI5IEMxNiwzMC42NTY4NTQyIDE0LjY1Njg1NDIsMzIgMTMsMzIgQzExLjM0MzE0NTgsMzIgMTAsMzAuNjU2ODU0MiAxMCwyOSBMMTAsMTkgQzEwLDE3LjM0MzE0NTggMTEuMzQzMTQ1OCwxNiAxMywxNiBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC44Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLDIyIEM0LjY1Njg1NDI1LDIyIDYsMjMuMzQzMTQ1OCA2LDI1IEw2LDI5IEM2LDMwLjY1Njg1NDIgNC42NTY4NTQyNSwzMiAzLDMyIEMxLjM0MzE0NTc1LDMyIDIuMDI5MDYxMjVlLTE2LDMwLjY1Njg1NDIgMCwyOSBMMCwyNSBDLTIuMDI5MDYxMjVlLTE2LDIzLjM0MzE0NTggMS4zNDMxNDU3NSwyMiAzLDIyIFoiIGlkPSJTaGFwZSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNNS44MSwxLjI3IEwzNi43MywzMi4xOSBDMzcuNDMxNDAxNiwzMi44OTE0MDE2IDM3LjQzMTQwMTYsMzQuMDI4NTk4NCAzNi43MywzNC43MyBDMzYuMDI4NTk4NCwzNS40MzE0MDE2IDM0Ljg5MTQwMTYsMzUuNDMxNDAxNiAzNC4xOSwzNC43MyBMMy4yNywzLjgxIEMyLjU2ODU5ODM3LDMuMTA4NTk4MzcgMi41Njg1OTgzNywxLjk3MTQwMTYzIDMuMjcsMS4yNyBDMy45NzE0MDE2MywwLjU2ODU5ODM2OCA1LjEwODU5ODM3LDAuNTY4NTk4MzY4IDUuODEsMS4yNyBaIiBpZD0iUGF0aCIgZmlsbC1ydWxlPSJub256ZXJvIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n";
@@ -1856,7 +1876,7 @@ function alanBtn(options) {
         var hoverSelector = !isMobile() ? ':hover' : ':active';
         
         if (!isMobile()) {
-            keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);transition:all 0.4s ease-in-out;} .alanBtn' + hoverSelector + '{transform: scale(1.11111);transition:all 0.4s ease-in-out;}.alanBtn:focus {transform: scale(1);transition:all 0.4s ease-in-out;  border: solid 3px #50e3c2;  outline: none;  }';
+            keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);'+ transitionCss +';} .alanBtn' + hoverSelector + '{transform: scale(1.11111);transition:' + transitionCss + ';}.alanBtn:focus {transform: scale(1);' + transitionCss + ';  border: solid 3px #50e3c2;  outline: none;  }';
         }
         
         keyFrames += getStyleSheetMarker() + '.alanBtn-recognised-text-holder { position:fixed; transform: translateY(' + (isTopAligned ? '-' : '') +'50%); max-width:236px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
@@ -2210,10 +2230,22 @@ function alanBtn(options) {
         togglePopupVisibility(true);
     }, 400);
 
+    var windowInitInnerHeight = window.innerHeight;
+
+    function isSafari(){
+        return /apple/i.test(navigator.vendor);
+    }
+
     window.onresize = function () {
-        if (btnWasMoved) {
+        var innerHeightDelta = Math.abs(windowInitInnerHeight - window.innerHeight);
+        var isMobileIos = isMobile() && isSafari();
+        if (btnWasMoved || (isMobileIos && (innerHeightDelta === 84 || innerHeightDelta === 0))) {
             var rootElClientRect = rootEl.getBoundingClientRect();
-            rootEl.style.setProperty('top', correctYPos(rootElClientRect.top) + 'px', 'important');
+            if (innerHeightDelta === 0) {
+                rootEl.style.setProperty('top', correctYPos(rootElClientRect.top + 84) + 'px', 'important');
+            } else {
+                rootEl.style.setProperty('top', correctYPos(rootElClientRect.top) + 'px', 'important');
+            }
         }
         togglePopupVisibility(false);
         onresizeDebounced();
@@ -2223,6 +2255,9 @@ function alanBtn(options) {
         if (navigator.permissions) {
             navigator.permissions.query({ name: 'microphone' }).then(function (result) {
                 if (result.state === 'prompt') {
+                    if (options.showOverlayOnMicPermissionPrompt) {
+                        showPopup({ overlay: true, buttonUnderOverlay: true });
+                    }
                     sendClientEvent({ micPermissionPrompt: true });
                 }
                 if (result.state !== 'granted') {
@@ -2352,7 +2387,10 @@ function alanBtn(options) {
         overlay.classList.add('alan-overlay');
         popup.classList.add('alan-overlay-popup');
 
-        btn.style.zIndex = maxZIndex;
+        if (popupOptions.buttonUnderOverlay !== true) {
+            btn.style.zIndex = maxZIndex;
+        }
+        
         overlay.style.zIndex = maxZIndex - 3;
         popup.style.zIndex = maxZIndex - 2;
 
@@ -2400,8 +2438,10 @@ function alanBtn(options) {
         }
 
         if (!popupOptions.html) {
-            popup.classList.add('default-popup');
-            popup.innerHTML = '<div class="alan-overlay-popup__body">' + message + '</div>';
+            if (message) {
+                popup.classList.add('default-popup');
+                popup.innerHTML = '<div class="alan-overlay-popup__body">' + message + '</div>';
+            }
         } else {
             popup.innerHTML = popupOptions.html;
         }
@@ -2415,14 +2455,25 @@ function alanBtn(options) {
         if (withOverlay) {
             rootEl.appendChild(overlay);
         }
-        closeIconImg.addEventListener('click', hidePopup);
+        closeIconImg.addEventListener('click', hidePopupByCloseIcon);
         overlay.addEventListener('click', hidePopup);
         document.addEventListener('keyup', hidePopupByEsc);
+        let showPopupEvent = "showPopup";
+        if (popupOptions.name) {
+            showPopupEvent += ":" + popupOptions.name;
+        }
+        sendUserEvent(showPopupEvent);
+    }
+
+    function hidePopupByCloseIcon() {
+        hidePopup();
+        sendClientEvent({popupCloseClicked: true});
     }
 
     function hidePopupByEsc(e) {
         if (e.keyCode === 27) {
             hidePopup();
+            sendClientEvent({popupCloseClicked: true});
         }
     }
 
@@ -3481,7 +3532,10 @@ function alanBtn(options) {
             tempDeltaY = posInfo.clientY - dndInitMousePos[1];
             rootEl.style.setProperty('left', correctXPos(newLeftPos) + 'px', 'important');
             rootEl.style.setProperty('top', correctYPos(newTopPos) + 'px', 'important');
+            e.preventDefault();
+            return false;
         }
+        
     }
 
     function onMouseUp(e) {
@@ -3525,7 +3579,7 @@ function alanBtn(options) {
                 afterMouseMove = false;
             }, 300);
 
-            if (Math.abs(tempDeltaX) < 15 || Math.abs(tempDeltaY) < 15) {
+            if (Math.abs(tempDeltaX) < 15 && Math.abs(tempDeltaY) < 15) {
                 afterMouseMove = false;
                 dndBackAnimFinished = true;
             }
