@@ -319,6 +319,9 @@
 
     function fillAuth(values, ext) {
         var auth = {};
+        for (var k in ext) {
+            auth[k] = ext[k];
+        }
         for (var k in values) {
             auth[k] = values[k];
         }
@@ -778,7 +781,7 @@
 (function(ns) {
     "use strict";
 
-    var alanButtonVersion = '1.8.27';
+    var alanButtonVersion = '1.8.28';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -1387,18 +1390,23 @@ function alanBtn(options) {
             initRightPos = parseInt(sideBtnPos, 10);
         }
 
+        rootEl.style[isLeftAligned ? 'left' : 'right'] = sideBtnPos;
+        setDefaultBtnHorizontalPosition();
+    }
+
+    function setDefaultBtnHorizontalPosition(){
         if (isTopAligned) {
             topBtnPos = setDefautlPositionProps(options.top !== undefined ? options.top : btnModes[mode].topPos);
         } else {
             bottomBtnPos = setDefautlPositionProps(options.bottom !== undefined ? options.bottom : btnModes[mode].bottomPos);
         }
 
-        rootEl.style[isLeftAligned ? 'left' : 'right'] = sideBtnPos;
-
         if (isTopAligned) {
             rootEl.style.top = topBtnPos;
+            rootEl.style.setProperty('bottom', '');
         } else {
             rootEl.style.bottom = bottomBtnPos;
+            rootEl.style.setProperty('top', '');
         }
     }
 
@@ -2188,7 +2196,11 @@ function alanBtn(options) {
             tryReadSettingsFromLocalStorage();
             switchState(getDefaultBtnState(DISCONNECTED));
 
-            window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host, null, { platform: (mode === 'demo' ? 'alanplayground' : null), appName: window.location.hostname });
+            window.tutorProject = alan.project(options.key, getAuthData(options.authData), options.host, null, {
+                platform: (mode === 'demo' ? 'alanplayground' : null),
+                userAgent: navigator.userAgent,
+                appName: window.location.hostname
+            });
             window.tutorProject.on('connectStatus', onConnectStatusChange);
             window.tutorProject.on('options', onOptionsReceived);
             //window.tutorProject.on('popup', onPopup);
@@ -2230,21 +2242,44 @@ function alanBtn(options) {
         togglePopupVisibility(true);
     }, 400);
 
-    var windowInitInnerHeight = window.innerHeight;
+    var windowPrevInnerHeight = window.innerHeight;
+    var windowPrevOrientation = window.orientation;
 
     function isSafari(){
         return /apple/i.test(navigator.vendor);
     }
 
     window.onresize = function () {
-        var innerHeightDelta = Math.abs(windowInitInnerHeight - window.innerHeight);
-        var isMobileIos = isMobile() && isSafari();
-        if (btnWasMoved || (isMobileIos && (innerHeightDelta === 84 || innerHeightDelta === 0))) {
+        var innerHeightDelta = Math.abs(windowPrevInnerHeight - window.innerHeight);
+        var isMobileIos = (isMobile() || isIpadOS()) && isSafari();
+        var orientationWasChanged = windowPrevOrientation !== window.orientation;
+        // Here we describe different cases when browser's panel on mobile are shown or hidden
+        // We cannot detect it other way, so we have to use this magic constants here
+        // innerHeightDelta === 50 - top brawser panel is shown in landscape mode
+        // innerHeightDelta === 84 - mobile ios smart banner is shown
+        // innerHeightDelta === 95 - tablet ios smart banner is shown
+        // innerHeightDelta === 0 - ios smart banner is hidden
+
+        console.info('LOGS', innerHeightDelta);
+
+        var mobilePanelsWereShownOrHidden = isMobileIos &&
+            (innerHeightDelta === 84 || innerHeightDelta === 95 || innerHeightDelta === 50 || innerHeightDelta === 0);
+
+        windowPrevOrientation = window.orientation;
+        windowPrevInnerHeight = window.innerHeight;
+        if (orientationWasChanged || btnWasMoved || mobilePanelsWereShownOrHidden) {
             var rootElClientRect = rootEl.getBoundingClientRect();
+            var newYPos;
             if (innerHeightDelta === 0) {
-                rootEl.style.setProperty('top', correctYPos(rootElClientRect.top + 84) + 'px', 'important');
+                newYPos = rootElClientRect.top + 84;
             } else {
-                rootEl.style.setProperty('top', correctYPos(rootElClientRect.top) + 'px', 'important');
+                newYPos = rootElClientRect.top;
+            }
+
+            if (orientationWasChanged && window.orientation === 0) {//portrait
+                setDefaultBtnHorizontalPosition();
+            } else {
+                rootEl.style.setProperty('top', correctYPos(newYPos) + 'px', 'important');
             }
         }
         togglePopupVisibility(false);
@@ -2369,6 +2404,7 @@ function alanBtn(options) {
     }
 
     function showPopup(popupOptions) {
+        if (btnDisabled) return;
         savedPopupOptions = popupOptions;
         var message = popupOptions.message;
         var buttonMarginInPopup = popupOptions.buttonMarginInPopup;
@@ -2449,7 +2485,11 @@ function alanBtn(options) {
         var closeIconImg = document.createElement('div');
         closeIconImg.id = 'alan-overlay-ok-btn';
         closeIconImg.classList.add('alan-overlay-popup__ok');
-        popup.appendChild(closeIconImg);
+        if (popupOptions.html && popup.children[0]) {
+            popup.children[0].appendChild(closeIconImg);
+        } else {
+            popup.appendChild(closeIconImg);
+        }
 
         rootEl.appendChild(popup);
         if (withOverlay) {
@@ -3297,10 +3337,16 @@ function alanBtn(options) {
     }
 
     function isMobile() {
-        if (/Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
             return true;
         }
         return false;
+    }
+
+    function isIpadOS() {
+        return navigator.maxTouchPoints &&
+            navigator.maxTouchPoints > 2 &&
+            /MacIntel/.test(navigator.platform);
     }
 
     function isOriginSecure() {
@@ -3472,8 +3518,8 @@ function alanBtn(options) {
     //#region Drag-n-drop btn logic
 
     if (!pinned) {
-        rootEl.addEventListener('mousedown', onMouseDown, true);
-        rootEl.addEventListener('touchstart', onMouseDown, { passive: false });
+        btn.addEventListener('mousedown', onMouseDown, true);
+        btn.addEventListener('touchstart', onMouseDown, { passive: false });
 
         document.addEventListener('mouseup', onMouseUp, true);
         document.addEventListener('touchend', onMouseUp, { passive: false });
