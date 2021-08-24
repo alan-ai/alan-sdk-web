@@ -23,7 +23,7 @@ function App() {
 
   return <div className="App">
     <header className="App-header">
-      <img src="https://alan.app/voice/images/previews/preview.jpg"
+      <img src="https://alan.app/previews/preview.png"
         ref={logoEl}
         className="Alan-logo" alt="logo" />
       <ul>
