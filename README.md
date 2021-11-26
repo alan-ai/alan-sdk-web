@@ -8,49 +8,49 @@
 [![CircleCI](https://circleci.com/gh/alan-ai/alan-sdk-web.svg?style=shield)](https://circleci.com/gh/alan-ai/alan-sdk-web)
 
 
-Quickly add voice to your app or website. Create a voice assistant or build a multimodal interface with two input modes &mdash; speech and gestures &mdash; working in sync.
+Quickly add voice to your app. Create an in-app voice assistant to enable human-like conversations and provide a personalized voice experience for every user.
 
 <img src="https://storage.googleapis.com/alan-public-images/github/tablet-tasks.gif" height="325px" align="right"/>
 
 
 ## Alan is a Voice AI Platform
 
-Alan is a conversational voice AI platform that lets you create an intelligent voice assistant for your app. It offers all necessary tools to design, embed and host your conversational experiences:
+Alan is a conversational voice AI platform that lets you create an intelligent voice assistant for your app. It offers all necessary tools to design, embed and host your voice solutions:
 
 #### Alan Studio
-A web portal where you can write, test and manage dialog scenarios for your voice assistant or chatbot.
+A powerful web-based IDE where you can write, test and debug dialog scenarios for your voice assistant or chatbot.
 
 #### Alan Client SDKs
 
-With Alan Client SDKs, you can quickly embed Alan's voice to your app.
+Alan's lightweight SDKs to quickly embed a voice assistant to your app.
 
 #### Alan Cloud
 
-Alan's AI-backend that maintains voice deployments and accomplishes all Spoken Language Understanding (SLU) and Natural Language Processing (NLP) tasks.
+Alan's AI-backend powered by the industry’s best Automatic Speech Recognition (ASR), Natural Language Understanding (NLU) and Speech Synthesis. The Alan Cloud provisions and handles the infrastructure required to maintain your voice deployments and perform all the voice processing tasks.
 
 To get more details on how Alan works, see <a href="https://alan.app/platform" target="_blank">Alan Platform</a>.
 
 ## Why Alan?
 
 * **No or minimum changes to your UI**: To voice enable your app, you only need to get the Alan Client SDK and drop it to your app.
-* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components. Alan does all maintenance and voice processing tasks on behalf of your app.
+* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components - the Alan Platform does the bulk of the work.
 * **On-the-fly updates**: All changes to the dialogs become available immediately.
 * **Voice flow testing and analytics**: Alan Studio provides advanced tools for testing your dialog flows and getting the analytics data on users' interactions, all in the same console.
 
 
 ## How to start
 
-To add voice a web app or page:
+To create a voice assistant for your web app or page:
 
 1. <a href="https://studio.alan.app/register" target="_blank">Sign up for Alan Studio</a> to build voice scripts in JavaScript and test them.
-2. Use the Alan Web SDK to embed the Alan button to your app or page. For details, see Alan AI documentation for the necessary framework:
+2. Use the Alan Web SDK to embed a voice assistant to your app or page. For details, see Alan AI documentation for the necessary framework:
 
-    * <img src="https://alan.app/assets/about/js.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/vanilla" target="_blank">JavaScript</a>
-	* <img src="https://alan.app/assets/about/react.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/react" target="_blank">React</a>
-    * <img src="https://alan.app/assets/about/angular.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/angular" target="_blank">Angular</a>
-    * <img src="https://alan.app/assets/about/vue.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/vue" target="_blank">Vue</a> 
-    * <img src="https://alan.app/assets/about/ember.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/ember" target="_blank">Ember</a>
-    * <img src="https://alan.app/assets/about/electron.svg" height="35px" align="center" style="border:0px"/> <a href="https://alan.app/docs/client-api/web/electron" target="_blank">Electron</a>
+    * <a href="https://alan.app/docs/client-api/web/vanilla" target="_blank">JavaScript</a>
+	* <a href="https://alan.app/docs/client-api/web/react" target="_blank">React</a>
+    * <a href="https://alan.app/docs/client-api/web/angular" target="_blank">Angular</a>
+    * <a href="https://alan.app/docs/client-api/web/vue" target="_blank">Vue</a> 
+    * <a href="https://alan.app/docs/client-api/web/ember" target="_blank">Ember</a>
+    * <a href="https://alan.app/docs/client-api/web/electron" target="_blank">Electron</a>
 
 
 Check out our <a href="https://alan-ai.github.io/alan-sdk-web/" target="_blank">demo</a>.
