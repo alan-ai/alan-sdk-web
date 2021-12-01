@@ -1,4 +1,4 @@
-# In-app voice assistant SDK for Web
+# Alan AI: In-app voice assistant SDK for Web
 
 [Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
