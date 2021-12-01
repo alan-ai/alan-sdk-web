@@ -13,7 +13,6 @@ jobs:
     steps:
       - checkout
       - node/install:
-         install-yarn: true
          install-npm: true
       - run: node --version
       - restore_cache:
