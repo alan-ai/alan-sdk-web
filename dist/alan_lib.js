@@ -781,7 +781,7 @@
 (function(ns) {
     "use strict";
 
-    var alanButtonVersion = '1.8.28';
+    var alanButtonVersion = '1.8.29';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -903,8 +903,24 @@ function alanBtn(options) {
     var absolutePosition = false;
     var micWasStoppedByTimeout = false;
     var keepButtonPositionAfterDnD = false;
+
+    // Btn modes
+    var mode;
+
+    if (options.mode === 'tutor') {
+        mode = 'tutor';
+        pinned = true;
+    } else if (options.mode === 'demo') {
+        mode = 'demo';
+    } else {
+        mode = 'component';
+    }
     
     console.log('Alan: v.' + alanButtonVersion);
+
+    if (window.tutorProject && !isTutorMode()) {
+        throw new Error('The Alan Button instance has already been created. There cannot be two Alan Button instances created at the same time');
+    }
 
     var btnInstance = {
         // Common public API
@@ -1002,6 +1018,9 @@ function alanBtn(options) {
             alanAudio.stop();
             window.tutorProject.close();
             rootEl.remove();
+            if(!isTutorMode()) {
+                window.tutorProject = null;
+            }
         },
         stop: function () {
             alanAudio.stop();
@@ -1041,18 +1060,6 @@ function alanBtn(options) {
 
     if (options.host) {
         baseUrl = 'https://' + options.host;
-    }
-
-    // Btn modes
-    var mode;
-
-    if (options.mode === 'tutor') {
-        mode = 'tutor';
-        pinned = true;
-    } else if (options.mode === 'demo') {
-        mode = 'demo';
-    } else {
-        mode = 'component';
     }
 
     if (options.position === 'absolute' || options.pinned) {
@@ -1435,6 +1442,7 @@ function alanBtn(options) {
 
         if (absolutePosition) {
             el.style.position = 'absolute';
+            el.classList.add('absolute-positioned');
         }
         if (topPos) {
             el.style.bottom = '';
@@ -2250,6 +2258,7 @@ function alanBtn(options) {
     }
 
     window.onresize = function () {
+        if (isTutorMode()) return;
         var innerHeightDelta = Math.abs(windowPrevInnerHeight - window.innerHeight);
         var isMobileIos = (isMobile() || isIpadOS()) && isSafari();
         var orientationWasChanged = windowPrevOrientation !== window.orientation;
@@ -2260,14 +2269,18 @@ function alanBtn(options) {
         // innerHeightDelta === 95 - tablet ios smart banner is shown
         // innerHeightDelta === 0 - ios smart banner is hidden
 
-        console.info('LOGS', innerHeightDelta);
+        var isVerticalResize = innerHeightDelta !== 0;
 
         var mobilePanelsWereShownOrHidden = isMobileIos &&
             (innerHeightDelta === 84 || innerHeightDelta === 95 || innerHeightDelta === 50 || innerHeightDelta === 0);
 
         windowPrevOrientation = window.orientation;
         windowPrevInnerHeight = window.innerHeight;
-        if (orientationWasChanged || btnWasMoved || mobilePanelsWereShownOrHidden) {
+
+        if ((orientationWasChanged ||
+            btnWasMoved ||
+            mobilePanelsWereShownOrHidden) &&
+            isVerticalResize) {
             var rootElClientRect = rootEl.getBoundingClientRect();
             var newYPos;
             if (innerHeightDelta === 0) {
@@ -2609,6 +2622,15 @@ function alanBtn(options) {
                     recognisedText = recognisedText.substr(0, 200);
                 }
                 recognisedTextContent.innerHTML = recognisedText;
+            }
+            if (recognisedTextHolder.classList.contains('absolute-positioned')) {
+                if (recognisedText.length < 33) {
+                    recognisedTextHolder.style.whiteSpace = 'nowrap';
+                    recognisedTextHolder.style.minWidth = 'auto';
+                } else {
+                    recognisedTextHolder.style.minWidth = '236px';
+                    recognisedTextHolder.style.whiteSpace = 'normal';
+                }
             }
 
             if (recognisedText.length > 60 && recognisedText.length <= 80) {
@@ -3202,6 +3224,7 @@ function alanBtn(options) {
             } else if (newState === PERMISSION_DENIED) {
                 rootEl.classList.add("alan-btn-permission-denied");
                 currentErrMsg = MIC_BLOCKED_MSG;
+                console.warn(MIC_BLOCKED_MSG);
             } else if (newState === NO_VOICE_SUPPORT || newState === NOT_SECURE_ORIGIN) {
                 rootEl.classList.add("alan-btn-no-voice-support");
                 if (newState === NO_VOICE_SUPPORT) {
@@ -3595,6 +3618,13 @@ function alanBtn(options) {
             curX = parseInt(rootEl.style.left, 10);
             curY = parseInt(rootEl.style.top, 10);
 
+            if (Math.abs(tempDeltaX) < 15 && Math.abs(tempDeltaY) < 15) {
+                afterMouseMove = false;
+                dndBackAnimFinished = true;
+                setButtonPosition();
+                return;
+            }
+
             if (curX <= window.innerWidth / 2) {
                 rootEl.style.setProperty('left', dndFinalHorPos + 'px', 'important');
                 changeBtnSide('to-left');
@@ -3624,11 +3654,6 @@ function alanBtn(options) {
             setTimeout(function () {
                 afterMouseMove = false;
             }, 300);
-
-            if (Math.abs(tempDeltaX) < 15 && Math.abs(tempDeltaY) < 15) {
-                afterMouseMove = false;
-                dndBackAnimFinished = true;
-            }
         }
     }
 
