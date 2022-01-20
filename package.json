@@ -1,6 +1,6 @@
 {
   "name": "@alan-ai/alan-sdk-web",
-  "version": "1.8.29",
+  "version": "1.8.30",
   "description": "Alan Web SDK: a lightweight JavaScript library for adding a voice experience to your website or web application",
   "keywords": [
     "alan sdk web",

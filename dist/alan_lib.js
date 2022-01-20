@@ -781,7 +781,7 @@
 (function(ns) {
     "use strict";
 
-    var alanButtonVersion = '1.8.29';
+    var alanButtonVersion = '1.8.30';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -1487,6 +1487,7 @@ function alanBtn(options) {
         }
 
         applySizeSettingsToBlurLayers([btnOval1, btnOval2]);
+        setTextPanelPosition(recognisedTextHolder);
     }
 
     // Define base styles for btn
@@ -2722,10 +2723,10 @@ function alanBtn(options) {
         }
 
         if (data && data.web && data.web.hidden === true) {
-            hideAlanBtn();
+            hideBtn();
         } else {
             // sendClientEvent({ buttonReady: true });
-            showAlanBtn();
+            showBtn();
         }
     }
 
@@ -2938,7 +2939,9 @@ function alanBtn(options) {
         if (options.onCommand) {
             options.onCommand(e.data);
         }
-        switchState(LISTENING);
+        if (isAlanActive) {
+            switchState(LISTENING);
+        }
         turnOffVoiceFn();
     }
 
@@ -3417,7 +3420,7 @@ function alanBtn(options) {
     //#endregion
 
     //#region Append layers to the rootEl
-    function showAlanBtn() {
+    function showBtn() {
         rootEl.innerHTML = '';
 
         recognisedTextHolder.appendChild(recognisedTextContent);
@@ -3428,7 +3431,7 @@ function alanBtn(options) {
         sendClientEvent({ buttonReady: true });
     }
 
-    function hideAlanBtn() {
+    function hideBtn() {
         if (!isTutorMode()) {
             alanAudio.stop();
             rootEl.innerHTML = '';
@@ -3505,7 +3508,7 @@ function alanBtn(options) {
     var alanBtnSavedOptions = null;
 
     if (isTutorMode()) {
-        showAlanBtn();
+        showBtn();
     } else {
         if (isLocalStorageAvailable) {
             try {
