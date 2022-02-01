@@ -9,7 +9,7 @@ orbs:
 jobs:
   build_web:
     macos:
-      xcode: 11.3.0
+      xcode: 13.0.0
     steps:
       - checkout
       - node/install:
