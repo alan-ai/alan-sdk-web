@@ -781,7 +781,7 @@
 (function(ns) {
     "use strict";
 
-    var alanButtonVersion = '1.8.30';
+    var alanButtonVersion = '1.8.31';
 
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
@@ -986,6 +986,7 @@ function alanBtn(options) {
         },
         //deprecated
         callClientApi: function (method, data, callback) {
+            console.error('The "callClientApi" method is deprecated. Please use the "callProjectApi: instead.\n\nSee more info here: https://alan.app/docs/client-api/methods/common-api/?highlight=callprojectapi#callprojectapi');
             if (btnDisabled) {
                 return;
             }
@@ -996,6 +997,7 @@ function alanBtn(options) {
         },
         // deprecated
         setAuthData: function (data) {
+            console.error('The "setAuthData" method is deprecated. Please use the "authData" property when you create the Alan Button.\n\nSee more info here:  https://alan.app/docs/server-api/sending-data/authdata/?highlight=authdata');
             if (btnDisabled) {
                 return;
             }
@@ -2216,6 +2218,7 @@ function alanBtn(options) {
 
             // console.info('BTN: tutorProject', options.key);
         } else {
+            console.error("The Alan Button key wasn't provided");
             switchState(getDefaultBtnState());
         }
     }
@@ -2248,7 +2251,7 @@ function alanBtn(options) {
     }
 
     var onresizeDebounced = debounce(function (e) {
-        togglePopupVisibility(true);
+        togglePopupVisibility(true, true);
     }, 400);
 
     var windowPrevInnerHeight = window.innerHeight;
@@ -2260,6 +2263,7 @@ function alanBtn(options) {
 
     window.onresize = function () {
         if (isTutorMode()) return;
+        if (absolutePosition) return;
         var innerHeightDelta = Math.abs(windowPrevInnerHeight - window.innerHeight);
         var isMobileIos = (isMobile() || isIpadOS()) && isSafari();
         var orientationWasChanged = windowPrevOrientation !== window.orientation;
@@ -2304,9 +2308,9 @@ function alanBtn(options) {
         if (navigator.permissions) {
             navigator.permissions.query({ name: 'microphone' }).then(function (result) {
                 if (result.state === 'prompt') {
-                    if (options.showOverlayOnMicPermissionPrompt) {
+                    // if (options.showOverlayOnMicPermissionPrompt) {
                         showPopup({ overlay: true, buttonUnderOverlay: true });
-                    }
+                    // }
                     sendClientEvent({ micPermissionPrompt: true });
                 }
                 if (result.state !== 'granted') {
@@ -2417,14 +2421,15 @@ function alanBtn(options) {
         }
     }
 
-    function showPopup(popupOptions) {
+    function showPopup(popupOptions, keepPopupOverlay) {
         if (btnDisabled) return;
+        if (popupIsVisible) return;
+        
         savedPopupOptions = popupOptions;
         var message = popupOptions.message;
         var buttonMarginInPopup = popupOptions.buttonMarginInPopup;
         var withOverlay = popupOptions.overlay;
         var _btnSize = parseInt(btnSize, 10);
-        var overlay = document.createElement('div');
         var popup = document.createElement('div');
         var rootElClientRect = rootEl.getBoundingClientRect();
         var maxZIndex = 2147483647;
@@ -2432,16 +2437,13 @@ function alanBtn(options) {
 
         popupIsVisible = true;
 
-        overlay.id = 'alan-overlay';
         popup.id = 'alan-overlay-popup';
-        overlay.classList.add('alan-overlay');
         popup.classList.add('alan-overlay-popup');
 
         if (popupOptions.buttonUnderOverlay !== true) {
             btn.style.zIndex = maxZIndex;
         }
         
-        overlay.style.zIndex = maxZIndex - 3;
         popup.style.zIndex = maxZIndex - 2;
 
         if (popupOptions.preventClick) {
@@ -2506,11 +2508,18 @@ function alanBtn(options) {
         }
 
         rootEl.appendChild(popup);
-        if (withOverlay) {
+
+        if (withOverlay && keepPopupOverlay !== true) {
+            var overlay = document.createElement('div');
+            overlay.id = 'alan-overlay';
+            overlay.classList.add('alan-overlay');
+            overlay.style.zIndex = maxZIndex - 3;
             rootEl.appendChild(overlay);
+            overlay.addEventListener('click', hidePopup);
         }
+
         closeIconImg.addEventListener('click', hidePopupByCloseIcon);
-        overlay.addEventListener('click', hidePopup);
+       
         document.addEventListener('keyup', hidePopupByEsc);
         let showPopupEvent = "showPopup";
         if (popupOptions.name) {
@@ -2531,7 +2540,7 @@ function alanBtn(options) {
         }
     }
 
-    function hidePopup(keepOptionsInMemory) {
+    function hidePopup(keepOptionsInMemory, keepPopupOverlay) {
         if (keepOptionsInMemory !== true) {
             savedPopupOptions = null;
         }
@@ -2542,7 +2551,7 @@ function alanBtn(options) {
         if (overlayCloseIcon) {
             overlayCloseIcon.removeEventListener('click', hidePopup);
         }
-        if (overlay) {
+        if (overlay && keepPopupOverlay !== true) {
             overlay.remove();
             overlay.removeEventListener('click', hidePopup);
         }
@@ -2557,14 +2566,14 @@ function alanBtn(options) {
 
     var savedPopupOptions;
 
-    function togglePopupVisibility(isVisible) {
+    function togglePopupVisibility(isVisible, keepPopupOverlay) {
         var popup = rootEl.querySelector('#alan-overlay-popup');
         if (popup) {
             popup.style.visibility = isVisible ? 'visible' : 'hidden';
             if (isVisible) {
-                hidePopup(true);
+                hidePopup(true, keepPopupOverlay);
                 if (savedPopupOptions) {
-                    showPopup(savedPopupOptions);
+                    showPopup(savedPopupOptions, keepPopupOverlay);
                 }
             }
         }
@@ -3326,6 +3335,7 @@ function alanBtn(options) {
         el.style.opacity = 0;
         el.style.transition = 'opacity 300ms ease-in-out';
         el.style.animation = gradientAnimation;
+        el.style.display = 'block';
     }
 
     function hideLayers(layers) {
