@@ -1,63 +1,65 @@
 // Created Data................
-project.doctorsMap = {};
-project.patient = {}
-project.isFormOpen = false
-project.askedForAppt = false
-project.title = ''
-project.familyDoctor = ''
-project.currPage = ''
-project.doctorsPage = ''
-project.doctorPicked = ''
-project.doctorTypeDate = ''
-project.doctorTypeTime = ''
-project.my = 'my'
-project.places = 'doctor|office|clinic|location|doctors|offices|clinics|locations'
-project.distance = 'closest~closest|closer~closest|near~closest|near by~closest|close~closest|nearest~closest'
-project.myDoctor = 'family~Internal Medicine|family doctors~Internal Medicine|family doctor~Internal Medicine|Internal Medicine Practitioners~Internal Medicine|family Practitioners~Internal Medicine'
-project.doctorTypes = 'family~Internal Medicine|family doctors~Internal Medicine|family doctor~Internal Medicine|Internal Medicine Practitioners~Internal Medicine|family Practitioners~Internal Medicine'
-project.pages = 'home~home|home page~home|landing~home|landing page~home|profile~profile|profile page~profile|my profile~profile|my profile page~profile|all doctors~doctors|all doctors page~doctors|doctors list~doctors|doctors list page~doctors|doctors~doctors|doctors page~doctors';
+onCreateUser(p => {
+    p.userData.doctorsMap = {};
+    p.userData.patient = {};
+    p.userData.isFormOpen = false;
+    p.userData.askedForAppt = false;
+    p.userData.title = '';
+    p.userData.familyDoctor = '';
+    p.userData.currPage = '';
+    p.userData.doctorsPage = '';
+    p.userData.doctorPicked = '';
+    p.userData.doctorTypeDate = '';
+    p.userData.doctorTypeTime = '';
+    p.userData.my = 'my';
+    p.userData.places = 'doctor|office|clinic|location|doctors|offices|clinics|locations';
+    p.userData.distance = 'closest~closest|closer~closest|near~closest|near by~closest|close~closest|nearest~closest';
+    p.userData.myDoctor = 'family~Internal Medicine|family doctors~Internal Medicine|family doctor~Internal Medicine|Internal Medicine Practitioners~Internal Medicine|family Practitioners~Internal Medicine';
+    p.userData.doctorTypes = 'family~Internal Medicine|family doctors~Internal Medicine|family doctor~Internal Medicine|Internal Medicine Practitioners~Internal Medicine|family Practitioners~Internal Medicine';
+    p.userData.pages = 'home~home|home page~home|landing~home|landing page~home|profile~profile|profile page~profile|my profile~profile|my profile page~profile|all doctors~doctors|all doctors page~doctors|doctors list~doctors|doctors list page~doctors|doctors~doctors|doctors page~doctors';
+});
 onVisualState((p, data) => {
-    project.isFormOpen = data.isFormOpen
+    p.userData.isFormOpen = data.isFormOpen;
     if (data.doctorsData && data.doctorsData.length > 0) {
-        let arr = []
+        let arr = [];
         data.doctorsData.map(doctor => {
             arr.push(`${doctor.name}~doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}
                      |${doctor.name} page~doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}
                      |${doctor.lastName}~doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}
                      |${doctor.lastName} page~doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}
                      |${doctor.name+" "+doctor.lastName}~doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}
-                     |${doctor.name+" "+doctor.lastName} page~doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`)
-            project.doctorsMap[doctor.name] = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`
-            project.doctorsMap[doctor.lastName] = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`
-            project.doctorsMap[doctor.name + " " + doctor.lastName] = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`
-            project.doctorsMap[`doctors/${doctor._id}`] = `${doctor.type}`
+                     |${doctor.name+" "+doctor.lastName} page~doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`);
+            p.userData.doctorsMap[doctor.name] = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`;
+            p.userData.doctorsMap[doctor.lastName] = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`;
+            p.userData.doctorsMap[doctor.name + " " + doctor.lastName] = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`;
+            p.userData.doctorsMap[`doctors/${doctor._id}`] = `${doctor.type}`;
             if (data.currDoctor && data.currDoctor === doctor._id) {
-                project.doctorPicked = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`
+                p.userData.doctorPicked = `doctors/${doctor._id}#${doctor.name+" "+doctor.lastName}`;
             }
             if (data.currPatient) {
-                project.patient = data.currPatient
+                p.userData.patient = data.currPatient;
             }
             if ((data.currPatient && data.currPatient.familyDoctor) ||
                 (data.currPatient && data.currPatient.familyDoctor && data.currPatient.familyDoctor._id === doctor._id)
             ) {
-                project.familyDoctor = `doctors/${data.currPatient.familyDoctor._id}#${data.currPatient.familyDoctor.name+" "+data.currPatient.familyDoctor.lastName}`
+                p.userData.familyDoctor = `doctors/${data.currPatient.familyDoctor._id}#${data.currPatient.familyDoctor.name+" "+data.currPatient.familyDoctor.lastName}`;
             } else {
-                project.familyDoctor = ""
+                p.userData.familyDoctor = "";
             }
         })
-        project.doctorsPage = arr.join('|') + "|"
+        p.userData.doctorsPage = arr.join('|') + "|";
     }
     if (data.currPage) {
-        project.currPage = data.currPage.slice(1)
+        p.userData.currPage = data.currPage.slice(1);
     }
     if (data.doctorTypes) {
-        project.doctorTypes = project.doctorTypes.en + "|" + Object.keys(data.doctorTypes).map(type => `${type}~${type}|${type} doctor~${type}`).join('|')
+        p.userData.doctorTypes = p.userData.doctorTypes.en + "|" + Object.keys(data.doctorTypes).map(type => `${type}~${type}|${type} doctor~${type}`).join('|');
     }
     if (data.appointmentRequest) {
-        project.askedForAppt = true
+        p.userData.askedForAppt = true;
     }
     if (data.title) {
-        project.title = data.title
+        p.userData.title = data.title;
     }
 });
 // General Knowledge Of The APP................
@@ -69,7 +71,7 @@ const What_I_DO_HERE = [
 intent(What_I_DO_HERE, p => {
     p.play('I am Alan your voice assistant, ask me question and directions, like, who are the available doctors?',
         'I help you to book your appointment smoothly, who is the doctor you want your appointment with?',
-        'I am here to help you with your appointment, ask me to make an appointment')
+        'I am here to help you with your appointment, ask me to make an appointment');
 });
 const WHAT_IS_THIS = [
     'This is an appointment app, and I am Alan your voice assistant',
@@ -84,7 +86,6 @@ intent(WHAT_IS_THIS, p => {
         'I am you assistant to book an appointment all with your voice',
         'ask me questions like, who are the available doctors')
 });
-
 // Shows All Doctors ................
 const GET_ALL_DOCTORS = [
     'who are the available doctors',
@@ -101,12 +102,11 @@ const GET_ALL_DOCTORS = [
 intent(GET_ALL_DOCTORS, p => {
     p.play({
         command: "show-all-doctors"
-    })
+    });
     p.play('here is the list of all doctors',
         'showig you all doctors',
-        'this is the list of all available doctors', )
+        'this is the list of all available doctors', );
 });
-
 // Direct Between Pages................
 const BACK_PAGE = [
     'go back',
@@ -118,230 +118,211 @@ const BACK_PAGE = [
 intent(BACK_PAGE, p => {
     p.play({
         command: "go-back"
-    })
-    p.play('going back', 'last page', 'ging to previous page')
+    });
+    p.play('going back', 'last page', 'ging to previous page');
 });
 const direct = (p, type) => {
     if (type === "page") {
-        project.doctorPicked = ''
-        if (project.currPage === p.PAGE.label) {
-            p.play(`you are Currently on ${project.currPage} page`,
-                `you are on ${project.currPage} page`,
-                `you are already here`, )
+        p.userData.doctorPicked = '';
+        if (p.userData.currPage === p.PAGE.label) {
+            p.play(`you are Currently on ${p.userData.currPage} page`,
+                `you are on ${p.userData.currPage} page`,
+                `you are already here`);
         } else {
-            project.currPage = p.PAGE.label
+            p.userData.currPage = p.PAGE.label;
             p.play(`taking you to ${p.PAGE.label} page`,
                 `directing you to ${p.PAGE.label} page`,
-                `opening ${p.PAGE.label} page`)
+                `opening ${p.PAGE.label} page`);
             setTimeout(() => {
                 p.play({
                     command: "change_Page",
                     type,
                     link: p.PAGE.label === "home" ? "" : p.PAGE.label
-                })
-            }, 1500)
+                });
+            }, 1500);
         }
     } else if (type === "doctor-page-1") {
-        const page = p.PAGE.label.split('#')
-        project.doctorPicked = p.PAGE.label
-        if (project.currPage === p.PAGE.label) {
+        const page = p.PAGE.label.split('#');
+        p.userData.doctorPicked = p.PAGE.label;
+        if (p.userData.currPage === p.PAGE.label) {
             p.play(`you are Currently on doctor ${page[1]} page`,
                 `you are on doctor ${page[1]} page`,
-                `you are on already here`, )
+                `you are on already here`);
         } else {
-            if (project.askedForAppt) {
-                project.askedForAppt = false
-                project.currPage = p.PAGE.label
-                askForAppointment(p, "doctor-appointment-1")
-                //                 p.play(`appointment with doctor ${page[1]} `,
-                //                        `doctor ${page[1]} event form `,
-                //                        `doctor ${page[1]}`)
+            if (p.userData.askedForAppt) {
+                p.userData.askedForAppt = false;
+                p.userData.currPage = p.PAGE.label;
+                askForAppointment(p, "doctor-appointment-1");
             } else {
-                project.currPage = p.PAGE.label
+                p.userData.currPage = p.PAGE.label;
                 p.play(`taking you to doctor ${page[1]} page`,
                     `directing you to doctor ${page[1]} page`,
-                    `opening doctor ${page[1]} page`)
+                    `opening doctor ${page[1]} page`);
                 setTimeout(() => {
                     p.play({
                         command: "change_Page",
                         type,
                         link: page[0],
                         name: page[1]
-                    })
-                }, 1500)
+                    });
+                }, 1500);
             }
         }
     } else if (type === "doctor-page-2") {
-        const page = project.doctorsMap[p.NAME.value].split('#')
-        project.doctorPicked = project.doctorsMap[p.NAME.value]
-        if (project.currPage === p.PAGE.label) {
+        const page = p.userData.doctorsMap[p.NAME.value].split('#');
+        p.userData.doctorPicked = p.userData.doctorsMap[p.NAME.value];
+        if (p.userData.currPage === p.PAGE.label) {
             p.play(`you are Currently on doctor ${page[1]} page`,
                 `you are on doctor ${page[1]} page`,
-                `you are on already here`, )
+                `you are on already here`);
         } else {
-            project.currPage = project.doctorsMap[p.NAME.value]
+            p.userData.currPage = p.userData.doctorsMap[p.NAME.value];
             p.play(`taking you to doctor ${page[1]} page`,
                 `directing you to doctor ${page[1]} page`,
-                `opening doctor ${page[1]} page`)
+                `opening doctor ${page[1]} page`);
             setTimeout(() => {
                 p.play({
                     command: "change_Page",
                     type,
                     link: page[0],
                     name: page[1]
-                })
-            }, 1500)
+                });
+            }, 1500);
         }
     } else if (type === "type-doctor-page") {
         if (p.TYPE.label === "Internal Medicine") {
             p.play({
                 command: "show-all-doctors",
                 filter: ["type", 'Internal Medicine']
-            })
+            });
             p.play(`these are the available family Practitioners`,
                 `this is the list of family Practitioners`,
-                `showing family Practitioners`)
-            const page = project.familyDoctor.split('#')
+                `showing family Practitioners`);
+            const page = p.userData.familyDoctor.split('#')
             if (page[1] && page[1] !== "") {
                 p.play(`also, doctor ${page[1]} has been assigned as your family doctor`,
                     `letting you know, doctor ${page[1]} is your current family doctor`,
                     `dont forget, Currently, doctor ${page[1]} is your family practitioner`,
-                )
+                );
             }
-
         } else {
             p.play(`these are the available $(p.TYPE.label+s)`,
                 `this is the list for $(p.TYPE.label+s)`,
-                `showing $(p.TYPE.label+s) `)
+                `showing $(p.TYPE.label+s) `);
             p.play({
                 command: "show-all-doctors",
                 filter: ["speciality", p.TYPE.label]
-            })
+            });
         }
-        if (project.doctorTypeTime !== "") {
-            if (!project.isFormOpen) {
+        if (p.userData.doctorTypeTime !== "") {
+            if (!p.userData.isFormOpen) {
                 setTimeout(() => {
-                    askForAppointment(p, "doctor-appointment-1")
-
-                }, 4500)
+                    askForAppointment(p, "doctor-appointment-1");
+                }, 4500);
             } else {
                 setTimeout(() => {
-                    p.play(`${project.doctorTypeDate}`,
-                        `moving to ${project.doctorTypeDate}`,
-                        `here is ${project.doctorTypeDate}`)
+                    p.play(`${p.userData.doctorTypeDate}`,
+                        `moving to ${p.userData.doctorTypeDate}`,
+                        `here is ${p.userData.doctorTypeDate}`);
                     p.play({
                         command: "date",
-                        date: project.doctorTypeDate
-                    })
-
-                }, 3000)
+                        date: p.userData.doctorTypeDate
+                    });
+                }, 3000);
             }
             setTimeout(() => {
-                p.play(`looking into slots`)
+                p.play(`looking into slots`);
                 p.play({
                     command: "time",
-                    time: project.doctorTypeTime,
+                    time: p.userData.doctorTypeTime,
                     side: "start"
-                })
-                project.doctorTypeTime = ""
-                project.doctorTypeDate = ""
-            }, 8500)
+                });
+                p.userData.doctorTypeTime = "";
+                p.userData.doctorTypeDate = "";
+            }, 8500);
         }
     } else if (type === "who-is-my-doctor") {
-
         if (p.TYPE.label === "Internal Medicine") {
-
-            const page = project.familyDoctor.split('#')
+            const page = p.userData.familyDoctor.split('#');
             if (!page[1] || page[1] === "") {
                 p.play('you have not picked a doctor as your family doctor yet',
                     'Currently, you do not have any family doctor',
-                    'you need to assign a family doctor first')
+                    'you need to assign a family doctor first');
                 p.play({
                     command: "show-all-doctors",
                     filter: ["type", "Internal Medicine"]
-                })
+                });
                 p.play('these are the available (internal medicine practitioner|family doctors)',
                     'this is the list of (internal medicine practitioner|family doctors)',
-                    'please choose a (internal medicine practitioner|family doctors)')
+                    'please choose a (internal medicine practitioner|family doctors)');
             } else {
-                project.doctorPicked = project.familyDoctor
-                if (project.currPage === page[0]) {
+                p.userData.doctorPicked = p.userData.familyDoctor;
+                if (p.userData.currPage === page[0]) {
                     p.play(`doctor ${page[1]} is your internal medicine practitioner Currently`,
-                        `you are on doctor ${page[1]} page, who is your family doctor`)
-
-                } else if (project.currPage === 'profile') {
+                        `you are on doctor ${page[1]} page, who is your family doctor`);
+                } else if (p.userData.currPage === 'profile') {
                     p.play({
                         command: "family-doctor-highlight-profile",
-                    })
-                    p.play(`do you want me to redirect you to doctor ${page[1]},your (family doctor|family practitioner), profile?`)
+                    });
+                    p.play(`doctor ${page[1]} is your (family doctor|family practitioner)`);
+                    p.play(`do you want me to redirect you to doctor ${page[1]} profile?`);
                     p.then(getBooleanAnswer, {
                         state: {
                             page: page[1],
                             link: page[0]
                         }
-                    })
-                    //                     p.play({
-                    //                         command: "change_Page",
-                    //                         type:"doctor-page-2",
-                    //                         link:page[0]
-                    //                     })
-
+                    });
                 } else {
                     p.play(`your family doctor, doctor ${page[1]}`,
                         `directing you to your family doctor, doctor ${page[1]}`,
-                        `opening your family doctor page, doctor ${page[1]}`)
-
+                        `opening your family doctor page, doctor ${page[1]}`);
                     p.play({
                         command: "change_Page",
                         type: "doctor-page-2",
                         link: page[0]
-                    })
+                    });
                 }
-                if (project.doctorTypeTime !== "") {
-                    if (!project.isFormOpen) {
+                if (p.userData.doctorTypeTime !== "") {
+                    if (!p.userData.isFormOpen) {
                         setTimeout(() => {
-                            askForAppointment(p, "doctor-appointment-1")
-
-                        }, 4500)
+                            askForAppointment(p, "doctor-appointment-1");
+                        }, 4500);
                     } else {
                         setTimeout(() => {
-                            p.play(`${project.doctorTypeDate}`,
-                                `moving to ${project.doctorTypeDate}`,
-                                `here is ${project.doctorTypeDate}`)
+                            p.play(`${p.userData.doctorTypeDate}`,
+                                `moving to ${p.userData.doctorTypeDate}`,
+                                `here is ${p.userData.doctorTypeDate}`);
                             p.play({
                                 command: "date",
-                                date: project.doctorTypeDate
-                            })
-
-                        }, 3000)
+                                date: p.userData.doctorTypeDate
+                            });
+                        }, 3000);
                     }
                     setTimeout(() => {
-                        p.play(`looking into slots`)
+                        p.play(`looking into slots`);
                         p.play({
                             command: "time",
-                            time: project.doctorTypeTime,
+                            time: p.userData.doctorTypeTime,
                             side: "start"
-                        })
-                        project.doctorTypeTime = ""
-                        project.doctorTypeDate = ""
-                    }, 9000)
+                        });
+                        p.userData.doctorTypeTime = ""
+                        p.userData.doctorTypeDate = ""
+                    }, 9000);
                 }
             }
         }
     }
 }
-
 let getBooleanAnswer = context(() => {
     intent('(yes|sure|definitely) (please|)', p => {
         p.play(`your family doctor, doctor ${p.state.page}`,
             `directing you to your family doctor, doctor ${p.state.page}`,
-            `opening your family doctor page, doctor ${p.state.page}`)
-
+            `opening your family doctor page, doctor ${p.state.page}`);
         p.play({
             command: "change_Page",
             type: "doctor-page-2",
             link: p.state.link
-        })
+        });
     });
 });
 const CHANGE_PAGE = [
@@ -352,7 +333,7 @@ const CHANGE_PAGE = [
     '$(PAGE p:pages) (please|)',
 ];
 intent(CHANGE_PAGE, p => {
-    direct(p, "page")
+    direct(p, "page");
 });
 const WHO_IS_MY_DOCTOR_TYPE = [
     'who is my $(TYPE p:doctorTypes) (please|)',
@@ -360,10 +341,9 @@ const WHO_IS_MY_DOCTOR_TYPE = [
     'I want to check my $(TYPE p:doctorTypes) (page|profile|) (please|)',
     'show me my $(TYPE p:doctorTypes) (page|profile|) (please|)',
     'my $(TYPE p:doctorTypes) (page|profile|)(please|)',
-    //     'I am looking for (my|all|every|a|) $(TYPE p:doctorTypes) (page|profile|)'
 ];
 intent(WHO_IS_MY_DOCTOR_TYPE, p => {
-    direct(p, "who-is-my-doctor")
+    direct(p, "who-is-my-doctor");
 });
 const GO_TYPE_DOCTOR_PAGE = [
     'who are (all|every|a|) (the|) $(TYPE p:doctorTypes) (page|profile|list|) (please|)',
@@ -374,7 +354,7 @@ const GO_TYPE_DOCTOR_PAGE = [
     'I am looking for (a|) $(TYPE p:doctorTypes)'
 ];
 intent(GO_TYPE_DOCTOR_PAGE, p => {
-    direct(p, "type-doctor-page")
+    direct(p, "type-doctor-page");
 });
 const GO_DOCTOR_PAGE_1 = [
     'go to (doctor|) $(PAGE p:doctorsPage) (please|)',
@@ -388,9 +368,8 @@ const GO_DOCTOR_PAGE_1 = [
     'I am looking for (doctor|) $(PAGE p:doctorsPage)'
 ];
 intent(GO_DOCTOR_PAGE_1, p => {
-    direct(p, "doctor-page-1")
+    direct(p, "doctor-page-1");
 });
-
 const GO_DOCTOR_PAGE_2 = [
     'go to (doctor|) $(NAME) page (please|)',
     'take me to (doctor|) $(NAME) page (please|)',
@@ -405,64 +384,62 @@ const GO_DOCTOR_PAGE_2 = [
     'I am looking for (doctor|) $(NAME) page'
 ];
 intent(GO_DOCTOR_PAGE_2, p => {
-    if (!project.doctorsMap[p.NAME.value]) {
-        project.doctorPicked = ''
+    if (!p.userData.doctorsMap[p.NAME.value]) {
+        p.userData.doctorPicked = '';
         p.play(`doctor ${p.NAME.value} is not one of our doctors`,
             `doctor ${p.NAME.value} is not in our system`,
             `doctor ${p.NAME.value} is not available`,
-            `I can not find doctor ${p.NAME.value}`)
+            `I can not find doctor ${p.NAME.value}`);
     } else {
-        direct(p, "doctor-page-2")
+        direct(p, "doctor-page-2");
     }
 });
-
 // Make Appointment ................
 const askForAppointment = (p, type) => {
     if (type === "doctor-appointment") {
-        if ((project.currPage && project.currPage.split('/').length < 2) || project.doctorPicked === "") {
-            project.askedForAppt = true
+        if ((p.userData.currPage && p.userData.currPage.split('/').length < 2) || p.userData.doctorPicked === "") {
+            p.userData.askedForAppt = true;
             p.play({
                 command: "show-all-doctors"
-            })
+            });
             p.play('here is the list of all doctors, who do you have in mind?',
                 'you need to pick a doctor first.',
-                'let me know who do you want your appointment with.')
+                'let me know who do you want your appointment with.');
         } else {
-            const page = project.currPage !== '' && project.currPage.split('#').length > 1 ? project.currPage.split('#') : project.doctorPicked.split('#')
+            const page = p.userData.currPage !== '' && p.userData.currPage.split('#').length > 1 ? p.userData.currPage.split('#') : p.userData.doctorPicked.split('#')
             p.play({
                 command: "open-appointment-form",
                 link: page[0],
                 name: page[1],
-            })
+            });
             p.play(`(here|this) is doctor ${page[1]} appointment form`,
                 `doctor ${page[1]} appointment form`,
                 `this is the form of doctor ${page[1]} available slots`,
-                `these are doctor ${page[1]} available slots`)
+                `these are doctor ${page[1]} available slots`);
         }
-
     } else if (type === "doctor-appointment-1") {
-        const page = p.PAGE ? p.PAGE.label.split('#') : project.familyDoctor.split('#')
+        const page = p.PAGE ? p.PAGE.label.split('#') : p.userData.familyDoctor.split('#');
         p.play({
             command: "create-appointment",
             link: page[0],
             name: page[1],
-        })
+        });
         p.play(`(here|this) is doctor ${page[1]} appointment form`,
             `doctor ${page[1]} appointment form`,
             `this is the form of doctor ${page[1]} available slots`,
-            `these are doctor ${page[1]} available slots`)
+            `these are doctor ${page[1]} available slots`);
     } else if (type === "doctor-appointment-2") {
-        const page = project.doctorsMap[p.NAME.value].split('#')
-        project.doctorPicked = project.doctorsMap[p.NAME.value]
+        const page = p.userData.doctorsMap[p.NAME.value].split('#');
+        p.userData.doctorPicked = p.userData.doctorsMap[p.NAME.value];
         p.play({
             command: "create-appointment",
             link: page[0],
             name: page[1],
-        })
+        });
         p.play(`(here|this) is doctor ${page[1]} appointment form`,
             `doctor ${page[1]} appointment form`,
             `this is the form of doctor ${page[1]} available slots`,
-            `these are doctor ${page[1]} available slots`)
+            `these are doctor ${page[1]} available slots`);
     }
 }
 const ASK_FOR_APPOINTMENT = [
@@ -478,17 +455,17 @@ const ASK_FOR_APPOINTMENT = [
     '(please|) create (an|my|) appointment (please|)',
 ]
 intent(ASK_FOR_APPOINTMENT, p => {
-    if (project.doctorPicked === '' || project.currPage === '') {
-        project.askedForAppt = true
-        project.currPage = "doctors"
+    if (p.userData.doctorPicked === '' || p.userData.currPage === '') {
+        p.userData.askedForAppt = true;
+        p.userData.currPage = "doctors";
         p.play({
             command: "show-all-doctors"
-        })
+        });
         p.play('here is the list of all doctors, who do you have in mind?',
             'this is the doctors list, who do you want your appointment with?',
-            'let me know who do you want your appointment with.')
+            'let me know who do you want your appointment with.');
     } else {
-        askForAppointment(p, "doctor-appointment")
+        askForAppointment(p, "doctor-appointment");
     }
 });
 const ASK_FOR_DOCTOR_APPOINTMENT_2 = [
@@ -504,21 +481,21 @@ const ASK_FOR_DOCTOR_APPOINTMENT_2 = [
     '(please|) create (an|my|) appointment with (doctor|) $(NAME) (please|)',
 ]
 intent(ASK_FOR_DOCTOR_APPOINTMENT_2, p => {
-    if (!project.doctorsMap[p.NAME.value]) {
-        project.doctorPicked = ''
+    if (!p.userData.doctorsMap[p.NAME.value]) {
+        p.userData.doctorPicked = '';
         p.play(`doctor ${p.NAME.value} is not one of our doctors`,
             `doctor ${p.NAME.value} is not in our system`,
             `doctor ${p.NAME.value} is not available`,
-            `I can not find doctor ${p.NAME.value}`)
-        project.askedForAppt = true
+            `I can not find doctor ${p.NAME.value}`);
+        p.userData.askedForAppt = true;
         p.play({
             command: "show-all-doctors"
-        })
+        });
         p.play('here is the list of available doctors',
             'pick one of the available doctors from this list',
-            'please find an available doctor', )
+            'please find an available doctor');
     } else {
-        askForAppointment(p, "doctor-appointment-2")
+        askForAppointment(p, "doctor-appointment-2");
     }
 })
 const ASK_FOR_DOCTOR_APPOINTMENT_3 = [
@@ -555,125 +532,119 @@ const ASK_FOR_DOCTOR_APPOINTMENT_3 = [
 ]
 intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
     if (p.NAME && p.NAME.value) {
-        if (!project.doctorsMap[p.NAME.value]) {
-            project.doctorPicked = ''
+        if (!p.userData.doctorsMap[p.NAME.value]) {
+            p.userData.doctorPicked = ''
             p.play(`doctor ${p.NAME.value} is not one of our doctors`,
                 `doctor ${p.NAME.value} is not in our system`,
                 `doctor ${p.NAME.value} is not available`,
-                `I can not find doctor ${p.NAME.value}`)
-            project.askedForAppt = true
+                `I can not find doctor ${p.NAME.value}`);
+            p.userData.askedForAppt = true;
             p.play({
                 command: "show-all-doctors"
-            })
+            });
             p.play('here is the list of available doctors',
                 'pick one of the available doctors from this list',
-                'please find an available doctor', )
+                'please find an available doctor');
         } else {
-            if (!project.isFormOpen) {
-                askForAppointment(p, "doctor-appointment-2")
+            if (!p.userData.isFormOpen) {
+                askForAppointment(p, "doctor-appointment-2");
             }
             setTimeout(() => {
                 p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
                     `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                    `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`)
+                    `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
                 p.play({
                     command: "date",
                     date: p.DATE.moment
-                })
-
-            }, 1000)
+                });
+            }, 1000);
             setTimeout(() => {
                 p.play(`looking into slots`)
                 p.play({
                     command: "time",
                     time: p.TIME.value,
                     side: "start"
-                })
-            }, 5500)
-
+                });
+            }, 5500);
         }
     } else {
-
+        if (!p.userData.isFormOpen) {
+            askForAppointment(p, "doctor-appointment");
+        }
         setTimeout(() => {
             p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
                 `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`)
+                `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
             p.play({
                 command: "date",
                 date: p.DATE.moment
-            })
-
+            });
         }, 1000)
         setTimeout(() => {
-            p.play(`looking into slots`)
+            p.play(`looking into slots`);
             p.play({
                 command: "time",
                 time: p.TIME.value,
                 side: "start"
-            })
-        }, 5500)
+            });
+        }, 5500);
     }
 });
 intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
-
     if (p.NAME && p.NAME.value) {
-        if (!project.doctorsMap[p.NAME.value]) {
-            project.doctorPicked = ''
+        if (!p.userData.doctorsMap[p.NAME.value]) {
+            p.userData.doctorPicked = '';
             p.play(`doctor ${p.NAME.value} is not one of our doctors`,
                 `doctor ${p.NAME.value} is not in our system`,
                 `doctor ${p.NAME.value} is not available`,
-                `I can not find doctor ${p.NAME.value}`)
-            project.askedForAppt = true
+                `I can not find doctor ${p.NAME.value}`);
+            p.userData.askedForAppt = true;
             p.play({
                 command: "show-all-doctors"
-            })
+            });
             p.play('here is the list of available doctors',
                 'pick one of the available doctors from this list',
-                'please find an available doctor', )
+                'please find an available doctor');
         } else {
-            if (!project.isFormOpen) {
-                askForAppointment(p, "doctor-appointment-2")
+            if (!p.userData.isFormOpen) {
+                askForAppointment(p, "doctor-appointment-2");
             }
             setTimeout(() => {
                 p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
                     `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                    `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`)
+                    `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
                 p.play({
                     command: "date",
                     date: p.DATE.moment
-                })
-
-            }, 1000)
+                });
+            }, 1000);
             setTimeout(() => {
-                p.play(`looking into slots`)
+                p.play(`looking into slots`);
                 p.play({
                     command: "time",
                     time: p.TIME.value,
                     side: "start"
-                })
-            }, 5500)
-
+                });
+            }, 5500);
         }
     } else {
-
         setTimeout(() => {
             p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
                 `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`)
+                `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
             p.play({
                 command: "date",
                 date: p.DATE.moment
-            })
-
-        }, 1000)
+            });
+        }, 1000);
         setTimeout(() => {
-            p.play(`looking into slots`)
+            p.play(`looking into slots`);
             p.play({
                 command: "time",
                 time: p.TIME.value,
                 side: "start"
             })
-        }, 5500)
+        }, 5500);
     }
 });
 const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
@@ -697,7 +668,6 @@ const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
     'I need to (make|have|create) (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
     '(please|) make (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
     '(please|) create (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-
     'appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
     'I want (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
     '(make|have|create) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
@@ -718,35 +688,31 @@ const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
     'I need to (make|have|create) (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
     '(please|) make (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
     '(please|) create (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-
-
 ]
 intent(ASK_FOR_DOCTOR_APPsOINTMENT_4, p => {
-    project.doctorTypeDate = `${p.DATE.moment.format("dddd, MMMM Do YYYY")}`
-    project.doctorTypeTime = `${p.TIME.value}`
+    p.userData.doctorTypeDate = `${p.DATE.moment.format("dddd, MMMM Do YYYY")}`;
+    p.userData.doctorTypeTime = `${p.TIME.value}`;
     if (p.MY && p.MY.value) {
-        direct(p, "who-is-my-doctor")
+        direct(p, "who-is-my-doctor");
     } else {
-        direct(p, "type-doctor-page")
+        direct(p, "type-doctor-page");
     }
 })
-
 // Event Form ................
 const CLOSE_FORM = [
     'close (the|this|appointment|) (tab|event form|form|) (please|)',
     'I want to close the tap',
 ];
 intent(CLOSE_FORM, p => {
-    if (!project.isFormOpen) {
+    if (!p.userData.isFormOpen) {
         p.play('no form is open',
-            'there is no form to close')
+            'there is no form to close');
     } else {
-
         p.play({
             command: "close-form"
-        })
-        p.play(`closing the tab for doctor ${project.doctorPicked.split("#")[1]} appointment`,
-            `closing the event form for doctor ${project.doctorPicked.split("#")[1]}`)
+        });
+        p.play(`closing the tab for doctor ${p.userData.doctorPicked.split("#")[1]} appointment`,
+            `closing the event form for doctor ${p.userData.doctorPicked.split("#")[1]}`);
     }
 });
 const OPEN_FORM = [
@@ -755,19 +721,19 @@ const OPEN_FORM = [
     'open the tap'
 ];
 intent(OPEN_FORM, p => {
-    if (project.isFormOpen) {
-        p.play(`Event form is already open for doctor ${project.doctorPicked.split("#")[1]}`)
+    if (p.userData.isFormOpen) {
+        p.play(`Event form is already open for doctor ${p.userData.doctorPicked.split("#")[1]}`)
     } else {
-        if (project.doctorPicked !== '') {
+        if (p.userData.doctorPicked !== '') {
             p.play({
                 command: "open-form"
-            })
+            });
             p.play('opening the tab',
                 'opening the event form',
-                'open the form')
+                'open the form');
         } else {
             p.play('you have not chosen any doctor yet',
-                'please pick your doctor first')
+                'please pick your doctor first');
         }
     }
 });
@@ -777,10 +743,10 @@ const NEXT_MONTH = [
 intent(NEXT_MONTH, p => {
     p.play({
         command: "nextMonth"
-    })
+    });
     p.play('next month',
         'going next month',
-        'sure')
+        'sure');
 });
 const LAST_MONTH = [
     '(go to|) (last|previous) month (please|)',
@@ -788,10 +754,10 @@ const LAST_MONTH = [
 intent(LAST_MONTH, p => {
     p.play({
         command: "backMonth"
-    })
+    });
     p.play('Previous month',
         'last month',
-        'sure')
+        'sure');
 });
 const NEXT_YEAR = [
     '(go to|) next year (please|)',
@@ -799,10 +765,10 @@ const NEXT_YEAR = [
 intent(NEXT_YEAR, p => {
     p.play({
         command: "nextYear"
-    })
+    });
     p.play('next year',
         'going next year',
-        'sure')
+        'sure');
 });
 const LAST_YEAR = [
     '(go to|) (last|previous) year (please|)',
@@ -810,10 +776,10 @@ const LAST_YEAR = [
 intent(LAST_YEAR, p => {
     p.play({
         command: "backYear"
-    })
+    });
     p.play('Previous year',
         'last year',
-        'sure')
+        'sure');
 });
 const ASK_FOR_A_DATE = [
     '(lets|please|) change the date to $(DATE)',
@@ -823,25 +789,24 @@ const ASK_FOR_A_DATE = [
 intent(ASK_FOR_A_DATE, p => {
     p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
         `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-        `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`)
+        `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
     p.play({
         command: "date",
         date: p.DATE.moment
-    })
-
+    });
 });
 const SET_TITLE = [
     `(set|change|) (the|) (appointment|) title (to|is) $(TITLE* (.*)) (please|)`,
 ];
 intent(SET_TITLE, p => {
-    project.title = p.TITLE.value
+    p.userData.title = p.TITLE.value;
     p.play({
         command: "title",
         title: p.TITLE.value
-    })
+    });
     p.play(`filling the title`,
         `sure`,
-        `Definitely `)
+        `Definitely `);
 });
 const SET_TIME = [
     `(lets|please|) change the time to $(TIME)`,
@@ -852,143 +817,127 @@ intent(SET_TIME, p => {
         command: "time",
         time: p.TIME.value,
         side: p.SIDE.value ? p.SIDE.label : "start"
-    })
+    });
 });
 const SAVE_APPOINTMENT = [
     `(save|submit) (the|my|) (appointment|)`,
     `I am (good|done|) with (my|) appointment`
 ];
 intent(SAVE_APPOINTMENT, p => {
-    if (project.title === "") {
+    if (p.userData.title === "") {
         p.play(`Are you ready to submit? Just letting you know that title is still empty`,
             `are you sure you want to submit this form?, the title is still empty`,
-            `should I submit the form? you might want to fill the title or do any changes before moving to submission`)
+            `should I submit the form? you might want to fill the title or do any changes before moving to submission`);
     }
     p.play({
         command: "save"
-    })
-    project.isFormOpen = false
+    });
+    p.userData.isFormOpen = false
     p.play(`saving`,
         `sure, saving the appointment`,
-        `confirming your appointment`)
-
+        `confirming your appointment`);
 });
-
 // Make my doctor ................
 const MAKE_MY_DOCTOR = [
     `(I want to|) (make|pick) (him|her|) my $(TYPE p:doctorTypes)`,
     `(I want to|) (send|) $(TYPE p:doctorTypes) request`
 ];
 intent(MAKE_MY_DOCTOR, p => {
-    if (project.doctorsMap[project.currPage] && project.doctorsMap[project.currPage] === "Internal Medicine") {
-        const familyDoctor = project.familyDoctor === '' ? null : project.familyDoctor.split('#')
+    if (p.userData.doctorsMap[p.userData.currPage] && p.userData.doctorsMap[p.userData.currPage] === "Internal Medicine") {
+        const familyDoctor = p.userData.familyDoctor === '' ? null : p.userData.familyDoctor.split('#');
         if (!familyDoctor) {
-            const id = project.patient._id ? project.patient._id : ""
+            const id = p.userData.patient._id ? p.userData.patient._id : ""
             p.play({
                 command: "make-my-doctor",
-                doctor: project.currPage,
+                doctor: p.userData.currPage,
                 patient: id
-            })
+            });
             p.play(`sending your request`,
                 `sure, your request has been sent`,
-                `confirming your request`)
+                `confirming your request`);
         } else {
-            p.play(`you already have a family doctor assigned. You need to remove doctor ${familyDoctor[1]} as your family doctor first `)
+            p.play(`you already have a family doctor assigned. You need to remove doctor ${familyDoctor[1]} as your family doctor first `);
         }
     } else {
-        p.play(`you either didnt pick a doctor yet or the doctor you picked dosnt have the option to accept`)
+        p.play(`you either didnt pick a doctor yet or the doctor you picked dosnt have the option to accept`);
     }
-
 });
 const REMOVE_MY_DOCTOR = [
     `(I want to|) (remove|retreat) (him|her|) (as|) my $(TYPE p:doctorTypes) (request|)`,
     `I want to retreat my request`
 ];
 intent(REMOVE_MY_DOCTOR, p => {
-    if (project.doctorsMap[project.currPage] && project.doctorsMap[project.currPage] === "Internal Medicine") {
-        const familyDoctor = project.familyDoctor === '' ? null : project.familyDoctor.split('#')
+    if (p.userData.doctorsMap[p.userData.currPage] && p.userData.doctorsMap[p.userData.currPage] === "Internal Medicine") {
+        const familyDoctor = p.userData.familyDoctor === '' ? null : p.userData.familyDoctor.split('#');
         if (familyDoctor) {
-            const id = project.patient._id ? project.patient._id : ""
+            const id = p.userData.patient._id ? p.userData.patient._id : ""
             p.play({
                 command: "remove-my-doctor",
-                doctor: project.currPage,
+                doctor: p.userData.currPage,
                 patient: id
-            })
+            });
             p.play(`sending your request`,
                 `sure, your request has been sent`,
-                `confirming your request`)
+                `confirming your request`);
         } else {
-            p.play(`you already have a family doctor assigned`)
+            p.play(`you already have a family doctor assigned`);
         }
     } else {
-        p.play(`you either didnt pick a doctor or the doctor you picked dosnt have the option to accept`)
+        p.play(`you either didnt pick a doctor or the doctor you picked dosnt have the option to accept`);
     }
-
 });
-
 // Search ................
 const SEARCH_APPOINTMENT = [
     `(lets|please|) change the date to $(DATE)`,
     `what are $(DATE) (appointments|appointment)`,
     `show me $(DATE) (appointments|appointment)`
 ];
-
 intent(SEARCH_APPOINTMENT, p => {
-    direct(p, "page")
+    direct(p, "page");
 });
-
 const FIND_LOCATION = [
     `(the|) $(DISTANCE p:distance) $(PLACES p:places)`,
     `(search|searching|looking) for (a|an|the) $(DISTANCE p:distance) $(PLACES p:places)`,
     `(search|searching|looking) for (a|an|the) $(DISTANCE p:distance) $(PLACES p:places)`,
     `(show me|find|where|what) (is|are) (a|an|the)  $(DISTANCE p:distance) $(PLACES p:places)`,
     `(search|searching|looking) for the $(DISTANCE p:distance) $(PLACES p:places)`,
-
     `(the|) $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
     `(search|searching|looking) for (a|an|the) $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
     `(search|searching|looking) for (a|an|the) $(PLACES p:places) $(TYPE p:doctorTypes) $(DISTANCE p:distance)`,
     `(show me|find|where|what) (is|are) (a|an|the)  $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
     `(search|searching|looking) for the $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
 ];
-
 intent(FIND_LOCATION, p => {
     if (!p.TYPE) {
         p.play({
             command: "show-all-doctors",
             sort: "closest"
-        })
+        });
         p.play('here is the list of all doctors sorted by distance from you.',
-            'showig doctors sorted by distance from you')
+            'showig doctors sorted by distance from you');
     } else {
         p.play({
             command: "show-all-doctors",
             sort: "closest",
             filter: p.TYPE.label !== "Internal Medicine" ? ["speciality", p.TYPE.label] : ["type", 'Internal Medicine']
-        })
+        });
         p.play(`here is the list of all ${p.TYPE.label} doctors sorted by distance from you.`,
-            `showig ${p.TYPE.label} doctors sorted by distance from you`)
+            `showig ${p.TYPE.label} doctors sorted by distance from you`);
     }
-
 });
-
-
 // Goodbye ................
 const BYE = [
     'goodbye (Alan|)', 'I am done (Alan|)',
 ];
 intent(BYE, p => {
-
-
-    p.play(`Goodbye ${project.patient.name}!`,
-        `bye ${project.patient.name}!`,
-        `take care ${project.patient.name}!`)
+    p.play(`Goodbye ${p.userData.patient.name}!`,
+        `bye ${p.userData.patient.name}!`,
+        `take care ${p.userData.patient.name}!`);
     setTimeout(() => {
         p.play({
             command: "goodbye"
         })
-    }, 1500)
-
+    }, 1500);
 });
-
 // Fall Backs ................
 fallback('I am sorry, I did not understand you', 'please clarify, I did not undrestand what you said');

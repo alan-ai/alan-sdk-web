@@ -13,24 +13,18 @@ This is an example of using the voice assistant SDK for Web in a React app. To u
 
 1. Clone this repository to your computer
 2. Navigate to 'appointment-frontend' folder .
-3. create a .env file in the 'appointment-backend' root.
-4. Insert your REACT_APP_ALAN_KEY value in the key/value pair.
+3. Rename the .env-example to .env file in the 'appointment-frontend' root.
+4. replace the REACT_APP_ALAN_KEY value with your Alan SDK key in following format of `KEY=VALUE`. You can learn more about Alan SDK key here:(https://alan.app/docs/client-api/web/web-api/#specifying-the-alan-button-parameters)
 5. Run `npm run build`.
 6. Navigate to 'appointment-backend' folder.
-7. create a .env file in the 'appointment-backend' root.
-8. Insert your MONGO_URL value in the key/value pair.
+7. Rename the .env-example to .env file in 'appointment-backend' root.
+8. replace the MONGO_URL value with your Alan studio key in following format of `KEY=VALUE`.
+
+- Steps to create MongoDB Atlas account and get a mangodb URL: (https://www.mongodb.com/docs/atlas/getting-started/)
+
 9. Run `npm start`.
 
-- Find the deployed versionof this code here at this link: (https://appointment-demo.alan.app/)
-
-##### A. Create your `.env` file
-
-Create a `.env` file in the root of each project and insert
-your key/value pairs in the following format of `KEY=VALUE`:
-
-```sh
-MONGO_URL=mongodb+srv://********@cluster0.e9c8z.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
-```
+- Deployed version of this code here at this link: (https://appointment-demo.alan.app/)
 
 ## Documentation
 
