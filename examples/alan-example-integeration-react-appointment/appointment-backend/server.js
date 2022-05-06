@@ -57,8 +57,7 @@ const PORT = process.env.PORT || 8080
 
 mongoose
     .connect(
-        // process.env.MONGO_URL
-        'mongodb+srv://LailyS:Mango4Laily123%3F@cluster0.e9c8z.mongodb.net/myFirstDatabase?retryWrites=true&w=majority'
+        process.env.MONGO_URL
     )
     .then(() => {
         console.log("mongodb is connected!");
