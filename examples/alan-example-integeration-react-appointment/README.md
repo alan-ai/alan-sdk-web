@@ -21,6 +21,8 @@ This is an example of using the voice assistant SDK for Web in a React app. To u
 8. Insert your MONGO_URL value in the key/value pair.
 9. Run `npm start`.
 
+- Find the deployed versionof this code here at this link: (https://appointment-demo.alan.app/)
+
 ##### A. Create your `.env` file
 
 Create a `.env` file in the root of each project and insert
