@@ -1,17 +1,7 @@
-import React, {
-	useEffect,
-	useContext,
-	useRef
-} from "react";
-import {
-	AppointmentContext
-} from "../provider/provider";
-import {
-	useNavigate
-} from "react-router-dom";
-import {
-	browserName
-} from "react-device-detect";
+import React, { useEffect, useContext, useRef } from "react";
+import { AppointmentContext } from "../provider/provider";
+import { useNavigate } from "react-router-dom";
+import { browserName } from "react-device-detect";
 
 import alanBtn from "@alan-ai/alan-sdk-web";
 
@@ -133,7 +123,8 @@ function AlanContainer() {
 						}
 						navigate("/doctors");
 					}
-					if (commandData.command === "show-family-doctor") {}
+					if (commandData.command === "show-family-doctor") {
+					}
 					if (commandData.command === "open-appointment-form") {
 						context.setAdding(true);
 					}
@@ -144,8 +135,8 @@ function AlanContainer() {
 					if (commandData.command === "nextMonth") {
 						context.setCurrMonth(
 							moment(context.currMonth)
-							.startOf("month")
-							.add(1, "months")
+								.startOf("month")
+								.add(1, "months")
 						);
 						document
 							.getElementsByClassName(
@@ -156,8 +147,8 @@ function AlanContainer() {
 					if (commandData.command === "backMonth") {
 						context.setCurrMonth(
 							moment(context.currMonth)
-							.startOf("month")
-							.subtract(1, "months")
+								.startOf("month")
+								.subtract(1, "months")
 						);
 						document
 							.getElementsByClassName(
@@ -168,8 +159,8 @@ function AlanContainer() {
 					if (commandData.command === "nextYear") {
 						context.setCurrYear(
 							moment(context.currYear)
-							.startOf("year")
-							.add(1, "years")
+								.startOf("year")
+								.add(1, "years")
 						);
 						document
 							.getElementsByClassName(
@@ -180,8 +171,8 @@ function AlanContainer() {
 					if (commandData.command === "backYear") {
 						context.setCurrYear(
 							moment(context.currYear)
-							.startOf("year")
-							.subtract(1, "years")
+								.startOf("year")
+								.subtract(1, "years")
 						);
 						document
 							.getElementsByClassName(
@@ -257,11 +248,11 @@ function AlanContainer() {
 				if (i === 0 && sign === "a.m.") {
 					time =
 						time +
-						(arr[0].length === 1 ?
-							"0" + arr[0] :
-							arr[0] === "12" ?
-							"00" :
-							arr[0]);
+						(arr[0].length === 1
+							? "0" + arr[0]
+							: arr[0] === "12"
+							? "00"
+							: arr[0]);
 				}
 				if (i > 0) {
 					time = time + ":" + (arr[i] === "" || !arr[i] ? "00" : arr[i]);
@@ -343,11 +334,11 @@ function AlanContainer() {
 			start = moment(new Date(start)).add(45, "minutes");
 		}
 		return !(
-				window.slotsMap[moment(new Date(start)).format("LT")] &&
-				window.slotsMap[moment(new Date(start)).format("LT")]
-			) ?
-			null :
-			moment(new Date(start)).format("LT");
+			window.slotsMap[moment(new Date(start)).format("LT")] &&
+			window.slotsMap[moment(new Date(start)).format("LT")]
+		)
+			? null
+			: moment(new Date(start)).format("LT");
 	};
 	const stop = () => {
 		if (browserName !== "Safari") {
@@ -377,13 +368,10 @@ function AlanContainer() {
 	const setDescription = (description) => {
 		context.setDescription(description);
 	};
-	return ( <
-		div className = "alan-btn-Container" >
-		<
-		div ref = {
-			roolElRef
-		} > < /div> < /
-		div >
+	return (
+		<div className="alan-btn-Container">
+			<div ref={roolElRef}> </div>{" "}
+		</div>
 	);
 }
 
