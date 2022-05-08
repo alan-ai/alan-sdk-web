@@ -206,7 +206,7 @@ function AlanContainer() {
 										.textContent
 								} has been confirmed`
 							);
-						}, 500);
+						}, 1500);
 					}
 				},
 			});
@@ -273,11 +273,32 @@ function AlanContainer() {
 					)} slot for you, do you want to fill the title?`
 				);
 			} else {
-				const nextAvailableSlot = getNextAvailable(time);
-				context.setLeftCurrTime(window.slotsMap[nextAvailableSlot][0]);
-				playResponse(
-					`sorry this time slot is either not available or has already booked. How about ${nextAvailableSlot}`
-				);
+				if (!window.slotsMap[moment(new Date(time)).format("LT")]) {
+					const responses = [
+						`unfortunately, the time slot you asked for is out of office hours, pick a slot in during office ours`,
+						`this time slot you picked is not during office hours`,
+						`please pick a slot during office hours, this one is not.`,
+					];
+					playResponse(responses[Math.floor(Math.random() * 3)]);
+				} else if (!window.slotsMap[moment(new Date(time)).format("LT")][1]) {
+					const nextAvailableSlot = getNextAvailable(time);
+					if (nextAvailableSlot) {
+						context.setLeftCurrTime(window.slotsMap[nextAvailableSlot][0]);
+						const responses = [
+							`sorry this time slot is either not available or has already booked. How about ${nextAvailableSlot}`,
+							`sorry the time slot you requested is not available, I can hold ${nextAvailableSlot} instead`,
+							`that is not an available time slot unfortunately, the next available time is lot is ${nextAvailableSlot} `,
+						];
+						playResponse(responses[Math.floor(Math.random() * 3)]);
+					} else {
+						const responses = [
+							`sorry no avaiable slot for this day, please try another day!`,
+							`please try another day, this is fully booked or already ended`,
+							`no time slot left for today, please pick a different day`,
+						];
+						playResponse(responses[Math.floor(Math.random() * 3)]);
+					}
+				}
 			}
 		};
 	}, [
@@ -327,16 +348,12 @@ function AlanContainer() {
 	}, [context.adding]);
 	const getNextAvailable = (time) => {
 		let start = moment(new Date(time)).add(45, "minutes");
-		while (
-			window.slotsMap[moment(new Date(start)).format("LT")] &&
-			!window.slotsMap[moment(new Date(start)).format("LT")]
-		) {
+		while (!window.slotsMap[moment(new Date(start)).format("LT")][1]) {
 			start = moment(new Date(start)).add(45, "minutes");
 		}
-		return !(
-			window.slotsMap[moment(new Date(start)).format("LT")] &&
-			window.slotsMap[moment(new Date(start)).format("LT")]
-		)
+
+		return !window.slotsMap[moment(new Date(start)).format("LT")] ||
+			!window.slotsMap[moment(new Date(start)).format("LT")][1]
 			? null
 			: moment(new Date(start)).format("LT");
 	};
@@ -370,7 +387,7 @@ function AlanContainer() {
 	};
 	return (
 		<div className="alan-btn-Container">
-			<div ref={roolElRef}> </div>{" "}
+			<div ref={roolElRef}></div>
 		</div>
 	);
 }

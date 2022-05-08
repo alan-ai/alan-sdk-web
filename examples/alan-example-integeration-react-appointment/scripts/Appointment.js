@@ -9,8 +9,8 @@ onCreateUser(p => {
     p.userData.currPage = '';
     p.userData.doctorsPage = '';
     p.userData.doctorPicked = '';
-    p.userData.doctorTypeDate = '';
-    p.userData.doctorTypeTime = '';
+    p.userData.doctorTypeDate = null;
+    p.userData.doctorTypeTime = null;
     p.userData.my = 'my';
     p.userData.places = 'doctor|office|clinic|location|doctors|offices|clinics|locations';
     p.userData.distance = 'closest~closest|closer~closest|near~closest|near by~closest|close~closest|nearest~closest';
@@ -221,9 +221,9 @@ const direct = (p, type) => {
                 }, 4500);
             } else {
                 setTimeout(() => {
-                    p.play(`${p.userData.doctorTypeDate}`,
-                        `moving to ${p.userData.doctorTypeDate}`,
-                        `here is ${p.userData.doctorTypeDate}`);
+                    p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
+                        `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
+                        `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
                     p.play({
                         command: "date",
                         date: p.userData.doctorTypeDate
@@ -237,8 +237,8 @@ const direct = (p, type) => {
                     time: p.userData.doctorTypeTime,
                     side: "start"
                 });
-                p.userData.doctorTypeTime = "";
-                p.userData.doctorTypeDate = "";
+                p.userData.doctorTypeDate = null;
+                p.userData.doctorTypeTime = null;
             }, 8500);
         }
     } else if (type === "who-is-my-doctor") {
@@ -289,9 +289,9 @@ const direct = (p, type) => {
                         }, 4500);
                     } else {
                         setTimeout(() => {
-                            p.play(`${p.userData.doctorTypeDate}`,
-                                `moving to ${p.userData.doctorTypeDate}`,
-                                `here is ${p.userData.doctorTypeDate}`);
+                            p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
+                                `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
+                                `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
                             p.play({
                                 command: "date",
                                 date: p.userData.doctorTypeDate
@@ -305,8 +305,8 @@ const direct = (p, type) => {
                             time: p.userData.doctorTypeTime,
                             side: "start"
                         });
-                        p.userData.doctorTypeTime = ""
-                        p.userData.doctorTypeDate = ""
+                        p.userData.doctorTypeDate = null;
+                        p.userData.doctorTypeTime = null;
                     }, 9000);
                 }
             }
@@ -326,46 +326,46 @@ let getBooleanAnswer = context(() => {
     });
 });
 const CHANGE_PAGE = [
-    'go to $(PAGE p:pages) (please|)',
-    'take me to $(PAGE p:pages) (please|)',
-    'I want to check $(PAGE p:pages) (please|)',
-    'show me $(PAGE p:pages) (please|)',
-    '$(PAGE p:pages) (please|)',
+    'go to $(PAGE u:pages) (please|)',
+    'take me to $(PAGE u:pages) (please|)',
+    'I want to check $(PAGE u:pages) (please|)',
+    'show me $(PAGE u:pages) (please|)',
+    '$(PAGE u:pages) (please|)',
 ];
 intent(CHANGE_PAGE, p => {
     direct(p, "page");
 });
 const WHO_IS_MY_DOCTOR_TYPE = [
-    'who is my $(TYPE p:doctorTypes) (please|)',
-    'take me to my $(TYPE p:doctorTypes) (page|profile|) (please|)',
-    'I want to check my $(TYPE p:doctorTypes) (page|profile|) (please|)',
-    'show me my $(TYPE p:doctorTypes) (page|profile|) (please|)',
-    'my $(TYPE p:doctorTypes) (page|profile|)(please|)',
+    'who is my $(TYPE u:doctorTypes) (please|)',
+    'take me to my $(TYPE u:doctorTypes) (page|profile|) (please|)',
+    'I want to check my $(TYPE u:doctorTypes) (page|profile|) (please|)',
+    'show me my $(TYPE u:doctorTypes) (page|profile|) (please|)',
+    'my $(TYPE u:doctorTypes) (page|profile|)(please|)',
 ];
 intent(WHO_IS_MY_DOCTOR_TYPE, p => {
     direct(p, "who-is-my-doctor");
 });
 const GO_TYPE_DOCTOR_PAGE = [
-    'who are (all|every|a|) (the|) $(TYPE p:doctorTypes) (page|profile|list|) (please|)',
-    'take me to $(TYPE p:doctorTypes) list (please|)',
-    'I want to (check|see) (all|every|a|) $(TYPE p:doctorTypes) (page|profile|list|) (please|)',
-    'show me (all|every|a|) $(TYPE p:doctorTypes) (page|profile|list|) (please|)',
-    '(all|every|a|) (available|) $(TYPE p:doctorTypes) (please|)',
-    'I am looking for (a|) $(TYPE p:doctorTypes)'
+    'who are (all|every|a|) (the|) $(TYPE u:doctorTypes) (page|profile|list|) (please|)',
+    'take me to $(TYPE u:doctorTypes) list (please|)',
+    'I want to (check|see) (all|every|a|) $(TYPE u:doctorTypes) (page|profile|list|) (please|)',
+    'show me (all|every|a|) $(TYPE u:doctorTypes) (page|profile|list|) (please|)',
+    '(all|every|a|) (available|) $(TYPE u:doctorTypes) (please|)',
+    'I am looking for (a|) $(TYPE u:doctorTypes)'
 ];
 intent(GO_TYPE_DOCTOR_PAGE, p => {
     direct(p, "type-doctor-page");
 });
 const GO_DOCTOR_PAGE_1 = [
-    'go to (doctor|) $(PAGE p:doctorsPage) (please|)',
-    'take me to (doctor|) $(PAGE p:doctorsPage) (please|)',
-    'I want to check (doctor|) $(PAGE p:doctorsPage) (please|)',
-    'show me (doctor|) $(PAGE p:doctorsPage) (please|)',
-    '(doctor|) $(PAGE p:doctorsPage) (please|)',
-    'I am looking for (doctor|) $(PAGE p:doctorsPage)',
-    'Is there any (doctor|) $(PAGE p:doctorsPage)',
-    '(doctor|)$(PAGE p:doctorsPage)',
-    'I am looking for (doctor|) $(PAGE p:doctorsPage)'
+    'go to (doctor|) $(PAGE u:doctorsPage) (please|)',
+    'take me to (doctor|) $(PAGE u:doctorsPage) (please|)',
+    'I want to check (doctor|) $(PAGE u:doctorsPage) (please|)',
+    'show me (doctor|) $(PAGE u:doctorsPage) (please|)',
+    '(doctor|) $(PAGE u:doctorsPage) (please|)',
+    'I am looking for (doctor|) $(PAGE u:doctorsPage)',
+    'Is there any (doctor|) $(PAGE u:doctorsPage)',
+    '(doctor|)$(PAGE u:doctorsPage)',
+    'I am looking for (doctor|) $(PAGE u:doctorsPage)'
 ];
 intent(GO_DOCTOR_PAGE_1, p => {
     direct(p, "doctor-page-1");
@@ -428,6 +428,29 @@ const askForAppointment = (p, type) => {
             `doctor ${page[1]} appointment form`,
             `this is the form of doctor ${page[1]} available slots`,
             `these are doctor ${page[1]} available slots`);
+        if (p.userData.doctorTypeDate !== "") {
+            setTimeout(() => {
+                p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
+                    `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
+                    `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
+                p.play({
+                    command: "date",
+                    date: p.userData.doctorTypeDate
+                });
+            }, 3000);
+        }
+        if (p.userData.doctorTypeTime !== "") {
+            setTimeout(() => {
+                p.play(`looking into slots`);
+                p.play({
+                    command: "time",
+                    time: p.userData.doctorTypeTime,
+                    side: "start"
+                });
+                p.userData.doctorTypeDate = null;
+                p.userData.doctorTypeTime = null;
+            }, 9000);
+        }
     } else if (type === "doctor-appointment-2") {
         const page = p.userData.doctorsMap[p.NAME.value].split('#');
         p.userData.doctorPicked = p.userData.doctorsMap[p.NAME.value];
@@ -648,52 +671,52 @@ intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
     }
 });
 const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
-    'appointment with  $(MY p:my) $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    'I want (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    '(make|have|create) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    'I want (an|) to (make|have|create) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    'I would Like (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME) $(DATE) (please|)',
-    'I would Like to (make|have|create) (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    'I need (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    'I need to (make|have|create) (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    '(please|) make (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    '(please|) create (an|) appointment with $(MY p:my)  $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'I want (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    '(make|have|create) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'I want (an|) to (make|have|create) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'I would Like (an|) appointment with $(MY p:my)  $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'I would Like to (make|have|create) (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'I need (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'I need to (make|have|create) (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    '(please|) make (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    '(please|) create (an|) appointment with $(MY p:my) $(TYPE p:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'I want (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    '(make|have|create) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'I want (an|) to (make|have|create) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'I would Like (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME) $(DATE) (please|)',
-    'I would Like to (make|have|create) (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'I need (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'I need to (make|have|create) (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    '(please|) make (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    '(please|) create (an|) appointment with $(TYPE p:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    'I want (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    '(make|have|create) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    'I want (an|) to (make|have|create) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    'I would Like (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    'I would Like to (make|have|create) (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    'I need (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    'I need to (make|have|create) (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    '(please|) make (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
-    '(please|) create (an|) appointment with $(TYPE p:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    'appointment with  $(MY u:my) $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    'I want (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    '(make|have|create) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    'I want (an|) to (make|have|create) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    'I would Like (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME) $(DATE) (please|)',
+    'I would Like to (make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    'I need (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    'I need to (make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    '(please|) make (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    '(please|) create (an|) appointment with $(MY u:my)  $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'I want (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    '(make|have|create) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'I want (an|) to (make|have|create) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'I would Like (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'I would Like to (make|have|create) (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'I need (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'I need to (make|have|create) (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    '(please|) make (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    '(please|) create (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'I want (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    '(make|have|create) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'I want (an|) to (make|have|create) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'I would Like (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME) $(DATE) (please|)',
+    'I would Like to (make|have|create) (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'I need (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'I need to (make|have|create) (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    '(please|) make (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    '(please|) create (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    'I want (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    '(make|have|create) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    'I want (an|) to (make|have|create) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    'I would Like (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    'I would Like to (make|have|create) (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    'I need (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    'I need to (make|have|create) (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    '(please|) make (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
+    '(please|) create (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
 ]
 intent(ASK_FOR_DOCTOR_APPsOINTMENT_4, p => {
-    p.userData.doctorTypeDate = `${p.DATE.moment.format("dddd, MMMM Do YYYY")}`;
-    p.userData.doctorTypeTime = `${p.TIME.value}`;
+    p.userData.doctorTypeDate = p.DATE.moment;
+    p.userData.doctorTypeTime = p.TIME.value;
     if (p.MY && p.MY.value) {
-        direct(p, "who-is-my-doctor");
+        askForAppointment(p, "doctor-appointment-1");
     } else {
         direct(p, "type-doctor-page");
     }
@@ -839,8 +862,8 @@ intent(SAVE_APPOINTMENT, p => {
 });
 // Make my doctor ................
 const MAKE_MY_DOCTOR = [
-    `(I want to|) (make|pick) (him|her|) my $(TYPE p:doctorTypes)`,
-    `(I want to|) (send|) $(TYPE p:doctorTypes) request`
+    `(I want to|) (make|pick) (him|her|) my $(TYPE u:doctorTypes)`,
+    `(I want to|) (send|) $(TYPE u:doctorTypes) request`
 ];
 intent(MAKE_MY_DOCTOR, p => {
     if (p.userData.doctorsMap[p.userData.currPage] && p.userData.doctorsMap[p.userData.currPage] === "Internal Medicine") {
@@ -863,7 +886,7 @@ intent(MAKE_MY_DOCTOR, p => {
     }
 });
 const REMOVE_MY_DOCTOR = [
-    `(I want to|) (remove|retreat) (him|her|) (as|) my $(TYPE p:doctorTypes) (request|)`,
+    `(I want to|) (remove|retreat) (him|her|) (as|) my $(TYPE u:doctorTypes) (request|)`,
     `I want to retreat my request`
 ];
 intent(REMOVE_MY_DOCTOR, p => {
@@ -896,16 +919,16 @@ intent(SEARCH_APPOINTMENT, p => {
     direct(p, "page");
 });
 const FIND_LOCATION = [
-    `(the|) $(DISTANCE p:distance) $(PLACES p:places)`,
-    `(search|searching|looking) for (a|an|the) $(DISTANCE p:distance) $(PLACES p:places)`,
-    `(search|searching|looking) for (a|an|the) $(DISTANCE p:distance) $(PLACES p:places)`,
-    `(show me|find|where|what) (is|are) (a|an|the)  $(DISTANCE p:distance) $(PLACES p:places)`,
-    `(search|searching|looking) for the $(DISTANCE p:distance) $(PLACES p:places)`,
-    `(the|) $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
-    `(search|searching|looking) for (a|an|the) $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
-    `(search|searching|looking) for (a|an|the) $(PLACES p:places) $(TYPE p:doctorTypes) $(DISTANCE p:distance)`,
-    `(show me|find|where|what) (is|are) (a|an|the)  $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
-    `(search|searching|looking) for the $(DISTANCE p:distance) $(TYPE p:doctorTypes) $(PLACES p:places)`,
+    `(the|) $(DISTANCE u:distance) $(PLACES u:places)`,
+    `(search|searching|looking) for (a|an|the) $(DISTANCE u:distance) $(PLACES u:places)`,
+    `(search|searching|looking) for (a|an|the) $(DISTANCE u:distance) $(PLACES u:places)`,
+    `(show me|find|where|what) (is|are) (a|an|the)  $(DISTANCE u:distance) $(PLACES u:places)`,
+    `(search|searching|looking) for the $(DISTANCE u:distance) $(PLACES u:places)`,
+    `(the|) $(DISTANCE u:distance) $(TYPE u:doctorTypes) $(PLACES u:places)`,
+    `(search|searching|looking) for (a|an|the) $(DISTANCE u:distance) $(TYPE u:doctorTypes) $(PLACES u:places)`,
+    `(search|searching|looking) for (a|an|the) $(PLACES u:places) $(TYPE u:doctorTypes) $(DISTANCE u:distance)`,
+    `(show me|find|where|what) (is|are) (a|an|the)  $(DISTANCE u:distance) $(TYPE u:doctorTypes) $(PLACES u:places)`,
+    `(search|searching|looking) for the $(DISTANCE u:distance) $(TYPE u:doctorTypes) $(PLACES u:places)`,
 ];
 intent(FIND_LOCATION, p => {
     if (!p.TYPE) {
