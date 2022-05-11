@@ -76,7 +76,6 @@ intent(What_I_DO_HERE, p => {
 const WHAT_IS_THIS = [
     'This is an appointment app, and I am Alan your voice assistant',
     'what is this app',
-    'you are here to book your an appointment with your doctor',
     'how can you help me',
     'who are you',
     'can you help me',
@@ -119,7 +118,7 @@ intent(BACK_PAGE, p => {
     p.play({
         command: "go-back"
     });
-    p.play('going back', 'last page', 'ging to previous page');
+    p.play('going back', 'last page', 'going to previous page');
 });
 const direct = (p, type) => {
     if (type === "page") {
@@ -214,16 +213,16 @@ const direct = (p, type) => {
                 filter: ["speciality", p.TYPE.label]
             });
         }
-        if (p.userData.doctorTypeTime !== "") {
+        if (p.userData.doctorTypeTime) {
             if (!p.userData.isFormOpen) {
                 setTimeout(() => {
                     askForAppointment(p, "doctor-appointment-1");
                 }, 4500);
             } else {
                 setTimeout(() => {
-                    p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                        `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                        `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
+                    p.play(`${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}`,
+                        `moving to ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")},`,
+                        `here is ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")},`);
                     p.play({
                         command: "date",
                         date: p.userData.doctorTypeDate
@@ -239,7 +238,7 @@ const direct = (p, type) => {
                 });
                 p.userData.doctorTypeDate = null;
                 p.userData.doctorTypeTime = null;
-            }, 8500);
+            }, 5500);
         }
     } else if (type === "who-is-my-doctor") {
         if (p.TYPE.label === "Internal Medicine") {
@@ -282,16 +281,17 @@ const direct = (p, type) => {
                         link: page[0]
                     });
                 }
-                if (p.userData.doctorTypeTime !== "") {
+                if (p.userData.doctorTypeTime) {
                     if (!p.userData.isFormOpen) {
                         setTimeout(() => {
                             askForAppointment(p, "doctor-appointment-1");
                         }, 4500);
                     } else {
+
                         setTimeout(() => {
-                            p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                                `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                                `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
+                            p.play(`${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")},`,
+                                `moving to ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")},`,
+                                `here is ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}, `);
                             p.play({
                                 command: "date",
                                 date: p.userData.doctorTypeDate
@@ -307,7 +307,7 @@ const direct = (p, type) => {
                         });
                         p.userData.doctorTypeDate = null;
                         p.userData.doctorTypeTime = null;
-                    }, 9000);
+                    }, 5500);
                 }
             }
         }
@@ -419,38 +419,57 @@ const askForAppointment = (p, type) => {
         }
     } else if (type === "doctor-appointment-1") {
         const page = p.PAGE ? p.PAGE.label.split('#') : p.userData.familyDoctor.split('#');
-        p.play({
-            command: "create-appointment",
-            link: page[0],
-            name: page[1],
-        });
-        p.play(`(here|this) is doctor ${page[1]} appointment form`,
-            `doctor ${page[1]} appointment form`,
-            `this is the form of doctor ${page[1]} available slots`,
-            `these are doctor ${page[1]} available slots`);
-        if (p.userData.doctorTypeDate !== "") {
-            setTimeout(() => {
-                p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                    `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-                    `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
-                p.play({
-                    command: "date",
-                    date: p.userData.doctorTypeDate
-                });
-            }, 3000);
+        if (page[1]) {
+            p.play({
+                command: "create-appointment",
+                link: page[0],
+                name: page[1],
+            });
+            if (p.userData.doctorTypeDate || p.userData.doctorTypeTime !== "") {
+                p.play(`(here|this) is your family doctor,doctor ${page[1]} appointment form`,
+                    `doctor ${page[1]}, your family practitioner appointment form`,
+                    `this is the appointment form of doctor ${page[1]} your family doctor`,
+                    `these are doctor ${page[1]} your family doctor available slots`);
+            } else {
+                p.play(`(here|this) is doctor ${page[1]} appointment form`,
+                    `doctor ${page[1]} appointment form`,
+                    `this is the form of doctor ${page[1]} available slots`,
+                    `these are doctor ${page[1]} available slots`);
+            }
+            if (p.userData.doctorTypeDate) {
+                setTimeout(() => {
+                    if (!p.userData.doctorTypeTime) {
+                        p.play(`${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}, what about the time slot?`,
+                            `moving to ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}, which time slot?`,
+                            `here is ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}, have you decided about the time?`);
+                    } else {
+                        p.play(`${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}`,
+                            `moving to ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}`,
+                            `here is ${p.userData.doctorTypeDate.format("dddd, MMMM Do YYYY")}`);
+                    }
+                    p.play({
+                        command: "date",
+                        date: p.userData.doctorTypeDate
+                    });
+                }, 3000);
+            }
+            if (p.userData.doctorTypeTime) {
+                setTimeout(() => {
+                    p.play(`looking into slots`);
+                    p.play({
+                        command: "time",
+                        time: p.userData.doctorTypeTime,
+                        side: "start"
+                    });
+                    p.userData.doctorTypeDate = null;
+                    p.userData.doctorTypeTime = null;
+                }, 5500);
+            }
+        } else {
+            p.play(`you do not have a family doctor yet`);
+            direct(p, "type-doctor-page");
         }
-        if (p.userData.doctorTypeTime !== "") {
-            setTimeout(() => {
-                p.play(`looking into slots`);
-                p.play({
-                    command: "time",
-                    time: p.userData.doctorTypeTime,
-                    side: "start"
-                });
-                p.userData.doctorTypeDate = null;
-                p.userData.doctorTypeTime = null;
-            }, 9000);
-        }
+
     } else if (type === "doctor-appointment-2") {
         const page = p.userData.doctorsMap[p.NAME.value].split('#');
         p.userData.doctorPicked = p.userData.doctorsMap[p.NAME.value];
@@ -588,7 +607,7 @@ intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
                     time: p.TIME.value,
                     side: "start"
                 });
-            }, 5500);
+            }, 3500);
         }
     } else {
         if (!p.userData.isFormOpen) {
@@ -610,7 +629,7 @@ intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
                 time: p.TIME.value,
                 side: "start"
             });
-        }, 5500);
+        }, 3500);
     }
 });
 intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
@@ -648,7 +667,7 @@ intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
                     time: p.TIME.value,
                     side: "start"
                 });
-            }, 5500);
+            }, 3500);
         }
     } else {
         setTimeout(() => {
@@ -667,14 +686,24 @@ intent(ASK_FOR_DOCTOR_APPOINTMENT_3, p => {
                 time: p.TIME.value,
                 side: "start"
             })
-        }, 5500);
+        }, 3500);
     }
 });
 const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
+    'appointment with  $(MY u:my) $(TYPE u:myDoctor)(please|)',
+    'I want (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (please|)',
+    '(make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (please|)',
+    'I want (an|) to (make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (please|)',
+    'I would Like (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (please|)',
+    'I would Like to (make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (please|)',
+    'I need (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    'I need to (make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (please|)',
+    '(please|) make (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (please|)',
+    '(please|) create (an|) appointment with $(MY u:my)  $(TYPE u:doctorTypes) (please|)',
     'appointment with  $(MY u:my) $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
     'I want (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    '(make|have|create) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
-    'I want (an|) to (make|have|create) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    '(make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
+    'I want (an|) to (make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
     'I would Like (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME) $(DATE) (please|)',
     'I would Like to (make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
     'I need (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(TIME)  $(DATE) (please|)',
@@ -683,8 +712,8 @@ const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
     '(please|) create (an|) appointment with $(MY u:my)  $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
     'appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
     'I want (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    '(make|have|create) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
-    'I want (an|) to (make|have|create) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    '(make|have|create) (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
+    'I want (an|) to (make|have|create) (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
     'I would Like (an|) appointment with $(MY u:my)  $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
     'I would Like to (make|have|create) (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
     'I need (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
@@ -693,8 +722,8 @@ const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
     '(please|) create (an|) appointment with $(MY u:my) $(TYPE u:myDoctor) (for|) $(DATE) $(TIME) (please|)',
     'appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
     'I want (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    '(make|have|create) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
-    'I want (an|) to (make|have|create) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    '(make|have|create) (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
+    'I want (an|) to (make|have|create) (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
     'I would Like (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME) $(DATE) (please|)',
     'I would Like to (make|have|create) (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
     'I need (an|) appointment with $(TYPE u:doctorTypes) (for|) $(TIME)  $(DATE) (please|)',
@@ -713,9 +742,9 @@ const ASK_FOR_DOCTOR_APPsOINTMENT_4 = [
     '(please|) create (an|) appointment with $(TYPE u:doctorTypes) (for|) $(DATE) $(TIME) (please|)',
 ]
 intent(ASK_FOR_DOCTOR_APPsOINTMENT_4, p => {
-    p.userData.doctorTypeDate = p.DATE.moment;
-    p.userData.doctorTypeTime = p.TIME.value;
-    if (p.MY && p.MY.value) {
+    p.userData.doctorTypeDate = p.DATE ? p.DATE.moment : null;
+    p.userData.doctorTypeTime = p.TIME ? p.TIME.value : null;
+    if (p.MY && p.MY.value && p.TYPE) {
         askForAppointment(p, "doctor-appointment-1");
     } else {
         direct(p, "type-doctor-page");
@@ -810,9 +839,10 @@ const ASK_FOR_A_DATE = [
     '(how about|check|) $(DATE)',
 ];
 intent(ASK_FOR_A_DATE, p => {
-    p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-        `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`,
-        `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}`);
+
+    p.play(`${p.DATE.moment.format("dddd, MMMM Do YYYY")}, what about the time slot?`,
+        `moving to ${p.DATE.moment.format("dddd, MMMM Do YYYY")}, which time slot?`,
+        `here is ${p.DATE.moment.format("dddd, MMMM Do YYYY")}, have you decided about the time?`);
     p.play({
         command: "date",
         date: p.DATE.moment
@@ -882,12 +912,13 @@ intent(MAKE_MY_DOCTOR, p => {
             p.play(`you already have a family doctor assigned. You need to remove doctor ${familyDoctor[1]} as your family doctor first `);
         }
     } else {
-        p.play(`you either didnt pick a doctor yet or the doctor you picked dosnt have the option to accept`);
+        p.play(`you either didnt pick a doctor yet or the doctor you picked does not have the option to accept`);
     }
 });
 const REMOVE_MY_DOCTOR = [
     `(I want to|) (remove|retreat) (him|her|) (as|) my $(TYPE u:doctorTypes) (request|)`,
-    `I want to retreat my request`
+    `I want to retreat my request`,
+    `send retreat $(TYPE u:doctorTypes) request`
 ];
 intent(REMOVE_MY_DOCTOR, p => {
     if (p.userData.doctorsMap[p.userData.currPage] && p.userData.doctorsMap[p.userData.currPage] === "Internal Medicine") {
