@@ -28,30 +28,33 @@ function Doctor() {
 	return (
 		<div className="profile-card">
 			<div className="doctor-profile-card-img-wrapper">
-				<div className="doctor-profile-card-img">
-					<img
-						src={context.doctorInfo ? context.doctorInfo.image : ""}
-						alt="doctor"
-						crossOrigin="anonymous"
-					/>
-				</div>
+				<div
+					className="doctor-profile-card-img"
+					style={{
+						backgroundImage: `url("${
+							context.doctorInfo ? context.doctorInfo.image : ""
+						}")`,
+					}}
+				></div>{" "}
 				<div className="profile-card-img-txt">
+					{" "}
 					{context.doctorInfo
 						? "DR." +
 						  context.doctorInfo.name +
 						  " " +
 						  context.doctorInfo.lastName
-						: ""}
-				</div>
-			</div>
+						: ""}{" "}
+				</div>{" "}
+			</div>{" "}
 			<div className="doctor-profile-card-info-wrapper">
-				<div className="profile-card-info-title"> Information: </div>
+				<div className="profile-card-info-title"> Information: </div>{" "}
 				{context.doctorInfo &&
 					["type", "speciality", "address", "city"].map((info, index) => (
 						<div className="profile-card-info-sec" key={index}>
-							{info + ":"} <span> {context.doctorInfo[info]} </span>
+							{" "}
+							{info + ":"} <span> {context.doctorInfo[info]} </span>{" "}
 						</div>
-					))}
+					))}{" "}
 				{context.familyDoctor === "" &&
 				context.doctorInfo.type === "Internal Medicine" &&
 				context.familyDoctor !== context.doctorInfo._id ? (
@@ -70,7 +73,7 @@ function Doctor() {
 						variant="outlined"
 						onClick={sendFamilyDoctorRqst}
 					>
-						Family Doctor Request
+						Family Doctor Request{" "}
 					</Button>
 				) : context.familyDoctor === context.doctorInfo._id ||
 				  (context.patient.familyDoctor &&
@@ -89,12 +92,12 @@ function Doctor() {
 						variant="contained"
 						onClick={retreatFamilyDoctorRqst}
 					>
-						Retreat Family request
+						Retreat Family request{" "}
 					</Button>
 				) : (
-					<></>
-				)}
-			</div>
+					<> </>
+				)}{" "}
+			</div>{" "}
 		</div>
 	);
 }

@@ -9,10 +9,11 @@ function FormDoctorCard({ doctor }) {
 	}
 	return (
 		<div className="form-doctor-card-Warapper">
-			<img
-				src={doctor ? doctor.image : ""}
-				alt="doctor"
-				crossOrigin="anonymous"
+			<div
+				className="form-doctor-card-Warapper-img"
+				style={{
+					backgroundImage: `url("${doctor ? doctor.image : ""}")`,
+				}}
 			/>
 			<div className="form-doctor-card-Warapper-desc">
 				{doctor &&

@@ -626,25 +626,19 @@ background-color: white;
 }
 .profile-card-img{
   margin: 60px 0 0 calc( 50% - 65px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
+  background-position:center top;
+  background-repeat: no-repeat;
+  background-size: cover;
   border-radius: 15px;
-  /* border: 6px solid #4A7AE2;; */
   width: 130px;
   height:130px;
 }
 .doctor-profile-card-img{
   margin: 60px 0 0 calc( 50% - 65px);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  overflow: hidden;
+  background-position:center top;
+  background-repeat: no-repeat;
+  background-size: cover;
   border-radius: 15px;
-  /* border: 6px solid #4A7AE2;; */
   width: 130px;
   height:130px;
 }
@@ -655,6 +649,7 @@ background-color: white;
   max-height:130px;
 }
 .doctor-profile-card-img img{
+  /* border: 6px solid green;; */
   min-width: 180px;
   max-width: 180px;
   min-height:180px;
@@ -1287,8 +1282,11 @@ opacity: 1;
   width:515px;
   height: 200px;
 }
-.form-doctor-card-Warapper img{
+.form-doctor-card-Warapper-img{
   margin:0 15px 0 15px;
+  background-position:left top;
+  background-repeat: no-repeat;
+  background-size: contain;
   border-radius: 10px;
   width:  150px;
   height: 170px;

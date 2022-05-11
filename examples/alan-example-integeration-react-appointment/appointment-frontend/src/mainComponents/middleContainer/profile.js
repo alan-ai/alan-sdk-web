@@ -20,13 +20,14 @@ function Profile() {
 	return (
 		<div className="profile-card">
 			<div className="profile-card-img-wrapper">
-				<div className="profile-card-img">
-					<img
-						src={context.patient ? context.patient.image : ""}
-						alt="patient"
-						crossOrigin="anonymous"
-					/>
-				</div>{" "}
+				<div
+					className="profile-card-img"
+					style={{
+						backgroundImage: `url("${
+							context.patient ? context.patient.image : ""
+						}")`,
+					}}
+				></div>{" "}
 				<div className="profile-card-img-txt">
 					{" "}
 					{context.patient
