@@ -979,7 +979,7 @@ intent(FIND_LOCATION, p => {
             `showig ${p.TYPE.label} doctors sorted by distance from you`);
     }
 });
-// Goodbye ................
+// Goodbye ...............
 const BYE = [
     'goodbye (Alan|)', 'I am done (Alan|)',
 ];
@@ -993,5 +993,5 @@ intent(BYE, p => {
         })
     }, 1500);
 });
-// Fall Backs ................
+// Fall Backs ..............
 fallback('I am sorry, I did not understand you', 'please clarify, I did not undrestand what you said');
