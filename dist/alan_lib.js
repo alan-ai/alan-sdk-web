@@ -780,7 +780,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.32';
+    var alanButtonVersion = '1.8.33';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
@@ -788,6 +788,7 @@
     var currentProjectId = null;
     var deviceId;
     var firstClick = null;
+    var btnInstance;
     // Define base properties for disable/enable button functionality
     var isLocalStorageAvailable = false;
     try {
@@ -855,10 +856,13 @@
             mode = 'component';
         }
         console.log('Alan: v.' + alanButtonVersion);
-        if (window.tutorProject && !isTutorMode()) {
-            throw new Error('The Alan Button instance has already been created. There cannot be two Alan Button instances created at the same time');
+        if (window.tutorProject && !isTutorMode() && btnInstance) {
+            if (currentProjectId === options.key) {
+                return btnInstance;
+            }
+            throw new Error('The Alan Button instance has already been created. There cannot be two Alan Button instances created at the same time connected to the different projects.');
         }
-        var btnInstance = {
+        btnInstance = {
             // Common public API
             version: alanButtonVersion,
             setVisualState: function (visualStateData) {
@@ -949,7 +953,8 @@
             remove: function () {
                 alanAudio.stop();
                 window.tutorProject.close();
-                rootEl.remove();
+                rootEl.innerHTML = '';
+                btnInstance = null;
                 if (!isTutorMode()) {
                     window.tutorProject = null;
                 }
