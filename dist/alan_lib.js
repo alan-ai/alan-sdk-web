@@ -780,7 +780,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.33';
+    var alanButtonVersion = '1.8.34';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
@@ -1321,7 +1321,7 @@
             }
             if (absolutePosition) {
                 el.style.position = 'absolute';
-                el.classList.add('absolute-positioned');
+                el.classList.add('alan-btn-lib__absolute-positioned');
             }
             if (topPos) {
                 el.style.bottom = '';
@@ -1334,14 +1334,14 @@
             if (isLeftAligned) {
                 btn.style.left = '0';
                 btn.style.right = '';
-                recognisedTextHolder.classList.remove('left-side');
-                recognisedTextHolder.classList.add('right-side');
+                recognisedTextHolder.classList.remove('alan-btn-lib__left-side');
+                recognisedTextHolder.classList.add('alan-btn-lib__right-side');
             }
             else {
                 btn.style.right = '0';
                 btn.style.left = '';
-                recognisedTextHolder.classList.remove('right-side');
-                recognisedTextHolder.classList.add('left-side');
+                recognisedTextHolder.classList.remove('alan-btn-lib__right-side');
+                recognisedTextHolder.classList.add('alan-btn-lib__left-side');
             }
         }
         function applyBtnSizeOptions(size) {
@@ -1703,8 +1703,8 @@
                 keyFrames += getStyleSheetMarker() + '.alanBtn{transform: scale(1);' + transitionCss + ';} .alanBtn' + hoverSelector + '{transform: scale(1.11111);transition:' + transitionCss + ';}.alanBtn:focus {transform: scale(1);' + transitionCss + ';  border: solid 3px #50e3c2;  outline: none;  }';
             }
             keyFrames += getStyleSheetMarker() + '.alanBtn-recognised-text-holder { position:fixed; transform: translateY(' + (isTopAligned ? '-' : '') + '50%); max-width:236px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}';
-            keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.with-text.left-side { text-align: left;}';
-            keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.with-text.right-side { text-align: right;}';
+            keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__left-side { text-align: left;}';
+            keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__right-side { text-align: right;}';
             keyFrames += getStyleSheetMarker() + ' .alanBtn-recognised-text-holder .alanBtn-recognised-text-content:not(:empty) {padding: 10px;}';
             keyFrames += getStyleSheetMarker(true) + '.alanBtn-recognised-text-holder-long  { font-size: 12px!important;line-height: 1.4!important;}  ';
             keyFrames += getStyleSheetMarker(true) + '.alanBtn-recognised-text-holder-super-long  { font-size: 11px!important;line-height: 1.4!important;}  ';
@@ -1728,11 +1728,11 @@
             keyFrames += getStyleSheetMarker() + '.alan-alert-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:12px;padding-right:24px;text-align: center;width: 220px;background: rgb(255 255 255);position: fixed;left: 50%;transform: translateX(-50%);top: 10%;    color: #000;font-size: 14px;line-height: 18px;}';
             keyFrames += getStyleSheetMarker() + '.alan-alert-popup__close-btn {background:url("' + popupCloseIconImgBase64 + '") no-repeat center;cursor:pointer; background-size:100% 100%;position: absolute;top: 12px;right: 12px;width: 14px;height: 14px;}';
             keyFrames += getStyleSheetMarker() + '.alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
-            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.default-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);}';
-            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.top.right {border-top-right-radius: 0!important;}';
-            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.top.left {border-top-left-radius: 0!important;}';
-            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.bottom.left {border-bottom-left-radius: 0!important;}';
-            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.bottom.right {border-bottom-right-radius: 0!important;}';
+            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.alan-btn-lib__default-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);}';
+            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__right {border-top-right-radius: 0!important;}';
+            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__left {border-top-left-radius: 0!important;}';
+            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.alan-btn-lib__bottom.alan-btn-lib__left {border-bottom-left-radius: 0!important;}';
+            keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.alan-btn-lib__bottom.alan-btn-lib__right {border-bottom-right-radius: 0!important;}';
             keyFrames += getStyleSheetMarker() + '.alan-overlay-popup {position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
             keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__body {position:relative;color: #0D1940;font-size: 16px;line-height: 20px;}';
             keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {background:url("' + popupCloseIconImgBase64 + '") no-repeat center; background-size:100% 100%;min-height:14px;height:14px;max-height:14px;min-width:14px;width:14px;max-width:14px;opacity:0;transition:opacity 300ms ease-in-out;position:absolute;top:8px;right:8px;cursor: pointer;pointer-events: auto!important;}';
@@ -2114,7 +2114,7 @@
                     document.getElementsByTagName('head')[0].appendChild(popupStyle);
                 }
             }
-            popup.classList.add(isLeftAligned ? 'left' : 'right');
+            popup.classList.add(isLeftAligned ? 'alan-btn-lib__left' : 'alan-btn-lib__right');
             if (!absolutePosition) {
                 if (!isLeftAligned) {
                     popup.style.right = initRightPos + (-buttonMarginInPopup || 0) + 'px';
@@ -2123,12 +2123,12 @@
                     popup.style.left = rootElClientRect.x + (-buttonMarginInPopup || 0) + 'px';
                 }
                 if (rootElClientRect.top > 80) {
-                    popup.classList.add('bottom');
+                    popup.classList.add('alan-btn-lib__bottom');
                     popup.style.top = rootElClientRect.top + (buttonMarginInPopup ? (_btnSize + buttonMarginInPopup) : (-popup2BtnMargin)) + 'px';
                     popup.style.setProperty('transform', 'translateY(-100%)', 'important');
                 }
                 else {
-                    popup.classList.add('top');
+                    popup.classList.add('alan-btn-lib__top');
                     popup.style.top = rootElClientRect.top + (buttonMarginInPopup ? (-buttonMarginInPopup) : (_btnSize + popup2BtnMargin)) + 'px';
                 }
             }
@@ -2136,11 +2136,11 @@
                 popup.style.position = 'absolute';
                 popup.style[isLeftAligned ? 'left' : 'right'] = (-buttonMarginInPopup || 0) + 'px';
                 popup.style[isTopAligned ? 'top' : 'bottom'] = (buttonMarginInPopup ? -buttonMarginInPopup : (_btnSize + popup2BtnMargin)) + 'px';
-                popup.classList.add(isTopAligned ? 'top' : 'bottom');
+                popup.classList.add(isTopAligned ? 'alan-btn-lib__top' : 'alan-btn-lib__bottom');
             }
             if (!popupOptions.html) {
                 if (message) {
-                    popup.classList.add('default-popup');
+                    popup.classList.add('alan-btn-lib__default-popup');
                     popup.innerHTML = '<div class="alan-overlay-popup__body">' + message + '</div>';
                 }
             }
@@ -2264,7 +2264,7 @@
             if (!options.hideRecognizedText) {
                 if (recognisedTextHolder.classList.value.indexOf('alanBtn-text-appearing') === -1) {
                     recognisedTextHolder.style.opacity = '1';
-                    recognisedTextHolder.classList.add('with-text');
+                    recognisedTextHolder.classList.add('alan-btn-lib__with-text');
                     recognisedTextHolder.classList.add('alanBtn-text-appearing');
                     recognisedTextHolder.classList.remove('alanBtn-text-disappearing');
                 }
@@ -2275,7 +2275,7 @@
                     }
                     recognisedTextContent.innerHTML = recognisedText;
                 }
-                if (recognisedTextHolder.classList.contains('absolute-positioned')) {
+                if (recognisedTextHolder.classList.contains('alan-btn-lib__absolute-positioned')) {
                     if (recognisedText.length < 33) {
                         recognisedTextHolder.style.whiteSpace = 'nowrap';
                         recognisedTextHolder.style.minWidth = 'auto';
@@ -2323,7 +2323,7 @@
                     recognisedTextContent.innerHTML = '';
                     recognisedTextHolder.classList.remove('alanBtn-recognised-text-holder-long');
                     recognisedTextHolder.classList.remove('alanBtn-recognised-text-holder-super-long');
-                    recognisedTextHolder.classList.remove('with-text');
+                    recognisedTextHolder.classList.remove('alan-btn-lib__with-text');
                 }, delay || 810);
             }
         }
