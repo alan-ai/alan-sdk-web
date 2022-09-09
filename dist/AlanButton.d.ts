@@ -6,4 +6,6 @@ export interface AlanButton {
     activate: () => Promise<void>;
     deactivate: () => void;
     isActive: () => boolean;
+    remove: () => void;
+    sendText: (text: string) => void;
 }
