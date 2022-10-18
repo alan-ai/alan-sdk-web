@@ -780,7 +780,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.35';
+    var alanButtonVersion = '1.8.36';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
@@ -813,6 +813,8 @@
         return "\n        Debug Info:\n        alanBtn: v.".concat(alanButtonVersion, "\n        alanSDK: v.").concat(window.alanSDKVersion, "\n        projectId: ").concat(currentProjectId || 'unknown', "\n        deviceId: ").concat(getDeviceId(), "\n        navigator: \n        getUserMedia: ").concat(printNavigatorFlag(navigator.getUserMedia), ", \n        mediaDevices: ").concat(printNavigatorFlag(navigator.mediaDevices), ", \n        mediaDevices.getUserMedia: ").concat(printNavigatorFlag(navigator.mediaDevices && navigator.mediaDevices.getUserMedia), ",\n        webkitGUM: ").concat(printNavigatorFlag(navigator.webkitGetUserMedia), ",\n        mozGUM: ").concat(printNavigatorFlag(navigator.mozGetUserMedia), ",\n        msGUM: ").concat(printNavigatorFlag(navigator.msGetUserMedia), ",\n        window:\n        AudioContext: ").concat(printNavigatorFlag(window.AudioContext), ",\n        webkitAC: ").concat(printNavigatorFlag(window.webkitAudioContext), ",\n        mozAC: ").concat(printNavigatorFlag(window.mozAudioContext), ",\n        userAgent: ").concat(navigator.userAgent, "\n        ");
     }
     function getDeviceId() {
+        if (!currentProjectId)
+            return;
         var deviceIdKey = 'alan-btn-uuid-' + currentProjectId;
         if (isLocalStorageAvailable) {
             deviceId = localStorage.getItem(deviceIdKey);
@@ -964,6 +966,7 @@
                 window.tutorProject.close();
                 window.tutorProject.off('scripts', onScriptsCb);
                 window.tutorProject.off('text', onTextCbInMicBtn);
+                window.tutorProject.off('parsed', onParsedCbInMicBtn);
                 rootEl.innerHTML = '';
                 btnInstance = null;
                 if (!isTutorMode()) {
@@ -1885,6 +1888,7 @@
                 window.tutorProject.on('options', onOptionsReceived);
                 window.tutorProject.on('scripts', onScriptsCb);
                 window.tutorProject.on('text', onTextCbInMicBtn);
+                window.tutorProject.on('parsed', onParsedCbInMicBtn);
                 //window.tutorProject.on('popup', onPopup);
                 // console.info('BTN: tutorProject', options.key);
             }
@@ -1992,8 +1996,8 @@
                     else {
                         sendClientEvent({ buttonClicked: true, micAllowed: true });
                     }
-                })["catch"](function () {
-                    console.warn('Not possible to detect mic permissions');
+                })["catch"](function (error) {
+                    console.warn('Not possible to detect mic permissions, details: ', error);
                     setTimeout(function () { return sendClientEvent({ buttonClicked: true, micAllowed: alanAudio.isMicAllowed() }); }, 300);
                 });
             }
@@ -2434,7 +2438,6 @@
             playSoundNext();
             isAlanActive = true;
             if (window.tutorProject) {
-                window.tutorProject.on('parsed', onParsedCbInMicBtn);
                 window.tutorProject.on('recognized', onRecognizedCbInMicBtn);
                 window.tutorProject.on('connectStatus', onConnectStatusChange);
                 window.tutorProject.on('options', onOptionsReceived);
