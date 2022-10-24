@@ -580,6 +580,7 @@
             return;
         }
         if (nowPlaying && !audioQueue.length) {
+            getAudioElement().setAttribute("src", "");
             onPlayStop();
         }
         if (!audioQueue.length || playState === PLAY_ACTIVE) {
@@ -780,7 +781,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.37';
+    var alanButtonVersion = '1.8.38';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
