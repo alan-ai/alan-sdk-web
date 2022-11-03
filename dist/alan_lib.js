@@ -781,7 +781,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.38';
+    var alanButtonVersion = '1.8.39';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
@@ -2032,6 +2032,19 @@
                 firstClick = true;
                 sendClientEvent({ firstClick: true });
             }
+            if (state === 'default') {
+                coldPlayForSoundNext();
+            }
+            if (currentErrMsg) {
+                if (currentErrMsg === MIC_BLOCKED_MSG) {
+                    sendClientEvent({ buttonClicked: true, micAllowed: false });
+                    showAlert(currentErrMsg);
+                }
+                else {
+                    showAlert(currentErrMsg);
+                }
+                return;
+            }
             var activatePromise = new Promise(function (resolve, reject) {
                 if (btnDisabled) {
                     reject({ err: BTN_IS_DISABLED_CODE });
@@ -2251,19 +2264,8 @@
             if (!dndBackAnimFinished)
                 return;
             hidePopup(null);
-            if (currentErrMsg) {
-                if (currentErrMsg === MIC_BLOCKED_MSG) {
-                    sendClientEvent({ buttonClicked: true, micAllowed: false });
-                    showAlert(currentErrMsg);
-                }
-                else {
-                    showAlert(currentErrMsg);
-                }
-                return;
-            }
             if (alanAudio) {
                 if (state === 'default') {
-                    coldPlayForSoundNext();
                     activateAlanButton();
                 }
                 else {
