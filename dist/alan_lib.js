@@ -493,18 +493,22 @@
     var isIE         = false || !!document.documentMode;
     var isEdge       = !isIE && !!window.StyleMedia;
     var isChrome     = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    var isMobileIos = navigator.userAgent.match(/safari/i) && navigator.vendor.match(/apple/i) && navigator.maxTouchPoints;
 
     if (isEdge || isChrome) {
         audioContext = new AudioContext({sampleRate: config.sampleRate});
     } else {
         audioContext = new AudioContext();
     }
-    
+
     audioContext.resume().then(()=> fireEvent(AUDIO_RUNNING));
 
     var microphoneStream = null;
     var microphoneNode = null;
     var gainNode = audioContext.createGain();
+    var audioGainNode = audioContext.createGain();
+    audioGainNode.gain.value = 1;
+    var audioBufferSource = null;
     var encoderNode = audioContext.createScriptProcessor(config.bufferLength, 1, 1);
     encoderNode.onaudioprocess = ({inputBuffer}) => encodeBuffers(inputBuffer);
     encoderNode.connect(audioContext.destination);
@@ -561,18 +565,79 @@
         });
     }
 
+    function onPlayEnded() {
+        playState = PLAY_IDLE;
+        _handleQueue(true);
+    }
+
     function getAudioElement() {
         if (audioElement) {
             return audioElement;
         }
         audioElement = document.createElement("audio");
         audioElement.addEventListener("ended", function() {
-            playState = PLAY_IDLE;
-            _handleQueue(true);
+            onPlayEnded();
         });
         document.body.appendChild(audioElement);
         audioElement.setAttribute("autoplay", "true");
         return audioElement;
+    }
+
+    function _base64ToArrayBuffer(base64) {
+        var binary_string = window.atob(base64);
+        var len = binary_string.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binary_string.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    function playAudio(audio) {
+        if (isMobileIos) {
+            const base64prefix = "data:audio/mpeg;base64,";
+            if (audio.startsWith(base64prefix)) {
+                audio = audio.substring(base64prefix.length);
+            }
+            var audioData = _base64ToArrayBuffer(audio);
+            audioContext.decodeAudioData(
+                audioData,
+                (buffer) => {
+                    audioBufferSource = audioContext.createBufferSource();
+                    audioBufferSource.addEventListener('ended', e => onPlayEnded());
+                    audioBufferSource.connect(gainNode);
+                    audioBufferSource.connect(audioGainNode);
+                    audioGainNode.connect(audioContext.destination);
+                    audioBufferSource.loop = false;
+                    audioBufferSource.buffer = buffer;
+                    audioBufferSource.start(0);
+                },
+                (err) => console.error(`Error with decoding audio data: ${err.err}`)
+            );
+        } else {
+            getAudioElement().setAttribute("src", audio);
+        }
+    }
+
+    function stopPlaying() {
+        if (isMobileIos) {
+            if (audioBufferSource) {
+                audioBufferSource.stop();
+            }
+        } else {
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
+                audioElement.src = "";
+            }
+        }
+    }
+
+    function onStopPlaying() {
+        if (!isMobileIos) {
+            getAudioElement().setAttribute("src", "");
+        }
+        onPlayStop();
     }
 
     function _handleQueue(nowPlaying) {
@@ -580,8 +645,7 @@
             return;
         }
         if (nowPlaying && !audioQueue.length) {
-            getAudioElement().setAttribute("src", "");
-            onPlayStop();
+            onStopPlaying();
         }
         if (!audioQueue.length || playState === PLAY_ACTIVE) {
             return;
@@ -598,7 +662,7 @@
                 if (playState === PLAY_IDLE) {
                     playState = PLAY_ACTIVE;
                     fireEvent('playStart');
-                    getAudioElement().setAttribute("src", o.audio);
+                    playAudio(o.audio);
                 }
             } else {
                 console.error('invalid queue item');
@@ -724,11 +788,16 @@
         getAudioElement().setAttribute("src", "");
         playState = PLAY_IDLE;
         openMicrophone()
-            .then(()=> { 
+            .then(()=> {
                 micState = MIC_ACTIVE;
                 fireEvent('micStart');
             })
-            .then(()=> { setMicAllowed(true); audioContext.resume();})
+            .then(()=> {
+                setMicAllowed(true);
+                if (!isMobileIos) {
+                    audioContext.resume();
+                }
+            })
             .catch(err => { fireEvent('micFail', err); });
         if (onStarted) {
             onStarted();
@@ -748,11 +817,7 @@
         fireEvent('micStop');
         playState = PLAY_STOPPED;
         audioQueue = [];
-        if (audioElement) {
-            audioElement.pause();
-            audioElement.currentTime = 0;
-            audioElement.src = "";
-        }
+        stopPlaying();
     };
 
     ns.skipExternalSounds = function(skip) {
@@ -781,7 +846,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.39';
+    var alanButtonVersion = '1.8.40';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
