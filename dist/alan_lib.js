@@ -846,7 +846,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.40';
+    var alanButtonVersion = '1.8.41';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
@@ -1033,6 +1033,7 @@
                 window.tutorProject.off('scripts', onScriptsCb);
                 window.tutorProject.off('text', onTextCbInMicBtn);
                 window.tutorProject.off('parsed', onParsedCbInMicBtn);
+                alanAudio.off('command', onCommandCbInMicBtn);
                 rootEl.innerHTML = '';
                 btnInstance = null;
                 if (!isTutorMode()) {
@@ -1955,6 +1956,7 @@
                 window.tutorProject.on('scripts', onScriptsCb);
                 window.tutorProject.on('text', onTextCbInMicBtn);
                 window.tutorProject.on('parsed', onParsedCbInMicBtn);
+                alanAudio.on('command', onCommandCbInMicBtn);
                 //window.tutorProject.on('popup', onPopup);
                 // console.info('BTN: tutorProject', options.key);
             }
@@ -2086,7 +2088,6 @@
             alanAudio.on('micFail', onMicFail);
             alanAudio.on('playStart', onPlayStart);
             alanAudio.on('playStop', onPlayStop);
-            alanAudio.on('command', onCommandCbInMicBtn);
             alanAudio.start(resolve);
             if (options.onMicStarted) {
                 options.onMicStarted();
@@ -2646,9 +2647,12 @@
             turnOffVoiceFn();
         }
         function onCommandCbInMicBtn(e) {
+            var _a, _b;
             // console.info('BTN: onCommandCbInMicBtn', e, new Date());
-            if (options.onCommand) {
-                options.onCommand(e.data);
+            if (isAlanActive || (!isAlanActive && ((_b = (_a = e.ctx) === null || _a === void 0 ? void 0 : _a.opts) === null || _b === void 0 ? void 0 : _b.force) === true)) {
+                if (options.onCommand) {
+                    options.onCommand(e.data);
+                }
             }
             if (isAlanActive) {
                 switchState(LISTENING);
