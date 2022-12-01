@@ -846,7 +846,7 @@
 
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.41';
+    var alanButtonVersion = '1.8.42';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
@@ -2523,8 +2523,6 @@
             alanAudio.off('micFail', onMicFail);
             alanAudio.off('playStart', onPlayStart);
             alanAudio.off('playStop', onPlayStop);
-            alanAudio.off('command', onCommandCbInMicBtn);
-            //alanAudio.off('popup', onPopup);
             hideRecognisedText();
             switchState(DEFAULT);
             isAlanActive = false;
