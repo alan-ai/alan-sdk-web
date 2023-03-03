@@ -208,7 +208,7 @@
 
     function ConnectionWrapper() {
         var _this = this;
-        this._worker = new Worker(window.URL.createObjectURL(new Blob(["(function(ns) {\n    'use strict';\n\n    var SENT_TS    = 1;\n    var REMOTE_TS  = 2;\n    var TIMESTAMP  = 3;\n    var AUDIO_DATA = 4;\n    var JSON_DATA  = 5;\n\n    AlanFrame.fields = [\n        propUint64(SENT_TS,   'sentTs'),\n        propUint64(REMOTE_TS, 'remoteTs'),\n        propUint64(TIMESTAMP, 'timestamp'),\n        propBytes(AUDIO_DATA, 'audioData'),\n        propJson(JSON_DATA,   'jsonData'),\n    ];\n\n    function AlanFrameProp(type, name, sizeF, readF, writeF) {\n        this.type   = type;\n        this.name   = name;\n        this.sizeF  = sizeF;\n        this.writeF = writeF;\n        this.readF  = readF;\n    }\n\n    function fixedSize(size) {\n        return function() {\n            return size;\n        }\n    }\n\n    function bufferSize(buffer) {\n        return 4 + byteLength(buffer);\n    }\n\n    function writeUIntN(uint8array, value, nBytes, offset) {\n        for (var i = 0; i < nBytes; i++ ) {\n            uint8array[offset + i] = 0xFF & value;\n            value /= 256;\n        }\n    }\n\n    function readUIntN(uint8array, nBytes, offset) {\n        var r = 0;\n        for (var i = nBytes - 1; i >= 0; i-- ) {\n            r *= 256;\n            r += 0xFF & uint8array[offset + i];\n        }\n        return r;\n    }\n\n    function writeUInt64(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 8, offset);\n    }\n\n    function readUInt64(uint8array, offset) {\n        return readUIntN(uint8array, 8, offset);\n    }\n\n    function writeUInt32(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 4, offset);\n    }\n\n    function readUInt32(uint8array, offset) {\n        return readUIntN(uint8array, 4, offset);\n    }\n\n    function writeBuffer(uint8array, buffer, offset) {\n        buffer = toUint8(buffer);\n        writeUInt32(uint8array, buffer.length, offset);\n        for (var i = 0; i < buffer.length; i++ ) {\n            uint8array[offset + 4 + i] = buffer[i];\n        }\n    }\n\n    function readBuffer(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('buffer too big');\n        }\n        return uint8array.subarray(offset + 4, offset + 4 + size);\n    }\n\n    function readUTF8(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('string too big');\n        }\n        return String.fromCharCode.apply(null, uint8array.slice(offset + 4, offset + 4 + size));\n    }\n\n    function writeUTF8(uint8array, string, offset) {\n        writeUInt32(uint8array, string.length, offset);\n        for (var i = 0; i < string.length; i++ ) {\n            uint8array[offset + 4 + i] = string.charCodeAt(i);\n        }\n    }\n\n    function sizeUTF8(string) {\n        return 4 + string.length;\n    }\n\n    function propUint32(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(4), readUInt32, writeUInt32);\n    }\n\n    function propUint64(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(8), readUInt64, writeUInt64);\n    }\n\n    function propBytes(type, name) {\n        return new AlanFrameProp(type, name, bufferSize, readBuffer, writeBuffer);\n    }\n\n    function propJson(type, name) {\n        return new AlanFrameProp(type, name, sizeUTF8, readUTF8, writeUTF8);\n    }\n\n    AlanFrame.fieldByType = function(type) {\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var frame = AlanFrame.fields[i];\n            if (frame.type === type) {\n                return frame;\n            }\n        }\n        throw new Error('invalid field: ' + type);\n    };\n\n    function AlanFrame() {\n        this.version = 1;\n    }\n\n    AlanFrame.prototype.write = function() {\n        var result = new Uint8Array(this.writeSize());\n        var offset = 1;\n        result[0]  = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                result[offset++] = field.type;\n                field.writeF(result, value, offset);\n                offset += field.sizeF(value);\n            }\n        }\n        return result.buffer;\n    };\n\n    /**\n     * @returns UInt8Array\n     */\n    AlanFrame.prototype.writeSize = function() {\n        var size = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                size += 1 + field.sizeF(value);\n            }\n        }\n        return size;\n    };\n\n    AlanFrame.prototype.toString = function() {\n        var first = true, str = '';\n        for (var k in this) {\n            if (this.hasOwnProperty(k)) {\n                if (first) {\n                    str += k + ' = ';\n                    first = false;\n                } else {\n                    str += ', ' + k + ' = ';\n                }\n                var v = this[k];\n                if (typeof(v) === 'object') {\n                    str += 'bytes[' + byteLength(v) + ']';\n                } else {\n                    str += v;\n                }\n            }\n        }\n        return str;\n    };\n\n    function byteLength(b) {\n        if (b instanceof Uint8Array) {\n            return b.length;\n        }\n        if (b instanceof ArrayBuffer) {\n            return b.byteLength;\n        }\n    }\n\n    function toArrayBuffer(buffer) {\n        if (buffer instanceof ArrayBuffer) {\n            return buffer;\n        }\n        return buffer.buffer;\n    }\n\n    function toUint8(buffer) {\n        if (buffer instanceof Uint8Array) {\n            return buffer;\n        }\n        if (buffer instanceof ArrayBuffer) {\n            return new Uint8Array(buffer);\n        }\n        throw new Error('invalid buffer type');\n    }\n\n    function parse(uint8array) {\n        uint8array = toUint8(uint8array);\n        var r = new AlanFrame();\n        var offset = 0;\n        r.version = uint8array[offset++];\n        while (offset < uint8array.length) {\n            var frame = AlanFrame.fieldByType(uint8array[offset++]);\n            r[frame.name] = frame.readF(uint8array, offset);\n            offset += frame.sizeF(r[frame.name]);\n        }\n        return r;\n    }\n\n    ns.create = function() {\n        return new AlanFrame();\n    };\n\n    ns.parse = parse;\n\n})(typeof(window)            !== 'undefined' ? (function() {window.alanFrame = {}; return window.alanFrame; })() :\n   typeof(WorkerGlobalScope) !== 'undefined' ? (function() {alanFrame = {}; return alanFrame; })() :\n   exports);\n\n\n'use strict';\n\n\n\nvar ALAN_OFF       = 'off';\nvar ALAN_SPEAKING  = 'speaking';\nvar ALAN_LISTENING = 'listening';\n\nfunction ConnectionImpl(config, auth, mode) {\n    var _this = this;\n    this._config = config;\n    this._auth = auth;\n    this._mode = mode;\n    this._projectId = config.projectId;\n    this._url = config.url;\n    this._connected = false;\n    this._authorized = false;\n    this._dialogId = null;\n    this._callId = 1;\n    this._callSent = {};\n    this._callWait = [];\n    this._failed = false;\n    this._closed = false;\n    this._reconnectTimeout = 100;\n    this._cleanups = [];\n    this._format = null;\n    this._formatSent = false;\n    this._frameQueue = [];\n    this._remoteSentTs = 0;\n    this._remoteRecvTs = 0;\n    this._rtt = 25;\n    this._rttAlpha = 1./16;\n    this._alanState = ALAN_OFF;\n    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 50);\n    this._visualState = {};\n    this._addCleanup(function() {clearInterval(_this._sendTimer);});\n    this._connect();\n    console.log('Alan: connection created');\n}\n\nConnectionImpl.prototype._addCleanup = function(f) {\n    this._cleanups.push(f);\n};\n\nConnectionImpl.prototype._onConnectStatus = function(s) {\n    console.log('Alan: connection status - ' + s);\n    this._fire('connectStatus', s);\n};\n\nConnectionImpl.prototype._fire = function(event, object) {\n    if (event === 'options') {\n        if (object.versions) {\n            object.versions['alanbase:web'] = this._config.version;\n        }\n    }\n    postMessage(['fireEvent', event, object]);\n};\n\nConnectionImpl.prototype._connect = function() {\n    var _this = this;\n    if (this._socket) {\n        console.error('socket is already connected');\n        return;\n    }\n    console.log('Alan: connecting - ' + getConnectionDetails(this._url));\n    this._socket = new WebSocket(this._url);\n    this._socket.binaryType = 'arraybuffer';\n    this._socket.onopen = function(e) {\n        console.info('Alan: connected');\n        _this._connected = true;\n        _this._reconnectTimeout = 100;\n        _this._fire('connection', {status: 'connected'});\n        if (_this._auth) {\n            _this._fire('connection', {status: 'authorizing'});\n            _this._callAuth();\n        } else {\n            _this._callWait.forEach(function(c) {  _this._sendCall(c); });\n            _this._callWait = [];\n        }\n    };\n    this._socket.onmessage = function(msg) {\n        if (msg.data instanceof ArrayBuffer) {\n            var f = alanFrame.parse(msg.data);\n            if (f.sentTs > 0) {\n                _this._remoteSentTs = f.sentTs;\n                _this._remoteRecvTs = Date.now();\n            } else {\n                _this._remoteSentTs = null;\n                _this._remoteRecvTs = null;\n            }\n            var rtt = 0;\n            if (f.remoteTs) {\n                rtt = Date.now() - f.remoteTs;\n            }\n            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;\n            var uint8 = new Uint8Array(f.audioData);\n            var frame = [];\n            var batch = 10000;\n            for (var offset = 0; offset < uint8.byteLength; offset += batch) {\n                var b = uint8.subarray(offset, Math.min(uint8.byteLength, offset + batch));\n                let a = String.fromCharCode.apply(null, b);\n                frame.push(a);\n            }\n            frame = frame.join('');\n            postMessage(['alanAudio', 'playFrame', frame]);\n        } else if (typeof(msg.data) === 'string') {\n            msg = JSON.parse(msg.data);\n            if (msg.i) {\n                var c = _this._callSent[msg.i];\n                delete _this._callSent[msg.i];\n                if (c && c.callback) {\n                    c.callback(msg.e, msg.r);\n                }\n            } else if (msg.e) {\n                if (msg.e === 'text') {\n                    postMessage(['alanAudio', 'playText', msg.p]);\n                } else if (msg.e === 'showPopup') {\n                    postMessage(['alanAudio', 'showPopup', msg.p]);\n                } else if (msg.e === 'command') {\n                    postMessage(['alanAudio', 'playCommand', msg.p]);\n                } else if (msg.e === 'inactivity') {\n                    postMessage(['alanAudio', 'stop']);\n                } else {\n                    _this._fire(msg.e, msg.p);\n                }\n            }\n        } else {\n            console.error('invalid message type');\n        }\n    };\n    this._socket.onerror = function(evt) {\n        console.error('Alan: connection closed due to error: ', evt);\n    };\n    this._socket.onclose = function(evt) {\n        console.info('Alan: connection closed');\n        _this._connected = false;\n        _this._authorized = false;\n        _this._socket = null;\n        _this._onConnectStatus('disconnected');\n        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {\n            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);\n            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);\n            if (_this._reconnectTimeout < 3000) {\n                _this._reconnectTimeout *= 2;\n            } else {\n                _this._reconnectTimeout += 500;\n            }\n            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);\n        }\n    };\n    this._addCleanup(function() {\n        if (this._socket) {\n            this._socket.close();\n            this._socket = null;\n        }\n    });\n};\n\nConnectionImpl.prototype._callAuth = function() {\n    var _this = this;\n    var callback = function(err, r) {\n        if (!err && r.status === 'authorized') {\n            _this._authorized = true;\n            _this._formatSent = false;\n            if (r.dialogId) {\n                postMessage(['setDialogId', r.dialogId]);\n                _this._dialogId = r.dialogId;\n            }\n            _this._onAuthorized();\n            _this._onConnectStatus('authorized');\n        } else if (err === 'auth-failed') {\n            _this._onConnectStatus('auth-failed');\n            if (_this._socket) {\n                _this._socket.close();\n                _this._socket = null;\n                _this._failed = true;\n            }\n        } else {\n            _this._onConnectStatus('invalid-auth-response');\n            console.log('Alan: invalid auth response', err, r);\n        }\n    };\n    var authParam = this._auth;\n    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;\n    if (this._dialogId) {\n        authParam.dialogId = this._dialogId;\n    }\n    authParam.mode = this._mode;\n    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});\n    return this;\n};\n\nConnectionImpl.prototype._sendCall = function(call) {\n    this._sendFormatIfNeeded(false);\n    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));\n    if (call.callback) {\n        this._callSent[call.cid] = call;\n    }\n};\n\nConnectionImpl.prototype._onAuthorized = function() {\n    var _this = this;\n    this._callWait.forEach(function(c) {\n        _this._sendCall(c);\n    });\n    this._callWait = [];\n};\n\nConnectionImpl.prototype.close = function() {\n    for (var i = 0; i < this._cleanups.length; i++ ) {\n        this._cleanups[i]();\n    }\n    this._cleanups = [];\n    this._closed = true;\n    \n    if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {\n        this._socket.close();\n        this._socket = null;\n    }\n    console.log('Alan: closed connection to: ' + getConnectionDetails(this._url));\n    //close(); TODO: delete it!\n};\n\nConnectionImpl.prototype.call = function(cid, method, param) {\n    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {\n        if (cid) {\n            postMessage(['callback', cid, err, obj]);\n        }\n    }};\n    if (this._authorized || this._connected && !this._auth) {\n        this._sendCall(call);\n    } else {\n        this._callWait.push(call);\n    }\n};\n\nConnectionImpl.prototype.setVisual = function(state) {\n    this._visualState = state;\n    this.call(null, '_visual_', state);\n};\n\nConnectionImpl.prototype._sendFrame = function(frame) {\n    if (!this._socket) {\n        console.error('sendFrame to closed socket');\n        return;\n    }\n    frame.sentTs = Date.now();\n    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {\n        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;\n    }\n    this._socket.send(frame.write());\n};\n\nConnectionImpl.prototype._listen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'listen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_LISTENING;\n};\n\nConnectionImpl.prototype._stopListen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'stopListen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_OFF;\n};\n\nConnectionImpl.prototype._onAudioFormat = function(format) {\n    this._formatSent = false;\n    this._format = format;\n};\n\nConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {\n    if (this._alanState === ALAN_SPEAKING) {\n        return;\n    }\n    if (this._alanState === ALAN_OFF) {\n        this._listen();\n    }\n    if (this._alanState !== ALAN_LISTENING) {\n        console.error('invalid alan state: ' + this._alanState);\n        return;\n    }\n    this._sendFormatIfNeeded(true);\n    var f = alanFrame.create();\n    f.audioData = frame;\n    this._frameQueue.push(f);\n};\n\nConnectionImpl.prototype._sendFormatIfNeeded = function(inQueue) {\n    if (!this._format || this._formatSent) {\n        return;\n    }\n    this._formatSent = true;\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({format: this._format});\n    if (inQueue) {\n        this._frameQueue.push(f);\n    } else {\n        this._sendFrame(f);\n    }\n};\n\nConnectionImpl.prototype._flushQueue = function() {\n    if (!this._socket || !this._connected) {\n        var d = 0;\n        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {\n            this._frameQueue.shift();\n            d++;\n        }\n        if (d > 0) {\n            console.error('dropped: %s, frames', d);\n        }\n        return;\n    }\n    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {\n        this._sendFrame(this._frameQueue.shift());\n    }\n};\n\nfunction getConnectionDetails(url){\n    var urlParts = url.split('/');\n    var projectId = urlParts[4];\n    var environment = urlParts[5];\n    var host = urlParts[2];\n\n    if (projectId && environment && host) {\n        return ' (ProjectID: ' + projectId + ', environment: ' + environment + ', host: ' + host + ')';\n    }\n\n    return url;\n}\n\nfunction connectProject(config, auth, mode) {\n    var c = new ConnectionImpl(config, auth, mode);\n    c.onAudioEvent = function(event, arg1, arg2) {\n        if (event === 'format') {\n            c._onAudioFormat(arg1);\n        } else if (event === 'frame') {\n            c._onMicFrame(arg1, arg2);\n        } else if (event === 'micStop' || event === 'playStart') {\n            c._stopListen();\n        } else {\n            console.error('unknown audio event: ' + event, arg1, arg2);\n        }\n    };\n    return c;\n}\n\nvar factories = {\n    connectProject: connectProject,\n};\n\nvar currentConnect = null;\n\nonmessage = function(e) {\n    var name = e.data[0];\n    try {\n        if (!currentConnect) {\n            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));\n        } else {\n            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));\n        }\n    } catch(e) {\n        console.error('error calling: ' + name, e);\n    }\n};\n"]),{type: 'text/javascript'}));
+        this._worker = new Worker(window.URL.createObjectURL(new Blob(["(function(ns) {\n    'use strict';\n\n    var SENT_TS    = 1;\n    var REMOTE_TS  = 2;\n    var TIMESTAMP  = 3;\n    var AUDIO_DATA = 4;\n    var JSON_DATA  = 5;\n\n    AlanFrame.fields = [\n        propUint64(SENT_TS,   'sentTs'),\n        propUint64(REMOTE_TS, 'remoteTs'),\n        propUint64(TIMESTAMP, 'timestamp'),\n        propBytes(AUDIO_DATA, 'audioData'),\n        propJson(JSON_DATA,   'jsonData'),\n    ];\n\n    function AlanFrameProp(type, name, sizeF, readF, writeF) {\n        this.type   = type;\n        this.name   = name;\n        this.sizeF  = sizeF;\n        this.writeF = writeF;\n        this.readF  = readF;\n    }\n\n    function fixedSize(size) {\n        return function() {\n            return size;\n        }\n    }\n\n    function bufferSize(buffer) {\n        return 4 + byteLength(buffer);\n    }\n\n    function writeUIntN(uint8array, value, nBytes, offset) {\n        for (var i = 0; i < nBytes; i++ ) {\n            uint8array[offset + i] = 0xFF & value;\n            value /= 256;\n        }\n    }\n\n    function readUIntN(uint8array, nBytes, offset) {\n        var r = 0;\n        for (var i = nBytes - 1; i >= 0; i-- ) {\n            r *= 256;\n            r += 0xFF & uint8array[offset + i];\n        }\n        return r;\n    }\n\n    function writeUInt64(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 8, offset);\n    }\n\n    function readUInt64(uint8array, offset) {\n        return readUIntN(uint8array, 8, offset);\n    }\n\n    function writeUInt32(uint8array, value, offset) {\n        writeUIntN(uint8array, value, 4, offset);\n    }\n\n    function readUInt32(uint8array, offset) {\n        return readUIntN(uint8array, 4, offset);\n    }\n\n    function writeBuffer(uint8array, buffer, offset) {\n        buffer = toUint8(buffer);\n        writeUInt32(uint8array, buffer.length, offset);\n        for (var i = 0; i < buffer.length; i++ ) {\n            uint8array[offset + 4 + i] = buffer[i];\n        }\n    }\n\n    function readBuffer(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('buffer too big');\n        }\n        return uint8array.subarray(offset + 4, offset + 4 + size);\n    }\n\n    function readUTF8(uint8array, offset) {\n        var size = readUInt32(uint8array, offset);\n        if (size > 1024 * 1024) {\n            throw new Error('string too big');\n        }\n        return String.fromCharCode.apply(null, uint8array.slice(offset + 4, offset + 4 + size));\n    }\n\n    function writeUTF8(uint8array, string, offset) {\n        writeUInt32(uint8array, string.length, offset);\n        for (var i = 0; i < string.length; i++ ) {\n            uint8array[offset + 4 + i] = string.charCodeAt(i);\n        }\n    }\n\n    function sizeUTF8(string) {\n        return 4 + string.length;\n    }\n\n    function propUint32(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(4), readUInt32, writeUInt32);\n    }\n\n    function propUint64(type, name) {\n        return new AlanFrameProp(type, name, fixedSize(8), readUInt64, writeUInt64);\n    }\n\n    function propBytes(type, name) {\n        return new AlanFrameProp(type, name, bufferSize, readBuffer, writeBuffer);\n    }\n\n    function propJson(type, name) {\n        return new AlanFrameProp(type, name, sizeUTF8, readUTF8, writeUTF8);\n    }\n\n    AlanFrame.fieldByType = function(type) {\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var frame = AlanFrame.fields[i];\n            if (frame.type === type) {\n                return frame;\n            }\n        }\n        throw new Error('invalid field: ' + type);\n    };\n\n    function AlanFrame() {\n        this.version = 1;\n    }\n\n    AlanFrame.prototype.write = function() {\n        var result = new Uint8Array(this.writeSize());\n        var offset = 1;\n        result[0]  = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                result[offset++] = field.type;\n                field.writeF(result, value, offset);\n                offset += field.sizeF(value);\n            }\n        }\n        return result.buffer;\n    };\n\n    /**\n     * @returns UInt8Array\n     */\n    AlanFrame.prototype.writeSize = function() {\n        var size = 1;\n        for (var i = 0; i < AlanFrame.fields.length; i++ ) {\n            var field = AlanFrame.fields[i];\n            var value = this[field.name];\n            if (value) {\n                size += 1 + field.sizeF(value);\n            }\n        }\n        return size;\n    };\n\n    AlanFrame.prototype.toString = function() {\n        var first = true, str = '';\n        for (var k in this) {\n            if (this.hasOwnProperty(k)) {\n                if (first) {\n                    str += k + ' = ';\n                    first = false;\n                } else {\n                    str += ', ' + k + ' = ';\n                }\n                var v = this[k];\n                if (typeof(v) === 'object') {\n                    str += 'bytes[' + byteLength(v) + ']';\n                } else {\n                    str += v;\n                }\n            }\n        }\n        return str;\n    };\n\n    function byteLength(b) {\n        if (b instanceof Uint8Array) {\n            return b.length;\n        }\n        if (b instanceof ArrayBuffer) {\n            return b.byteLength;\n        }\n    }\n\n    function toArrayBuffer(buffer) {\n        if (buffer instanceof ArrayBuffer) {\n            return buffer;\n        }\n        return buffer.buffer;\n    }\n\n    function toUint8(buffer) {\n        if (buffer instanceof Uint8Array) {\n            return buffer;\n        }\n        if (buffer instanceof ArrayBuffer) {\n            return new Uint8Array(buffer);\n        }\n        throw new Error('invalid buffer type');\n    }\n\n    function parse(uint8array) {\n        uint8array = toUint8(uint8array);\n        var r = new AlanFrame();\n        var offset = 0;\n        r.version = uint8array[offset++];\n        while (offset < uint8array.length) {\n            var frame = AlanFrame.fieldByType(uint8array[offset++]);\n            r[frame.name] = frame.readF(uint8array, offset);\n            offset += frame.sizeF(r[frame.name]);\n        }\n        return r;\n    }\n\n    ns.create = function() {\n        return new AlanFrame();\n    };\n\n    ns.parse = parse;\n\n})(typeof(window)            !== 'undefined' ? (function() {window.alanFrame = {}; return window.alanFrame; })() :\n   typeof(WorkerGlobalScope) !== 'undefined' ? (function() {alanFrame = {}; return alanFrame; })() :\n   exports);\n\n\n'use strict';\n\n\n\nvar ALAN_OFF       = 'off';\nvar ALAN_SPEAKING  = 'speaking';\nvar ALAN_LISTENING = 'listening';\n\nfunction ConnectionImpl(config, auth, mode) {\n    var _this = this;\n    this._config = config;\n    this._auth = auth;\n    this._mode = mode;\n    this._projectId = config.projectId;\n    this._url = config.url;\n    this._connected = false;\n    this._authorized = false;\n    this._dialogId = null;\n    this._callId = 1;\n    this._callSent = {};\n    this._callWait = [];\n    this._failed = false;\n    this._closed = false;\n    this._reconnectTimeout = 100;\n    this._cleanups = [];\n    this._format = null;\n    this._formatSent = false;\n    this._frameQueue = [];\n    this._remoteSentTs = 0;\n    this._remoteRecvTs = 0;\n    this._rtt = 25;\n    this._rttAlpha = 1./16;\n    this._alanState = ALAN_OFF;\n    this._sendTimer = setInterval(_this._flushQueue.bind(_this), 50);\n    this._visualState = {};\n    this._addCleanup(function() {clearInterval(_this._sendTimer);});\n    this._connect();\n    console.log('Alan: connection created');\n}\n\nConnectionImpl.prototype._addCleanup = function(f) {\n    this._cleanups.push(f);\n};\n\nConnectionImpl.prototype._onConnectStatus = function(s) {\n    console.log('Alan: connection status - ' + s);\n    this._fire('connectStatus', s);\n};\n\nConnectionImpl.prototype._fire = function(event, object) {\n    if (event === 'options') {\n        if (object.versions) {\n            object.versions['alanbase:web'] = this._config.version;\n        }\n    }\n    postMessage(['fireEvent', event, object]);\n};\n\nConnectionImpl.prototype._connect = function() {\n    var _this = this;\n    if (this._socket) {\n        console.error('socket is already connected');\n        return;\n    }\n    console.log('Alan: connecting - ' + getConnectionDetails(this._url));\n    this._socket = new WebSocket(this._url);\n    this._socket.binaryType = 'arraybuffer';\n    this._socket.onopen = function(e) {\n        console.info('Alan: connected');\n        _this._connected = true;\n        _this._reconnectTimeout = 100;\n        _this._fire('connection', {status: 'connected'});\n        if (_this._auth) {\n            _this._fire('connection', {status: 'authorizing'});\n            _this._callAuth();\n        } else {\n            _this._callWait.forEach(function(c) {  _this._sendCall(c); });\n            _this._callWait = [];\n        }\n    };\n    this._socket.onmessage = function(msg) {\n        if (msg.data instanceof ArrayBuffer) {\n            var f = alanFrame.parse(msg.data);\n            if (f.sentTs > 0) {\n                _this._remoteSentTs = f.sentTs;\n                _this._remoteRecvTs = Date.now();\n            } else {\n                _this._remoteSentTs = null;\n                _this._remoteRecvTs = null;\n            }\n            var rtt = 0;\n            if (f.remoteTs) {\n                rtt = Date.now() - f.remoteTs;\n            }\n            _this._rtt = _this._rttAlpha * rtt  + (1 - _this._rttAlpha) * _this._rtt;\n            var uint8 = new Uint8Array(f.audioData);\n            var frame = [];\n            var batch = 10000;\n            for (var offset = 0; offset < uint8.byteLength; offset += batch) {\n                var b = uint8.subarray(offset, Math.min(uint8.byteLength, offset + batch));\n                let a = String.fromCharCode.apply(null, b);\n                frame.push(a);\n            }\n            frame = frame.join('');\n            postMessage(['alanAudio', 'playFrame', frame]);\n        } else if (typeof(msg.data) === 'string') {\n            msg = JSON.parse(msg.data);\n            if (msg.i) {\n                var c = _this._callSent[msg.i];\n                delete _this._callSent[msg.i];\n                if (c && c.callback) {\n                    c.callback(msg.e, msg.r);\n                }\n            } else if (msg.e) {\n                if (msg.e === 'text') {\n                    postMessage(['alanAudio', 'playText', msg.p]);\n                } else if (msg.e === 'afterText') {\n                    postMessage(['alanAudio', 'playAfterText', msg.p]);\n                } else if (msg.e === 'showPopup') {\n                    postMessage(['alanAudio', 'showPopup', msg.p]);\n                } else if (msg.e === 'command') {\n                    postMessage(['alanAudio', 'playCommand', msg.p]);\n                } else if (msg.e === 'inactivity') {\n                    postMessage(['alanAudio', 'stop']);\n                } else {\n                    _this._fire(msg.e, msg.p);\n                }\n            }\n        } else {\n            console.error('invalid message type');\n        }\n    };\n    this._socket.onerror = function(evt) {\n        console.error('Alan: connection closed due to error: ', evt);\n    };\n    this._socket.onclose = function(evt) {\n        console.info('Alan: connection closed');\n        _this._connected = false;\n        _this._authorized = false;\n        _this._socket = null;\n        _this._onConnectStatus('disconnected');\n        if (!_this._failed && _this._reconnectTimeout && !_this._closed) {\n            console.log('Alan: reconnecting in %s ms.', _this._reconnectTimeout);\n            _this._reConnect = setTimeout(_this._connect.bind(_this), _this._reconnectTimeout);\n            if (_this._reconnectTimeout < 3000) {\n                _this._reconnectTimeout *= 2;\n            } else {\n                _this._reconnectTimeout += 500;\n            }\n            _this._reconnectTimeout = Math.min(7000, _this._reconnectTimeout);\n        }\n    };\n    this._addCleanup(function() {\n        if (this._socket) {\n            this._socket.close();\n            this._socket = null;\n        }\n    });\n};\n\nConnectionImpl.prototype._callAuth = function() {\n    var _this = this;\n    var callback = function(err, r) {\n        if (!err && r.status === 'authorized') {\n            _this._authorized = true;\n            _this._formatSent = false;\n            if (r.dialogId) {\n                postMessage(['setDialogId', r.dialogId]);\n                _this._dialogId = r.dialogId;\n            }\n            _this._onAuthorized();\n            _this._onConnectStatus('authorized');\n        } else if (err === 'auth-failed') {\n            _this._onConnectStatus('auth-failed');\n            if (_this._socket) {\n                _this._socket.close();\n                _this._socket = null;\n                _this._failed = true;\n            }\n        } else {\n            _this._onConnectStatus('invalid-auth-response');\n            console.log('Alan: invalid auth response', err, r);\n        }\n    };\n    var authParam = this._auth;\n    authParam.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;\n    if (this._dialogId) {\n        authParam.dialogId = this._dialogId;\n    }\n    authParam.mode = this._mode;\n    this._sendCall({cid: this._callId++, method: '_auth_', callback: callback, param: authParam});\n    return this;\n};\n\nConnectionImpl.prototype._sendCall = function(call) {\n    this._sendFormatIfNeeded(false);\n    this._socket.send(JSON.stringify({i: call.cid, m: call.method, p: call.param}));\n    if (call.callback) {\n        this._callSent[call.cid] = call;\n    }\n};\n\nConnectionImpl.prototype._onAuthorized = function() {\n    var _this = this;\n    this._callWait.forEach(function(c) {\n        _this._sendCall(c);\n    });\n    this._callWait = [];\n};\n\nConnectionImpl.prototype.close = function() {\n    for (var i = 0; i < this._cleanups.length; i++ ) {\n        this._cleanups[i]();\n    }\n    this._cleanups = [];\n    this._closed = true;\n    \n    if (this._socket && (this._socket.readyState === WebSocket.OPEN || this._socket.readyState === WebSocket.CONNECTING)) {\n        this._socket.close();\n        this._socket = null;\n    }\n    console.log('Alan: closed connection to: ' + getConnectionDetails(this._url));\n    //close(); TODO: delete it!\n};\n\nConnectionImpl.prototype.call = function(cid, method, param) {\n    var call = {cid: cid, method: method, param: param, callback: function(err, obj) {\n        if (cid) {\n            postMessage(['callback', cid, err, obj]);\n        }\n    }};\n    if (this._authorized || this._connected && !this._auth) {\n        this._sendCall(call);\n    } else {\n        this._callWait.push(call);\n    }\n};\n\nConnectionImpl.prototype.setVisual = function(state) {\n    this._visualState = state;\n    this.call(null, '_visual_', state);\n};\n\nConnectionImpl.prototype._sendFrame = function(frame) {\n    if (!this._socket) {\n        console.error('sendFrame to closed socket');\n        return;\n    }\n    frame.sentTs = Date.now();\n    if (this._remoteSentTs > 0 && this._remoteRecvTs > 0) {\n        frame.remoteTs = this._remoteSentTs + Date.now() - this._remoteRecvTs;\n    }\n    this._socket.send(frame.write());\n};\n\nConnectionImpl.prototype._listen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'listen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_LISTENING;\n};\n\nConnectionImpl.prototype._stopListen = function() {\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({signal: 'stopListen'});\n    this._frameQueue.push(f);\n    this._alanState = ALAN_OFF;\n};\n\nConnectionImpl.prototype._onAudioFormat = function(format) {\n    this._formatSent = false;\n    this._format = format;\n};\n\nConnectionImpl.prototype._onMicFrame = function(sampleRate, frame) {\n    if (this._alanState === ALAN_SPEAKING) {\n        return;\n    }\n    if (this._alanState === ALAN_OFF) {\n        this._listen();\n    }\n    if (this._alanState !== ALAN_LISTENING) {\n        console.error('invalid alan state: ' + this._alanState);\n        return;\n    }\n    this._sendFormatIfNeeded(true);\n    var f = alanFrame.create();\n    f.audioData = frame;\n    this._frameQueue.push(f);\n};\n\nConnectionImpl.prototype._sendFormatIfNeeded = function(inQueue) {\n    if (!this._format || this._formatSent) {\n        return;\n    }\n    this._formatSent = true;\n    var f = alanFrame.create();\n    f.jsonData = JSON.stringify({format: this._format});\n    if (inQueue) {\n        this._frameQueue.push(f);\n    } else {\n        this._sendFrame(f);\n    }\n};\n\nConnectionImpl.prototype._flushQueue = function() {\n    if (!this._socket || !this._connected) {\n        var d = 0;\n        while (this._frameQueue.length > 100 && !this._frameQueue[0].jsonData) {\n            this._frameQueue.shift();\n            d++;\n        }\n        if (d > 0) {\n            console.error('dropped: %s, frames', d);\n        }\n        return;\n    }\n    while (this._frameQueue.length > 0 && this._socket && this._socket.bufferedAmount < 64 * 1024) {\n        this._sendFrame(this._frameQueue.shift());\n    }\n};\n\nfunction getConnectionDetails(url){\n    var urlParts = url.split('/');\n    var projectId = urlParts[4];\n    var environment = urlParts[5];\n    var host = urlParts[2];\n\n    if (projectId && environment && host) {\n        return ' (ProjectID: ' + projectId + ', environment: ' + environment + ', host: ' + host + ')';\n    }\n\n    return url;\n}\n\nfunction connectProject(config, auth, mode) {\n    var c = new ConnectionImpl(config, auth, mode);\n    c.onAudioEvent = function(event, arg1, arg2) {\n        if (event === 'format') {\n            c._onAudioFormat(arg1);\n        } else if (event === 'frame') {\n            c._onMicFrame(arg1, arg2);\n        } else if (event === 'micStop' || event === 'playStart') {\n            c._stopListen();\n        } else {\n            console.error('unknown audio event: ' + event, arg1, arg2);\n        }\n    };\n    return c;\n}\n\nvar factories = {\n    connectProject: connectProject,\n};\n\nvar currentConnect = null;\n\nonmessage = function(e) {\n    var name = e.data[0];\n    try {\n        if (!currentConnect) {\n            currentConnect = factories[name].apply(null, e.data.slice(1, e.data.length));\n        } else {\n            currentConnect[name].apply(currentConnect, e.data.slice(1, e.data.length));\n        }\n    } catch(e) {\n        console.error('error calling: ' + name, e);\n    }\n};\n"]),{type: 'text/javascript'}));
         this._worker.onmessage = function(e) {
             if (e.data[0] === 'fireEvent') {
                 _this._fire(e.data[1], e.data[2]);
@@ -217,6 +217,10 @@
             if (e.data[0] === 'alanAudio') {
                 if (e.data[1] === 'playText') {
                     alanAudio.playText(e.data[2]);
+                    return;
+                }
+                if (e.data[1] === 'playAfterText') {
+                    alanAudio.playAfterText(e.data[2]);
                     return;
                 }
                 if (e.data[1] === 'playAudio' || e.data[1] === 'playFrame') {
@@ -656,6 +660,8 @@
                 fireEvent('command', o.event);
             } else if (o.text) {
                 fireEvent('text', o.text);
+            } else if (o.afterText) {
+                fireEvent('afterText', o.afterText);
             } else if (o.popup) {
                 fireEvent('popup', o.popup);
             } else if (o.audio) {
@@ -708,9 +714,21 @@
         return playState === PLAY_ACTIVE;
     };
 
-    ns.playText = function(text) {
+    ns.playText = function (text) {
+        if (text && text.ctx && text.ctx.opts && text.ctx.opts.force === true) {
+            fireEvent('text', text);
+        } else {
+            audioContext.resume().then(() => {
+                audioQueue.push({ text: text });
+                _handleQueue();
+            });
+        }
+    };
+
+    ns.playAfterText = function(afterText) {
         audioContext.resume().then(()=> {
-            audioQueue.push({text: text});
+
+            audioQueue.push({afterText: afterText});
             _handleQueue();
         });
     };
@@ -844,9 +862,56 @@
 
 })(typeof(window) !== 'undefined' ? (function() {window.alanAudio = {}; return window.alanAudio})() : exports);
 
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 /// <reference types="../global" />
 (function (ns) {
-    var alanButtonVersion = '1.8.42';
+    var alanButtonVersion = '1.8.43';
     if (window.alanBtn) {
         console.warn('Alan: the Alan Button source code has already added (v.' + alanButtonVersion + ')');
     }
@@ -855,6 +920,11 @@
     var deviceId;
     var firstClick = null;
     var btnInstance;
+    var textChatIsHidden = true;
+    var textChatIsAvailable = false;
+    var voiceEnabledInTextChat = true;
+    var textChatMessages = [];
+    var textChatOptions = null;
     // Define base properties for disable/enable button functionality
     var isLocalStorageAvailable = false;
     try {
@@ -909,7 +979,7 @@
     })(AlanButtonTextMessageType || (AlanButtonTextMessageType = {}));
     function alanBtn(options) {
         options = options || {};
-        var btnDisabled = false;
+        var btnDisabled = true;
         var hideS2TPanel = false;
         var popupEnabled = true;
         var pinned = false;
@@ -917,7 +987,6 @@
         var micWasStoppedByTimeout = false;
         var keepButtonPositionAfterDnD = false;
         var dragAndDropEnabled = true;
-        // Btn modes
         var mode;
         if (options.mode === 'tutor') {
             mode = 'tutor';
@@ -986,16 +1055,13 @@
                 return activateAlanButton();
             },
             deactivate: function () {
-                if (btnDisabled) {
-                    return;
-                }
-                alanAudio.stop();
+                deactivateAlanButton();
             },
             isActive: function () {
                 return isAlanActive;
             },
             sendText: function (text) {
-                window.tutorProject.call('text', { text: text });
+                _sendText(text);
             },
             //deprecated
             callClientApi: function (method, data, callback) {
@@ -1034,6 +1100,7 @@
                 window.tutorProject.off('text', onTextCbInMicBtn);
                 window.tutorProject.off('parsed', onParsedCbInMicBtn);
                 alanAudio.off('command', onCommandCbInMicBtn);
+                alanAudio.off('afterText', onAfterTextCbInMicBtn);
                 rootEl.innerHTML = '';
                 btnInstance = null;
                 if (!isTutorMode()) {
@@ -1162,6 +1229,7 @@
             pulsatingMicAnimation = 'alan-mic-pulsating 1.4s ease-in-out infinite';
             pulsatingTriangleMicAnimation = 'alan-triangle-mic-pulsating 1.2s ease-in-out infinite';
         }
+        var pulsatingAnimationForMicBtnInTextChat = 'alan-text-chat-pulsating 2s ease-in-out infinite';
         var gradientAnimation = 'alan-gradient 3s ease-in-out infinite';
         var disconnectedLoaderAnimation = 'disconnected-loader-animation 2s linear infinite';
         // Set alanAudio
@@ -1171,9 +1239,15 @@
         var body = document.getElementsByTagName('body')[0];
         var btn = document.createElement('div');
         var micIconSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==';
+        var alanLogoIconSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2ctAAAAAXNSR0IArs4c6QAACw9JREFUeAHtnWusHVUVx1t5CVatj8rDB20pPgBJQbAmGJIStLFJRW1DWiXaVKG8Ykz0g4lRI6mPL34yihg0BD9IMDGgQaNJtSIGEilig2hViBaoiFUQRVGR+vvTc5vL7bln9pmzXzPnv5Lde87MmrX2/u01a/bM3me6YIHFBEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABEzABHIRWJjLUU1+9u/f/1zqs5KylLKYcgTl5ZRVlOdTcsl+HD1E+RHluoULF/4tl+Na/ExdABJ8i4C/jjIs0A5j+5spr6HkFgXiVoLw4dyOS/p7TknnhXyvxu+w4FN1/ke5lfKAvmQWZeCrMvss7m6qApDstwzixzdQ12VxO+XpBr0Uu8+kjjpBpkamJgDpWA03zgrs2f+gd3ugbmy1y6jr1PTL1DSUKDmZ8qIxomU3uk+NoR9LdTmG1sYyVrudqQjAQUZ5w5idoeD7yZjHxFK/hDofHstYzXamIgDpgNdR5rvxGNU/97Pz36MUEu07AbvrE9muymzvA3CQSc5oSV13xTtaHjvpYVuou55X9lp6H4D03mmUYyboRT2S+ccEx7c99CUcuKntwV05rtcBSAY5ko7QjMckoscxOyYxMMGx76UNbYYOE7jMe2ivAxCUCj4F4aSyFwOPTmqkxfEKvve1OK4zh/Q2AMkcR9MLuvzGkh/HMjSmnY20RZfjXkpvA5DeOpMS81HGI9j7U4Eo0I3I+wv4zeKylwE4GDfp0UtsKfVc8F20qWkKMXZbs9jrZQBCTg+dU7RN40DdFecWZfKtuZ3m8Jeik3LUe14fZAqt79O0WwrRQoWfpjAcYHMtbVsaoNcpld4FIPTPpmjhQSp5HMP3pTI+wq766ooR+zu5q1cBSIZYQi8sy9ATd2TwMczFatqYYmw7zFeWbb0KQIgp++WQJ3DyyxyOhvi4csi2zm7qTQCSGTSB/4qMPbEzo6/ZrlbRVt1k9UJ6E4D0Rq7sN9PxT/Lhrpkvmf/2ZizYiwAkI5xIABybOQjkbhdFd8a55XTafG5upyn8dT4A6Qjd8ebOfjN9cS8fvjfzJfPfywdtz+w2rrvOByA4TqK8OC6WIGvKfBoHfoVSYun+CvyuoXRaOh2AZADVP/SHRrE7ard+SE55EMM3xTYeaO9SGMSc7w50G0+t0wEIBv2A/AXxcARb0hrB2Tcg1/K9xNJ93fVfEFzrChU7G4CDM7/U44h7yXwHV0nzeR99e0Oh/v0ALI4q5Htit50NQFp+CmWSpfZt4Wm8d/eQg69n28GgHLI/1aYlGL4wlfHUdjsZgJzxWuXc9odGkzK9h4z3z7lG2KYXC3197vZM3zfDZFEmX1HddDIAIXA6pcRlR29M+MWIHvgG+0os3X8hfi8aUa9qd3UuADnTtUL49YWI7iLTzXuzMciMXy1Ut3fDRkvROiWdC0Do6tJ7RAHKmnq7J8Dvt9B5OEAvtorGw1tiG01tr1MBOBjn6OajhNxNhtMleKQMdPRwuoRsgFGJKcnWbe1UANJK/dDosNatbX+gbjo07RYqt6D4h1DliHq6Obs4or3kpjoTgJzZGmjrwXMJuYvMpscvQYKuXulxdZByfKV1sHpVfLNpLHYmAGm+ptxSLrWfj7Ce7f16vp0jtm9vedwIk0G7dIW4LEizAqVOBCBntH6YrUUHJeROMpqm3sYSjtFihS+OdVA85bfArNTVYqxWdCIAaVGp5VaP4ft3YxGdpUwQ3s7Xn8/alPPj5TmdtfVVfQByJh9H40qNaXa2yX5zOqNUFjwHdivn1KW6r9UHIMTeWIjaX/B7/6S+CWDNG982qZ2Wx1e/dL/qAOQMfiXglQFLiMZ+sZbbf6lEA/B5BgzPKeQ7yG21AQi4kkvtHyH4oj3Hw9Zv6I3vB/VIfCW9db/E04OgllQbgNR+GeWlQa2Ir/Sz+CYXXINNPR/MLa/F4fm5nYb6qzIAOWNVr1J3vnvJWA+FAgzVw+YedL8dqh9ZT0v3S8wgNTajygCk1q+maOajhKTIfjPtuJYPjfPJM8oR/56IrXUR7UUzVV0ADs5UzfmWkD1kqmQvoRzYvrFEw/CppfuaK65KqgtA6Gi1S6nVvXdm6J3r8KHFDblFTxM25Hba5K+quyPOUK3z20RZQtENiBaf5qqjFpr+kTKO6DGNluJrmX5w8NLOSzhGJbc8isMLqGuJE2BoW3N17lDnczfSMeex7fOU6p/gz6073zXl9h4691dD9j1rE+18Hhtupix+1o48X75MHTUWrUKqCUA6RTcd6sRlVZBpV4k9HLaSDlamGSm09yIUPjRSKc1Ore5RFlTmLi41jQE/Bo0uB586U3PWH9eHAPkmOn8O0IutovH15thG29qrIgOSDY6nAfdRjm7bkIqO01jyZDLMA011ot3vREcnXm5RHZUF9+V2PNdfLRnwE1SsD8EnvkdRPqkPAfIddPRumdyiOlaxdL94BiQLLAeGVhzrDrgvoim3U8kwu5saRPvXoPPpJr0E+5/C5gbqWOIEONicGjLgVdSmT8EnuJr22qYPAfIDdH4boBdb5XAMXhrb6Lj2igYgZ/9pVHjTuJXuiP562tf48iQykJ4lllq0uoY6rijJs2gA0nBdekrXIRV/DW8+G2KcILwNvV0hupF1VMeiS/eLdT5n3ioa//bIQGszpx8HrQ6sVKkseC511JWoiBQLQFr7mSItzu80NAvupGp35K/eMx6vLOS3zOWPM+58GnxeqUZn9qv/1+MdgT5LZcGzqKOuSNmlVAacluw306Hb6OBG1owFNY+8feagzH+vyOzvGXeNUGJXio7Q0/+zY9ut3N6p1E9zvyFyNUpPhyhG1jmFvgkdr0ZznTUAB1lgW7Tad8vQp2j/kU1VJgv+Hp1bmvQS7df/PZI1JrI6A5qygBacTqMspdFbAxt+DXqaqcgty3C4NqdTPQfKIoOzX1NuauS0ipb7n0SWe6IJALw+gs7GJr0E+/dicz11/G8C24eYzJkBL8b7NAef4B9LCV0D+DV0n9RBmeUE/GmcnkWyZEDO5mNojZZbHZelVXU70ULQ5WSYvzZVE26apdjSpJdgv15LouVayU+AXBnwgzTIwXcgUrTy+6MHPjb+ez0af2/Uiq+g1+FtjG/2UIvJMyBnsYJcYx/9yMhygMC/+PMyMoyWx48U+G1GocRMxWP4fSt1TPpIKEcG1F2vgw8Is0SLb9806/uojzewc98ohUT7FmN3eSLbB83mCECdSZZDCWic1SiDcVipt2slv/wnD0AAPgjlmxpJT5fCrXDRLwCDBF29U+bmIOV4Sjvwq6FTUkk+BlTtGccs4s/nKOsp03wzomds36V8mM59nL9jCRzfxgEXUlZQdBlPIcrMP6R8gTpW8wP2FA21TRMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARPoC4H/A+Gj/yJlPcQaAAAAAElFTkSuQmCC';
         var roundedTriangleSecondLayerSrc = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n';
         var circleSecondLayerSrc = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n';
         var micIconDiv = document.createElement('div');
+        var unreadChatMsgCount = 0;
+        var chatHolderDiv = document.createElement('div');
+        var chatNotificationsBubble = document.createElement('div');
+        chatNotificationsBubble.id = 'chat-notifications-bubble';
+        chatNotificationsBubble.classList.add('alan-btn__chat-notifications-bubble');
         var defaultStateBtnIconImg = document.createElement('img');
         var listenStateBtnIconImg = document.createElement('img');
         var processStateBtnIconImg = document.createElement('img');
@@ -1266,9 +1340,6 @@
             }
             return NO_VOICE_SUPPORT;
         }
-        //#endregion
-        //#region Define settings based on the btn mode
-        // For now we have two modes: small - for tutor, and big for demo
         var btnModes = {
             "tutor": {
                 btnSize: 44,
@@ -1332,6 +1403,7 @@
         recognisedTextContent.classList.add('alanBtn-recognised-text-content');
         recognisedTextHolder.classList.add('alanBtn-recognised-text-holder');
         setTextPanelPosition(recognisedTextHolder);
+        setTextChatPosition(chatHolderDiv);
         function setButtonPosition(keepBtnPosition) {
             var _savedBtnPosition = keepBtnPosition ? getSavedBtnPosition() : null;
             if (_savedBtnPosition) {
@@ -1377,6 +1449,70 @@
                 rootEl.style.bottom = bottomBtnPos;
                 rootEl.style.setProperty('top', '');
             }
+        }
+        function setTextChatPosition(el, topPos) {
+            if (textChatIsHidden) {
+                return;
+            }
+            el.style.zIndex = btnZIndex + 2;
+            if (isMobile()) {
+                return;
+            }
+            setTimeout(function () {
+                var _a, _b;
+                var defaultMargin = 12;
+                var chatHeight = el.clientHeight;
+                if (isLeftAligned) {
+                    el.style.right = '';
+                    el.style.left = defaultMargin + 'px';
+                }
+                else {
+                    el.style.left = '';
+                    el.style.right = defaultMargin + 'px';
+                }
+                var btnTopPos = (_a = rootEl.getBoundingClientRect()) === null || _a === void 0 ? void 0 : _a.top;
+                var btnBottomPos = (_b = rootEl.getBoundingClientRect()) === null || _b === void 0 ? void 0 : _b.bottom;
+                var isTopPartOfTheScreen = btnTopPos < window.innerHeight / 2;
+                var newTopPos = 0;
+                var newBottomPos = 0;
+                if (isTopPartOfTheScreen) {
+                    if (defaultMargin + chatHeight > btnBottomPos) { // popup can cover the btn
+                        newTopPos = defaultMargin;
+                    }
+                    else {
+                        newTopPos = btnBottomPos - chatHeight + defaultMargin;
+                    }
+                    if (chatHeight >= window.innerHeight) {
+                        newTopPos = 0;
+                    }
+                }
+                else {
+                    if (defaultMargin + chatHeight > window.innerHeight - btnTopPos) { // popup can cover the btn
+                        newBottomPos = defaultMargin;
+                    }
+                    else {
+                        newBottomPos = window.innerHeight - btnBottomPos - defaultMargin;
+                    }
+                    if (chatHeight >= window.innerHeight) {
+                        newBottomPos = 0;
+                    }
+                }
+                if (isTopPartOfTheScreen) {
+                    el.style.bottom = '';
+                    el.style.top = newTopPos + 'px';
+                }
+                else {
+                    el.style.top = '';
+                    el.style.bottom = newBottomPos + 'px';
+                }
+                el.style.display = 'flex';
+                setTimeout(function () {
+                    var textareaEl = document.getElementById('chatTextarea');
+                    if (textareaEl) {
+                        textareaEl.focus();
+                    }
+                }, 0);
+            }, 0);
         }
         function setTextPanelPosition(el, topPos) {
             var _btnSize = parseInt(btnSize, 10);
@@ -1425,7 +1561,9 @@
                 recognisedTextHolder.classList.add('alan-btn-lib__left-side');
             }
         }
-        function applyBtnSizeOptions(size) {
+        function changeBtnSize(size) {
+            if (!size)
+                return;
             btnSize = size;
             btn.style.width = size + 'px';
             btn.style.minWidth = size + 'px';
@@ -1439,11 +1577,15 @@
             rootEl.style.minHeight = size + 'px';
             rootEl.style.height = size + 'px';
             rootEl.style.maxHeight = size + 'px';
+        }
+        function applyBtnSizeOptions(size) {
+            changeBtnSize(size);
             if (isMobile()) {
                 recognisedTextHolder.style.maxWidth = 'calc(100vw - ' + (parseInt(sideBtnPos, 10) + parseInt(btnSize, 10) + 20) + 'px)';
             }
             applySizeSettingsToBlurLayers([btnOval1, btnOval2]);
             setTextPanelPosition(recognisedTextHolder);
+            setTextChatPosition(chatHolderDiv);
         }
         // Define base styles for btn
         btn.style.color = '#fff';
@@ -1670,6 +1812,19 @@
                         'rgb(122, 40, 255)'
                     ]
                 }
+            },
+            "textChat": {
+                "background": {
+                    "color": ["#1eb6e5", "#1995ff"],
+                    "angle": 45
+                },
+                "hover": {
+                    "color": ["#1ba3ce", "#1686e5"],
+                    "angle": 45
+                },
+                "shadow": {
+                    "color": ["#6693bc", "#b3c9de"]
+                }
             }
         };
         btnOval1.style.transform = 'rotate(-315deg)';
@@ -1760,7 +1915,9 @@
         function getStyleSheetMarker(andFlag) {
             return '.alan-' + getProjectId() + (andFlag ? '' : ' ');
         }
-        function createAlanStyleSheet(btnOptions) {
+        function createAlanStyleSheet(webOptions) {
+            var _a;
+            var _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, _65, _66, _67;
             var style;
             var keyFrames = '';
             var projectId = getProjectId();
@@ -1808,6 +1965,66 @@
             keyFrames += getStyleSheetMarker() + '.alan-overlay-for-alert {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
             keyFrames += getStyleSheetMarker() + '.alan-alert-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:12px;padding-right:24px;text-align: center;width: 220px;background: rgb(255 255 255);position: fixed;left: 50%;transform: translateX(-50%);top: 10%;    color: #000;font-size: 14px;line-height: 18px;}';
             keyFrames += getStyleSheetMarker() + '.alan-alert-popup__close-btn {background:url("' + popupCloseIconImgBase64 + '") no-repeat center;cursor:pointer; background-size:100% 100%;position: absolute;top: 12px;right: 12px;width: 14px;height: 14px;}';
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder {\n                position: fixed;\n                height:  ".concat(((_d = (_c = (_b = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _b === void 0 ? void 0 : _b.textChat) === null || _c === void 0 ? void 0 : _c.popup) === null || _d === void 0 ? void 0 : _d.height) || "100", "%;\n                min-height: ").concat(((_g = (_f = (_e = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _e === void 0 ? void 0 : _e.textChat) === null || _f === void 0 ? void 0 : _f.popup) === null || _g === void 0 ? void 0 : _g.minHeight) || "400", "px;\n                max-height: ").concat(((_k = (_j = (_h = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _h === void 0 ? void 0 : _h.textChat) === null || _j === void 0 ? void 0 : _j.popup) === null || _k === void 0 ? void 0 : _k.maxHeight) || "1200", "px;\n                width: 346px;\n                min-width: 346px;\n                max-width: 346px;\n                display: none;\n            }");
+            keyFrames += '.mobile' + getStyleSheetMarker() + ".alan-btn__chat-holder {\n                position: fixed; \n                height: 100%;\n                min-height: 100%;\n                max-height: 100%;\n                width: 100vw;\n                min-width: 100vw;\n                max-width: 100vw;\n                display: none;\n                top: 0;\n                bottom:0;\n                left:0;\n                right:0;\n                border-radius: 0px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat {\n                height: 100%;\n                position: relative;\n                overflow: hidden;\n                display: flex;\n                width: 100%;\n                min-width: 100%;\n                max-width: 100%;\n                flex: 2;\n                position: relative;\n                flex-direction: column;\n                background-color: ".concat(((_o = (_m = (_l = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _l === void 0 ? void 0 : _l.textChat) === null || _m === void 0 ? void 0 : _m.popup) === null || _o === void 0 ? void 0 : _o.backgroundColor) || "#FFFFFF", ";\n                box-shadow: 0px 5px 44px rgba(0, 0, 0, 0.15);\n                border-radius: 8px;\n            }");
+            keyFrames += '.mobile' + getStyleSheetMarker() + ".alan-btn__chat {\n                border-radius: 0px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea-holder {\n                width: 100%;\n                height: 76px;\n                max-height: 76px;\n                min-height: 76px;\n                box-shadow: 0px 5px 44px rgba(0, 0, 0, 0.15);\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-empty-block {\n                flex: 1 1 auto;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages {\n                width: 100%;\n                height: calc(100% - 136px);\n                max-height: calc(100% - 136px);\n                min-height: calc(100% - 136px);\n                overflow-y: scroll;\n                overflow-x: hidden;\n                padding: 20px 12px;\n                display: flex;\n                flex-shrink: 0;\n                flex-direction: column;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header {\n                width: 100%;\n                height: 60px;\n                max-height: 60px;\n                min-height: 60px;\n                line-height: 60px;\n                box-shadow: 0px 5px 44px rgb(0 0 0 / 15%);\n                color: #0f2029;\n                padding: 0px 12px;\n                font-size: ".concat(((_r = (_q = (_p = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _p === void 0 ? void 0 : _p.textChat) === null || _q === void 0 ? void 0 : _q.header) === null || _r === void 0 ? void 0 : _r.fontSize) || 20, "px;\n                background-color: ").concat(((_u = (_t = (_s = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _s === void 0 ? void 0 : _s.textChat) === null || _t === void 0 ? void 0 : _t.header) === null || _u === void 0 ? void 0 : _u.backgroundColor) || "#FFFFFF", ";\n                color: ").concat(((_x = (_w = (_v = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _v === void 0 ? void 0 : _v.textChat) === null || _w === void 0 ? void 0 : _w.header) === null || _x === void 0 ? void 0 : _x.color) || "#000000", ";\n                overflow: hidden;\n                text-overflow: ellipsis;\n                white-space: nowrap;\n                padding-right: 24px;\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn {\n                position: absolute;\n                right: 12px;\n                top: 0;\n                height: 60px;\n                display: flex;\n                align-items: center;\n                cursor: pointer;\n                pointer-events: all;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn svg path {\n                fill: ".concat(((_2 = (_1 = (_0 = (_z = (_y = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _y === void 0 ? void 0 : _y.textChat) === null || _z === void 0 ? void 0 : _z.popup) === null || _0 === void 0 ? void 0 : _0.icons) === null || _1 === void 0 ? void 0 : _1["default"]) === null || _2 === void 0 ? void 0 : _2.fill) || "#C8C8CC", ";\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn:hover svg path {\n                fill: ".concat(((_7 = (_6 = (_5 = (_4 = (_3 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _3 === void 0 ? void 0 : _3.textChat) === null || _4 === void 0 ? void 0 : _4.popup) === null || _5 === void 0 ? void 0 : _5.icons) === null || _6 === void 0 ? void 0 : _6.hover) === null || _7 === void 0 ? void 0 : _7.fill) || "#007AFF", ";\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar {\n                width: 6px;\n                height: 6px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar-thumb {\n                border-radius: 3px;\n                background-color: rgba(224, 224, 224, 0.795);\n                transition: background-color 300ms ease-in-out;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar-thumb:hover {\n                background-color: rgba(230, 230, 230, 0.856);\n                transition: background-color 300ms ease-in-out;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar-track {\n                border-radius: 3px;\n                background: transparent;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea {\n                position: absolute;\n                left: 8px;\n                bottom: 8px;\n                width: calc(100% - 16px);\n                border-radius: 6px;\n                border: 1px solid #C8C8CC;\n                background: #fff;\n                overflow-y: auto;\n                outline: none;\n                resize: none;\n                font-size: 13px;\n                line-height: 1.25;\n                text-align: left;\n                color: #0f2029;\n                padding: 12px 48px 12px 12px;\n                -webkit-user-select: text;\n                -khtml-user-select: text;\n                -moz-user-select: text;\n                -ms-user-select: text;\n                user-select: text;\n                transition: opacity 300ms ease-in-out;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-text-chat__voice-enabled .alan-btn__chat-send-btn {\n                right: 56px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-text-chat__voice-enabled .alan-btn__chat-textarea {\n                padding: 12px 92px 12px 12px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat.active .alan-btn__chat-textarea {\n                opacity: 0.2;\n                transition: opacity 300ms ease-in-out;\n                pointer-events: none;\n                -webkit-touch-callout: none;\n                -webkit-user-select: none;\n                -khtml-user-select: none;\n                -moz-user-select: none;\n                -ms-user-select: none;\n                user-select: none;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat.active .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn {\n                position: absolute;\n                transition: opacity 300ms ease-in-out;\n                right: 12px;\n                bottom: 16px;\n                min-width: 40px;\n                width: 40px;\n                max-width: 40px;\n                height: 40px;\n                max-height: 40px;\n                min-height: 40px;\n                display: flex;\n                flex-direction: row;\n                cursor: pointer;\n                justify-content: center;\n                align-items: center;\n                border-radius: 50%;\n                -webkit-touch-callout: none; /* iOS Safari */\n                -webkit-user-select: none; /* Chrome/Safari/Opera */\n                -khtml-user-select: none; /* Konqueror */\n                -moz-user-select: none; /* Firefox */\n                -ms-user-select: none; /* IE/Edge */\n                user-select: none;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg {\n                width: 22px;\n                position: relative;\n                left: 2px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg path {\n                fill: ".concat(((_12 = (_11 = (_10 = (_9 = (_8 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _8 === void 0 ? void 0 : _8.textChat) === null || _9 === void 0 ? void 0 : _9.popup) === null || _10 === void 0 ? void 0 : _10.icons) === null || _11 === void 0 ? void 0 : _11["default"]) === null || _12 === void 0 ? void 0 : _12.fill) || "#C8C8CC", ";\n            }");
+            if (!isMobile()) {
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn:hover svg path {\n                    fill: ".concat(((_17 = (_16 = (_15 = (_14 = (_13 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _13 === void 0 ? void 0 : _13.textChat) === null || _14 === void 0 ? void 0 : _14.popup) === null || _15 === void 0 ? void 0 : _15.icons) === null || _16 === void 0 ? void 0 : _16.hover) === null || _17 === void 0 ? void 0 : _17.fill) || "#007AFF", ";\n                }");
+            }
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn {\n                position: absolute;\n                right: 12px;\n                bottom: 16px;\n                min-width: 40px;\n                width: 40px;\n                max-width: 40px;\n                height: 40px;\n                max-height: 40px;\n                min-height: 40px;\n                display: flex;\n                flex-direction: row;\n                cursor: pointer;\n                justify-content: center;\n                align-items: center;\n                border-radius: 50%;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active::before {\n                content: '';\n                position: absolute;\n                z-index: -1;\n                left: 0;\n                top: 0;\n                height: 100%;\n                width: 100%;\n                background-color:  ".concat(((_22 = (_21 = (_20 = (_19 = (_18 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _18 === void 0 ? void 0 : _18.textChat) === null || _19 === void 0 ? void 0 : _19.popup) === null || _20 === void 0 ? void 0 : _20.icons) === null || _21 === void 0 ? void 0 : _21["default"]) === null || _22 === void 0 ? void 0 : _22.fill) || "#C8C8CC", ";\n                opacity: 0.3;\n                border-radius: 50%;\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-notifications-bubble {\n                position: absolute;\n                right: 4px;\n                top: -4px;\n                height: 20px;\n                width: 20px;\n                background-color:  ".concat(((_25 = (_24 = (_23 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _23 === void 0 ? void 0 : _23.textChat) === null || _24 === void 0 ? void 0 : _24.notifications) === null || _25 === void 0 ? void 0 : _25.backgroundColor) || "rgba(208, 2, 27, 1)", ";\n                color:  ").concat(((_28 = (_27 = (_26 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _26 === void 0 ? void 0 : _26.textChat) === null || _27 === void 0 ? void 0 : _27.notifications) === null || _28 === void 0 ? void 0 : _28.color) || "rgba(255, 255, 255, 1)", ";\n                border-radius: 50%;\n                z-index: ").concat(btnZIndex + 1, ";\n                display: flex;\n                flex-direction: column;\n                align-items: center;\n                justify-content: center;\n                font-size: 10px;\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-notifications-bubble:empty {\n                display: none;\n            }";
+            if (!isMobile()) {
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active:hover::before {\n                opacity: 0.35;\n            }";
+            }
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn svg {\n                width: 22px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn svg path {\n                fill: ".concat(((_33 = (_32 = (_31 = (_30 = (_29 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _29 === void 0 ? void 0 : _29.textChat) === null || _30 === void 0 ? void 0 : _30.popup) === null || _31 === void 0 ? void 0 : _31.icons) === null || _32 === void 0 ? void 0 : _32["default"]) === null || _33 === void 0 ? void 0 : _33.fill) || "#C8C8CC", ";\n            }");
+            if (!isMobile()) {
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn:hover svg path {\n                fill: ".concat(((_38 = (_37 = (_36 = (_35 = (_34 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _34 === void 0 ? void 0 : _34.textChat) === null || _35 === void 0 ? void 0 : _35.popup) === null || _36 === void 0 ? void 0 : _36.icons) === null || _37 === void 0 ? void 0 : _37.hover) === null || _38 === void 0 ? void 0 : _38.fill) || "#007AFF", ";\n            }");
+            }
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__animated-btn-bars {\n                height:40px;\n                width:40px;\n                border-radius: 50%;\n                justify-content: center;\n                align-items: center;\n                background: ".concat(((_43 = (_42 = (_41 = (_40 = (_39 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _39 === void 0 ? void 0 : _39.textChat) === null || _40 === void 0 ? void 0 : _40.popup) === null || _41 === void 0 ? void 0 : _41.icons) === null || _42 === void 0 ? void 0 : _42.hover) === null || _43 === void 0 ? void 0 : _43.fill) || "#007AFF", ";\n                display:none;\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active .alan-text-chat__animated-btn-bars  {\n                display: flex;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active svg  {\n                display: none;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar {\n                background: #ffffff;\n                bottom: 1px;\n                height: 3px;\n                width: 2px;\n                margin: 0px 1px;\n                border-radius: 5px;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-1 {\n                animation: alan-btn__sound-bar-1 0ms -1200ms linear infinite alternate;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-2 {\n                animation: alan-btn__sound-bar-2 0ms -1200ms linear infinite alternate;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-3 {\n                animation: alan-btn__sound-bar-3 0ms -1200ms linear infinite alternate;\n            }";
+            keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-btn__sound-bar-1', "\n            0% {\n      \n                height: 3px; \n            }\n            100% {\n                  \n                height: 10px;        \n            }");
+            keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-btn__sound-bar-2', "\n            0% {\n      \n                height: 8px; \n            }\n            100% {\n                  \n                height: 15px;        \n            }");
+            keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-btn__sound-bar-3', "\n            0% {\n      \n                height: 12px; \n            }\n            100% {\n                  \n                height: 28px;        \n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(1)  { animation-duration: 474ms; }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(2)  { animation-duration: 433ms; }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(3)  { animation-duration: 407ms; }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(4)  { animation-duration: 458ms; }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(5)  { animation-duration: 400ms; }";
+            keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(6)  { animation-duration: 427ms; }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request {\n                margin-bottom: 16px;\n                max-width: 100%;\n                padding: 9px;\n                line-height: 1.46;\n                display: block;\n                float: right;\n                clear: both;\n                border-radius: 16px 16px 0 16px;\n                position: relative;\n                background-color: ".concat(((_47 = (_46 = (_45 = (_44 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _44 === void 0 ? void 0 : _44.textChat) === null || _45 === void 0 ? void 0 : _45.bubbles) === null || _46 === void 0 ? void 0 : _46.request) === null || _47 === void 0 ? void 0 : _47.backgroundColor) || "#0078FF", ";\n                color: ").concat(((_51 = (_50 = (_49 = (_48 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _48 === void 0 ? void 0 : _48.textChat) === null || _49 === void 0 ? void 0 : _49.bubbles) === null || _50 === void 0 ? void 0 : _50.request) === null || _51 === void 0 ? void 0 : _51.color) || "#ffffff", ";\n                font-size: ").concat(((_55 = (_54 = (_53 = (_52 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _52 === void 0 ? void 0 : _52.textChat) === null || _53 === void 0 ? void 0 : _53.bubbles) === null || _54 === void 0 ? void 0 : _54.request) === null || _55 === void 0 ? void 0 : _55.fontSize) || "14", "px;\n                word-break: break-word;\n                text-align: right;\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request * {\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response {\n                margin-bottom: 16px;\n                max-width: 100%;\n                padding: 9px;\n                line-height: 1.46;\n                display: block;\n                float: left;\n                clear: both;\n                border-radius: 0 16px 16px 16px;\n                position: relative;\n                background-color: ".concat(((_59 = (_58 = (_57 = (_56 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _56 === void 0 ? void 0 : _56.textChat) === null || _57 === void 0 ? void 0 : _57.bubbles) === null || _58 === void 0 ? void 0 : _58.response) === null || _59 === void 0 ? void 0 : _59.backgroundColor) || "#E9E9EB", ";\n                color: ").concat(((_63 = (_62 = (_61 = (_60 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _60 === void 0 ? void 0 : _60.textChat) === null || _61 === void 0 ? void 0 : _61.bubbles) === null || _62 === void 0 ? void 0 : _62.response) === null || _63 === void 0 ? void 0 : _63.color) || "#0f2029", ";\n                font-size: ").concat(((_67 = (_66 = (_65 = (_64 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _64 === void 0 ? void 0 : _64.textChat) === null || _65 === void 0 ? void 0 : _65.bubbles) === null || _66 === void 0 ? void 0 : _66.response) === null || _67 === void 0 ? void 0 : _67.fontSize) || "14", "px;\n                word-break: break-word;\n                text-align: left;\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }");
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response * {\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }";
+            keyFrames += getStyleSheetMarker(true) + ".text-chat-is-opened .alanBtn {\n                display: none;\n            }";
+            keyFrames += getStyleSheetMarker(true) + ".text-chat-is-opened .alanBtn-recognised-text-holder {\n                display: none;\n            }";
             keyFrames += getStyleSheetMarker() + '.alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}';
             keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.alan-btn-lib__default-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);}';
             keyFrames += getStyleSheetMarker() + '.alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__right {border-top-right-radius: 0!important;}';
@@ -1821,6 +2038,7 @@
             keyFrames += getStyleSheetMarker() + '.alan-overlay-popup:hover .alan-overlay-popup__ok{opacity:1;transition:opacity 300ms ease-in-out;}';
             keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-gradient', '0%{backgroundPosition: 0 0;}50%{backgroundPosition: -100% 0;}100%{backgroundPosition: 0 0;}');
             keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-pulsating', '0%{transform: scale(1.11111);}50%{transform: scale(1.0);}100%{transform: scale(1.11111);}');
+            keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-text-chat-pulsating', '0%{transform: scale(1.09);}50%{transform: scale(1.0);}100%{transform: scale(1.09);}');
             keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-mic-pulsating', '0%{transform: scale(0.91);}50%{transform: scale(1.0);}100%{transform: scale(0.91);}');
             keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-triangle-mic-pulsating', '0%{transform: scale(0.94);}50%{transform: scale(1.0);}100%{transform: scale(0.94);}');
             keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-fade-in', '0%{opacity: 0;}100%{opacity:1;}');
@@ -1871,23 +2089,22 @@
             keyFrames += getStyleSheetMarker() + generateKeyFrame('alan-text-fade-in', '0%{  opacity: 0;  } 100%{   opacity: 1;  }');
             keyFrames += getStyleSheetMarker() + '.alanBtn-bg-default.super-hidden{opacity:0!important;display:none;}';
             var predefinedBtnColorOptions = defaultBtnColorOptions;
-            if (btnOptions) {
-                if (btnOptions.btnLayerOptions) { //old settings
+            if (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) {
+                if (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions.btnLayerOptions) { //old settings
                     predefinedBtnColorOptions = defaultBtnColorOptions;
                 }
                 else {
-                    predefinedBtnColorOptions = btnOptions || defaultBtnColorOptions;
+                    predefinedBtnColorOptions = (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) ? __assign(__assign({}, defaultBtnColorOptions), webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) : defaultBtnColorOptions;
                 }
             }
-            var btnBackgroundOptionKeys = Object.keys(predefinedBtnColorOptions);
             var tempLayer;
             var stateName;
-            var stateMapping = {
-                idle: ['default'],
-                listen: ['listening'],
-                process: ['intermediate', 'understood'],
-                reply: ['speaking']
-            };
+            var stateMapping = (_a = {},
+                _a[textChatIsAvailable ? 'textChat' : 'idle'] = ['default'],
+                _a.listen = ['listening'],
+                _a.process = ['intermediate', 'understood'],
+                _a.reply = ['speaking'],
+                _a);
             var stateNameClasses, stateNameClass;
             var states = Object.keys(stateMapping);
             for (i = 0; i < states.length; i++) {
@@ -1957,6 +2174,7 @@
                 window.tutorProject.on('text', onTextCbInMicBtn);
                 window.tutorProject.on('parsed', onParsedCbInMicBtn);
                 alanAudio.on('command', onCommandCbInMicBtn);
+                alanAudio.on('afterText', onAfterTextCbInMicBtn);
                 //window.tutorProject.on('popup', onPopup);
                 // console.info('BTN: tutorProject', options.key);
             }
@@ -1979,6 +2197,27 @@
                 return key.substr(0, key.indexOf('/'));
             }
             return mode;
+        }
+        function throttle(func, wait) {
+            if (wait === void 0) { wait = 100; }
+            var timer = null;
+            var throttlePause;
+            return function () {
+                var args = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    args[_i] = arguments[_i];
+                }
+                if (!throttlePause) {
+                    func.apply(this, args);
+                    throttlePause = true;
+                    if (timer === null) {
+                        timer = setTimeout(function () {
+                            timer = null;
+                            throttlePause = false;
+                        }, wait);
+                    }
+                }
+            };
         }
         function debounce(func, wait) {
             var timeout;
@@ -2059,18 +2298,15 @@
                         sendClientEvent({ micPermissionPrompt: true });
                     }
                     if (result.state !== 'granted') {
-                        sendClientEvent({ buttonClicked: true, micAllowed: false });
-                    }
-                    else {
-                        sendClientEvent({ buttonClicked: true, micAllowed: true });
+                        sendClientEvent({ micAllowed: false });
                     }
                 })["catch"](function (error) {
                     console.warn('Not possible to detect mic permissions, details: ', error);
-                    setTimeout(function () { return sendClientEvent({ buttonClicked: true, micAllowed: alanAudio.isMicAllowed() }); }, 300);
+                    setTimeout(function () { return sendClientEvent({ micAllowed: alanAudio.isMicAllowed() }); }, 300);
                 });
             }
             else {
-                setTimeout(function () { return sendClientEvent({ buttonClicked: true, micAllowed: alanAudio.isMicAllowed() }); }, 300);
+                setTimeout(function () { return sendClientEvent({ micAllowed: alanAudio.isMicAllowed() }); }, 300);
             }
         }
         alanAudio.on('popup', onPopup);
@@ -2093,17 +2329,71 @@
                 options.onMicStarted();
             }
         }
-        function activateAlanButton() {
+        function sendFirstClickEvent() {
             if (!firstClick) {
                 firstClick = true;
                 sendClientEvent({ firstClick: true });
             }
+        }
+        function onBtnClick() {
+            if (afterMouseMove)
+                return;
+            if (!dndBackAnimFinished)
+                return;
+            if (textChatIsAvailable && textChatIsHidden) {
+                activateAlanButton();
+            }
+            else {
+                activateVoiceBtn();
+                //remove focus state from the btn after click
+                this.blur();
+            }
+        }
+        function onBtnClickInTextChat() {
+            activateVoiceBtn();
+        }
+        function activateVoiceBtn() {
+            if (alanAudio) {
+                if (state === 'default') {
+                    activateAlanButton();
+                }
+                else {
+                    alanAudio.stop();
+                }
+            }
+            else {
+                throw new Error('No alan audio instance was provided');
+            }
+        }
+        btn.addEventListener('click', onBtnClick);
+        function activateAlanButton(opts) {
+            hidePopup(null);
+            sendFirstClickEvent();
             if (state === 'default') {
                 coldPlayForSoundNext();
             }
+            var continueWithAudio = true;
+            if (textChatIsAvailable) {
+                continueWithAudio = false;
+                if (textChatIsHidden) {
+                    sendClientEvent({ buttonClicked: true });
+                    showTextChat();
+                    setTextChatPosition(chatHolderDiv);
+                }
+                if ((opts === null || opts === void 0 ? void 0 : opts.activate) === true && voiceEnabledInTextChat) {
+                    if (voiceEnabledInTextChat) {
+                        continueWithAudio = true;
+                    }
+                }
+            }
+            if (!continueWithAudio) {
+                return new Promise(function (resolve) {
+                    resolve();
+                });
+            }
             if (currentErrMsg) {
                 if (currentErrMsg === MIC_BLOCKED_MSG) {
-                    sendClientEvent({ buttonClicked: true, micAllowed: false });
+                    sendClientEvent({ micAllowed: false });
                     showAlert(currentErrMsg);
                 }
                 else {
@@ -2143,14 +2433,14 @@
                             break;
                         case PERMISSION_DENIED:
                             reject({ err: MIC_BLOCKED_CODE });
-                            sendClientEvent({ buttonClicked: true, micAllowed: false });
+                            sendClientEvent({ micAllowed: false });
                             break;
                         case LISTENING:
                         case SPEAKING:
                         case INTERMEDIATE:
                         case UNDERSTOOD:
                             resolve();
-                            sendClientEvent({ buttonClicked: true, micAllowed: true });
+                            sendClientEvent({ micAllowed: true });
                             break;
                         default:
                     }
@@ -2160,6 +2450,27 @@
                 }
             });
             return activatePromise;
+        }
+        function deactivateAlanButton() {
+            if (btnDisabled) {
+                return;
+            }
+            alanAudio.stop();
+        }
+        function sendText(text) {
+            return new Promise(function (resolve, reject) {
+                window.tutorProject.call('text', { text: text }, function (e, res) {
+                    if (e) {
+                        reject({ error: e });
+                    }
+                    else if (res && res.error) {
+                        reject(__assign({}, res));
+                    }
+                    else {
+                        resolve(res);
+                    }
+                });
+            });
         }
         function checkIfPlayAllowed() {
             if (alanAudio.isAudioRunning()) {
@@ -2184,6 +2495,8 @@
             if (popupIsVisible)
                 return;
             if (!popupEnabled)
+                return;
+            if (!textChatIsHidden)
                 return;
             savedPopupOptions = popupOptions;
             var message = popupOptions.message;
@@ -2324,29 +2637,13 @@
                 }
             }
         }
-        btn.addEventListener('click', function (e) {
-            if (afterMouseMove)
-                return;
-            if (!dndBackAnimFinished)
-                return;
-            hidePopup(null);
-            if (alanAudio) {
-                if (state === 'default') {
-                    activateAlanButton();
-                }
-                else {
-                    alanAudio.stop();
-                }
-            }
-            else {
-                throw new Error('No alan audio instance was provided');
-            }
-            //remove focus state from the btn after click
-            this.blur();
-        });
         function showRecognisedText(e) {
             var recognisedText = '';
-            if (hideS2TPanel || dndIsDown) {
+            if (hideS2TPanel || dndIsDown || !isAlanActive) {
+                return;
+            }
+            if (!textChatIsHidden) {
+                renderMessageInTextChat(Object.assign(e, { type: 'request' }));
                 return;
             }
             recognisedTextVisible = true;
@@ -2417,7 +2714,8 @@
             }
         }
         function onOptionsReceived(data) {
-            var _a, _b, _c;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+            console.log('Alan: options received');
             if (data && data.web) {
                 keepButtonPositionAfterDnD = ((_a = data.web.alanButtonDragAndDrop) === null || _a === void 0 ? void 0 : _a.keepButtonPositionAfterDnD) || data.web.keepButtonPositionAfterDnD;
                 if (!keepButtonPositionAfterDnD) {
@@ -2444,12 +2742,27 @@
                 popupEnabled = false;
                 hidePopup();
             }
+            if (!isTutorMode()) {
+                if (data && data.web && ((_e = (_d = data.web.chatOptions) === null || _d === void 0 ? void 0 : _d.textChat) === null || _e === void 0 ? void 0 : _e.enabled) === true) {
+                    textChatIsAvailable = true;
+                    voiceEnabledInTextChat = (_h = (_g = (_f = data.web.chatOptions) === null || _f === void 0 ? void 0 : _f.textChat) === null || _g === void 0 ? void 0 : _g.voice) === null || _h === void 0 ? void 0 : _h.enabled;
+                    textChatOptions = (_j = data.web.chatOptions) === null || _j === void 0 ? void 0 : _j.textChat;
+                    initTextChat();
+                    if (((_m = (_l = (_k = data.web.chatOptions) === null || _k === void 0 ? void 0 : _k.textChat) === null || _l === void 0 ? void 0 : _l.popup) === null || _m === void 0 ? void 0 : _m.openByDefualt) === true) {
+                        showTextChat();
+                    }
+                }
+                else {
+                    textChatIsAvailable = false;
+                    hideTextChat();
+                }
+            }
             if (data && data.web && data.web.timeout !== undefined) {
                 turnOffTimeout = data.web.timeout;
                 setTurnOffVoiceTimeout();
             }
             if (data && data.web) {
-                applyBtnOptions(data.web.btnOptions);
+                applyBtnOptions(data.web);
             }
             applyLogoOptions(data);
             if (options.mode !== 'tutor') {
@@ -2468,7 +2781,9 @@
             }
             else {
                 // sendClientEvent({ buttonReady: true });
-                showBtn();
+                if (btnDisabled) {
+                    showBtn();
+                }
             }
         }
         function onConnectStatusChange(res) {
@@ -2615,25 +2930,46 @@
             switchState(LISTENING);
             turnOffVoiceFn();
         }
-        function onTextCbInMicBtn(e) {
-            // console.info('BTN: onTextCb', e, new Date());
+        function _onTextCb(e) {
+            console.info('BTN: onTextCb', e, new Date());
+            var event = Object.assign(e, { name: 'text', type: AlanButtonTextMessageType.Response });
             if (options.onEvent) {
-                options.onEvent(Object.assign(e, { name: 'text', type: AlanButtonTextMessageType.Response }));
+                options.onEvent(event);
             }
+            renderMessageInTextChat(event);
             turnOffVoiceFn();
+        }
+        function onTextCbInMicBtn(e) {
+            var _a, _b, _c, _d;
+            if (!isAlanActive && ((_b = (_a = e.ctx) === null || _a === void 0 ? void 0 : _a.opts) === null || _b === void 0 ? void 0 : _b.activate) === true) {
+                activateAlanButton({ activate: (_d = (_c = e.ctx) === null || _c === void 0 ? void 0 : _c.opts) === null || _d === void 0 ? void 0 : _d.activate }).then(function () {
+                    _onTextCb(e);
+                });
+            }
+            else {
+                _onTextCb(e);
+            }
+        }
+        function onAfterTextCbInMicBtn(e) {
+            var _a, _b;
+            if (isAlanActive && ((_b = (_a = e.ctx) === null || _a === void 0 ? void 0 : _a.opts) === null || _b === void 0 ? void 0 : _b.deactivate) === true) {
+                deactivateAlanButton();
+            }
         }
         function onParsedCbInMicBtn(e) {
             // console.info('BTN: onParsedCb', e, new Date());
+            var event = Object.assign(e, { name: 'parsed' });
             if (options.onEvent) {
-                options.onEvent(Object.assign(e, { name: 'parsed' }));
+                options.onEvent(event);
             }
             turnOffVoiceFn();
-            showRecognisedText(e);
+            showRecognisedText(event);
         }
         function onRecognizedCbInMicBtn(e) {
             // console.info('BTN: onRecognizedTextCb', e, new Date());
+            var event = Object.assign(e, { name: 'recognized' });
             if (options.onEvent) {
-                options.onEvent(Object.assign(e, { name: 'recognized' }));
+                options.onEvent(event);
             }
             if (e.final === true) {
                 switchState(UNDERSTOOD);
@@ -2641,12 +2977,11 @@
             else {
                 switchState(INTERMEDIATE);
             }
-            showRecognisedText(e);
+            showRecognisedText(event);
             turnOffVoiceFn();
         }
-        function onCommandCbInMicBtn(e) {
-            var _a, _b;
-            // console.info('BTN: onCommandCbInMicBtn', e, new Date());
+        function _onCommandCb(e) {
+            var _a, _b, _c, _d;
             if (isAlanActive || (!isAlanActive && ((_b = (_a = e.ctx) === null || _a === void 0 ? void 0 : _a.opts) === null || _b === void 0 ? void 0 : _b.force) === true)) {
                 if (options.onCommand) {
                     options.onCommand(e.data);
@@ -2654,8 +2989,23 @@
             }
             if (isAlanActive) {
                 switchState(LISTENING);
+                if (((_d = (_c = e.ctx) === null || _c === void 0 ? void 0 : _c.opts) === null || _d === void 0 ? void 0 : _d.deactivate) === true) {
+                    deactivateAlanButton();
+                }
             }
             turnOffVoiceFn();
+        }
+        function onCommandCbInMicBtn(e) {
+            var _a, _b;
+            // console.info('BTN: onCommandCbInMicBtn', e, new Date());
+            if (!isAlanActive && (((_b = (_a = e.ctx) === null || _a === void 0 ? void 0 : _a.opts) === null || _b === void 0 ? void 0 : _b.activate) === true)) {
+                activateAlanButton().then(function () {
+                    _onCommandCb(e);
+                });
+            }
+            else {
+                _onCommandCb(e);
+            }
         }
         function onScriptsCb(e) {
             if (options.onEvent) {
@@ -2704,6 +3054,218 @@
             for (var i = 0; i < logosToHide.length; i++) {
                 logosToHide[i].style.opacity = 0;
             }
+        }
+        function escapeHtml(text) {
+            var resultStr = text;
+            var entityMap = {
+                "<script>": "&lt;script&gt;",
+                "</script>": "&lt;/script&gt;"
+            };
+            for (var key in entityMap) {
+                var r = new RegExp("".concat(key), 'gi');
+                resultStr = String(resultStr).replace(r, entityMap[key]);
+            }
+            return resultStr;
+        }
+        function renderMessageInTextChat(msg) {
+            if (!textChatIsAvailable)
+                return;
+            console.info('==== MSG', msg);
+            var msgInd = null;
+            var msgHtml = '';
+            var isNewMsg = true;
+            if (msg.name === 'text' || msg.name === 'parsed' || msg.name === 'recognized') {
+                msgHtml = '<div class="' + (msg.type === 'request' ? 'alan-btn__chat-request' : 'alan-btn__chat-response') + '">' +
+                    escapeHtml(msg.text) + '</div>';
+            }
+            if ((msg.name === 'recognized' || msg.name === 'parsed' || msg.name === 'text') && textChatMessages.length > 0) {
+                var lastMsg = textChatMessages[textChatMessages.length - 1];
+                if ((lastMsg.name === 'recognized' && msg.name === 'recognized') ||
+                    (lastMsg.name === 'recognized' && msg.name === 'parsed' && msg.text === lastMsg.text) ||
+                    (msg.type === 'request' && lastMsg.type === 'request' && lastMsg.reqId && msg.reqId === lastMsg.reqId)) {
+                    msgInd = textChatMessages.length - 1;
+                    textChatMessages[msgInd] = msg;
+                    isNewMsg = false;
+                }
+            }
+            if (isNewMsg) {
+                textChatMessages.push(msg);
+                var msgHolder = document.getElementById('chatMessages');
+                var div = document.createElement('div');
+                div.id = 'msg-' + (textChatMessages.length - 1);
+                div.innerHTML = msgHtml;
+                msgHolder.appendChild(div);
+                if (textChatIsAvailable && textChatIsHidden && msg.type === 'response') {
+                    unreadChatMsgCount++;
+                }
+                setTimeout(function () {
+                    document.getElementById('chatMessages').scroll({
+                        top: document.getElementById('chatMessages').scrollHeight + 500,
+                        left: 0,
+                        behavior: 'smooth'
+                    });
+                }, 300);
+            }
+            else {
+                if (document.getElementById('msg-' + msgInd)) {
+                    document.getElementById('msg-' + msgInd).innerHTML = msgHtml;
+                }
+            }
+            if (textChatIsAvailable && textChatIsHidden) {
+                showChatNotifications();
+            }
+        }
+        function _sendText(text) {
+            return __awaiter(this, void 0, void 0, function () {
+                var msg, res;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            msg = { text: text, type: 'request', name: 'text' };
+                            textChatMessages.push(msg);
+                            return [4 /*yield*/, sendText(text)];
+                        case 1:
+                            res = _a.sent();
+                            msg = __assign(__assign({}, msg), { reqId: res.reqId });
+                            renderMessageInTextChat(msg);
+                            return [2 /*return*/];
+                    }
+                });
+            });
+        }
+        var sendMessageToTextChat = throttle(function sendMessageToTextChat() {
+            return __awaiter(this, void 0, void 0, function () {
+                var textareaEl, text;
+                return __generator(this, function (_a) {
+                    textareaEl = document.getElementById('chatTextarea');
+                    text = textareaEl.value;
+                    if (text.trim() === '')
+                        return [2 /*return*/];
+                    textareaEl.value = '';
+                    _sendText(text);
+                    return [2 /*return*/];
+                });
+            });
+        }, 1000);
+        function onChatTextAreaKeyDown(e) {
+            var keyCode = e.keyCode || e.which;
+            if (keyCode === 13) {
+                sendMessageToTextChat();
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }
+        function initTextChat() {
+            var _a, _b, _c;
+            var chatDiv = document.getElementById('alan-text-chat');
+            var textareaDiv = document.getElementById('textarea-holder');
+            var chatTextarea = document.getElementById('chatTextarea');
+            var simpleAlanBtn = document.getElementById('chat-mic-btn');
+            var chatSendBtn = document.getElementById('chat-send-btn');
+            var headerDiv = document.getElementById('chat-header');
+            var headerTille = document.getElementById('chat-header-title');
+            if (!document.getElementById('alan-text-chat')) {
+                chatDiv = document.createElement('div');
+                chatDiv.id = 'alan-text-chat';
+                chatDiv.classList.add('alan-btn__chat');
+                var messagesDiv = document.createElement('div');
+                messagesDiv.id = 'chatMessages';
+                messagesDiv.classList.add('alan-btn__chat-messages');
+                var messagesEmptyDiv = document.createElement('div');
+                messagesEmptyDiv.classList.add('alan-btn__chat-messages-empty-block');
+                messagesDiv.appendChild(messagesEmptyDiv);
+                headerDiv = document.createElement('div');
+                headerDiv.id = 'chat-header';
+                headerDiv.classList.add('alan-btn__chat-header');
+                headerTille = document.createElement('span');
+                headerTille.id = 'chat-header-title';
+                headerDiv.appendChild(headerTille);
+                var closeChatBtnImg = document.createElement('div');
+                closeChatBtnImg.innerHTML = "\n                <svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path d=\"M13.1195 2.47218C13.5523 2.03918 13.5502 1.33489 13.1193 0.904189L13.0217 0.806586C12.5887 0.373581 11.8875 0.372614 11.4537 0.806392L7.1601 5.1C7.05127 5.20902 6.87582 5.21 6.76583 5.1L2.47222 0.806392C2.03922 0.373581 1.33493 0.375712 0.904226 0.806586L0.806624 0.904189C0.373619 1.33719 0.372652 2.03841 0.80643 2.47218L5.10004 6.76579C5.20906 6.87462 5.21003 7.05007 5.10004 7.16006L0.80643 11.4537C0.373619 11.8867 0.375751 12.591 0.806624 13.0217L0.904226 13.1193C1.33723 13.5523 2.03844 13.5532 2.47222 13.1195L6.76583 8.82585C6.87466 8.71683 7.05011 8.71586 7.1601 8.82585L11.4537 13.1195C11.8867 13.5523 12.591 13.5501 13.0217 13.1193L13.1193 13.0217C13.5523 12.5887 13.5533 11.8874 13.1195 11.4537L8.82589 7.16006C8.71687 7.05123 8.7159 6.87578 8.82589 6.76579L13.1195 2.47218Z\" fill=\"white\"/>\n</svg>\n";
+                closeChatBtnImg.classList.add('alan-btn__close-chat-btn');
+                headerDiv.appendChild(closeChatBtnImg);
+                closeChatBtnImg.addEventListener('click', closeTextChat);
+                textareaDiv = document.createElement('div');
+                textareaDiv.id = 'textarea-holder';
+                textareaDiv.classList.add('alan-btn__chat-textarea-holder');
+                chatTextarea = document.createElement('textarea');
+                chatTextarea.id = 'chatTextarea';
+                chatTextarea.setAttribute('rows', '2');
+                chatTextarea.classList.add('alan-btn__chat-textarea');
+                chatTextarea.addEventListener('keydown', onChatTextAreaKeyDown);
+                chatSendBtn = document.createElement('div');
+                chatSendBtn.id = 'chat-send-btn';
+                chatSendBtn.classList.add('alan-btn__chat-send-btn');
+                chatSendBtn.addEventListener('click', sendMessageToTextChat);
+                chatSendBtn.innerHTML = "\n                <svg width=\"26\" height=\"26\" viewBox=\"0 0 26 26\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path d=\"M0.0297638 24.7941L2.2258 15.2839C2.31247 14.8792 2.65916 14.5612 3.09273 14.5034L15.3735 13.2314C15.7202 13.2026 15.7202 12.6822 15.3735 12.6243L3.09273 11.4391C2.65937 11.4102 2.31249 11.0923 2.2258 10.6876L0.0297638 1.20624C-0.172404 0.396854 0.694524 -0.267944 1.44571 0.107737L25.4582 12.1328C26.1806 12.5087 26.1806 13.5493 25.4582 13.925L1.44571 25.8923C0.694473 26.2679 -0.172404 25.6031 0.0297638 24.7938V24.7941Z\" fill=\"#007AFF\"/>\n</svg>";
+                textareaDiv.appendChild(chatTextarea);
+                textareaDiv.appendChild(chatSendBtn);
+                chatDiv.appendChild(headerDiv);
+                chatDiv.appendChild(messagesDiv);
+                chatDiv.appendChild(textareaDiv);
+                chatHolderDiv.appendChild(chatDiv);
+                chatHolderDiv.classList.add('alan-btn__chat-holder');
+            }
+            if (headerTille) {
+                var title = ((_a = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.header) === null || _a === void 0 ? void 0 : _a.label) || 'Alan Virtual Assistant';
+                headerTille.innerText = title;
+                headerTille.setAttribute('title', title);
+            }
+            if (voiceEnabledInTextChat) {
+                chatTextarea.setAttribute('placeholder', 'Type here or use your mic with button...');
+                chatHolderDiv.classList.add('alan-text-chat__voice-enabled');
+                if (!simpleAlanBtn) {
+                    simpleAlanBtn = document.createElement('div');
+                    simpleAlanBtn.classList.add('alan-btn__chat-mic-btn');
+                    simpleAlanBtn.id = 'chat-mic-btn';
+                    simpleAlanBtn.addEventListener('click', function () {
+                        onBtnClickInTextChat();
+                    });
+                    simpleAlanBtn.innerHTML = "\n                <svg width=\"41\" height=\"56\" viewBox=\"0 0 41 56\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M29.2564 26.3571C29.2564 31.2186 25.3614 35.1429 20.5 35.1429C15.6386 35.1429 11.7143 31.2186 11.7143 26.3571V8.78571C11.7143 3.92429 15.6386 0 20.5 0C25.3614 0 29.2857 3.92429 29.2857 8.78571L29.2564 26.3571ZM20.5 41.2929C28.5829 41.2929 36.0214 35.1429 36.0214 26.3571H41C41 36.3729 33.0343 44.6314 23.4286 46.0371V55.6429H17.5714V46.0371C7.96571 44.6021 0 36.3436 0 26.3571H4.97857C4.97857 35.1429 12.4171 41.2929 20.5 41.2929Z\" fill=\"#2C9EFF\"/>\n                </svg>\n                <div class=\"alan-text-chat__animated-btn-bars\">\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n                </div>";
+                    if (textareaDiv) {
+                        textareaDiv.appendChild(simpleAlanBtn);
+                    }
+                }
+            }
+            else {
+                if (simpleAlanBtn) {
+                    simpleAlanBtn.removeEventListener('click', onBtnClickInTextChat);
+                    simpleAlanBtn.remove();
+                }
+                chatTextarea.setAttribute('placeholder', 'Type here...');
+                chatHolderDiv.classList.remove('alan-text-chat__voice-enabled');
+            }
+            if (chatTextarea) {
+                if ((_b = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _b === void 0 ? void 0 : _b.placeholder) {
+                    chatTextarea.setAttribute('placeholder', (_c = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _c === void 0 ? void 0 : _c.placeholder);
+                }
+            }
+        }
+        function showTextChat() {
+            hideChatNotifications();
+            hidePopup();
+            chatHolderDiv.style.display = 'flex';
+            textChatIsHidden = false;
+            rootEl.classList.add('text-chat-is-opened');
+        }
+        function hideTextChat() {
+            deactivateAlanButton();
+            chatHolderDiv.style.display = 'none';
+            rootEl.classList.remove('text-chat-is-opened');
+            textChatIsHidden = true;
+        }
+        function closeTextChat() {
+            hideTextChat();
+        }
+        function showChatNotifications() {
+            if (unreadChatMsgCount > 0) {
+                chatNotificationsBubble.innerHTML = unreadChatMsgCount > 99 ? "99+" : "".concat(unreadChatMsgCount);
+                chatNotificationsBubble.style.display = 'flex';
+            }
+        }
+        function hideChatNotifications() {
+            unreadChatMsgCount = 0;
+            chatNotificationsBubble.style.display = 'none';
         }
         function switchState(newState) {
             if (options.onButtonState) {
@@ -2969,6 +3531,34 @@
                 rootEl.classList.remove("alan-btn-offline");
                 rootEl.classList.remove("alan-btn-no-voice-support");
             }
+            if (textChatIsAvailable) {
+                var simpleAlanBtn = document.getElementById('chat-mic-btn');
+                var textChatEl = document.getElementById('alan-text-chat');
+                if (simpleAlanBtn) {
+                    if (newState === LISTENING ||
+                        newState === INTERMEDIATE ||
+                        newState === SPEAKING ||
+                        newState === UNDERSTOOD) {
+                        simpleAlanBtn.classList.add('active');
+                        simpleAlanBtn.style.animation = pulsatingAnimationForMicBtnInTextChat;
+                    }
+                    else {
+                        simpleAlanBtn.classList.remove('active');
+                        simpleAlanBtn.style.animation = '';
+                    }
+                }
+                if (textChatEl) {
+                    if (newState === LISTENING ||
+                        newState === INTERMEDIATE ||
+                        newState === SPEAKING ||
+                        newState === UNDERSTOOD) {
+                        textChatEl.classList.add('active');
+                    }
+                    else {
+                        textChatEl.classList.remove('active');
+                    }
+                }
+            }
             state = newState;
         }
         //#endregion
@@ -3071,6 +3661,8 @@
             recognisedTextHolder.appendChild(recognisedTextContent);
             rootEl.appendChild(recognisedTextHolder);
             rootEl.appendChild(btn);
+            rootEl.appendChild(chatHolderDiv);
+            btn.appendChild(chatNotificationsBubble);
             btnDisabled = false;
             sendClientEvent({ buttonReady: true });
         }
@@ -3088,9 +3680,9 @@
             hideS2TPanel = true;
             hideRecognisedText();
         }
-        function applyBtnOptions(btnOptions) {
-            if (btnOptions) {
-                createAlanStyleSheet(btnOptions);
+        function applyBtnOptions(webOptions) {
+            if (webOptions) {
+                createAlanStyleSheet(webOptions);
             }
             else {
                 createAlanStyleSheet();
@@ -3103,38 +3695,49 @@
                     !data.web.logoIdle &&
                     !data.web.logoListen &&
                     !data.web.logoProcess &&
-                    !data.web.logoReply) {
+                    !data.web.logoReply &&
+                    !data.web.logoTextChat) {
                     listenStateBtnIconImg.src = data.web.logoUrl;
                     processStateBtnIconImg.src = data.web.logoUrl;
                     replyStateBtnIconImg.src = data.web.logoUrl;
                 }
                 else {
-                    if (data.web.logoIdle) {
-                        defaultStateBtnIconImg.src = data.web.logoIdle;
+                    if (textChatIsAvailable) {
+                        if (data.web.logoTextChat) {
+                            defaultStateBtnIconImg.src = data.web.logoTextChat;
+                        }
+                        else {
+                            defaultStateBtnIconImg.src = alanLogoIconSrc;
+                        }
                     }
                     else {
-                        defaultStateBtnIconImg.src = micIconSrc;
-                    }
-                    if (data.web.logoListen) {
-                        listenStateBtnIconImg.src = data.web.logoListen;
-                    }
-                    else {
-                        listenStateBtnIconImg.removeAttribute('src');
-                        listenStateBtnIconImg.style.opacity = '0';
-                    }
-                    if (data.web.logoProcess) {
-                        processStateBtnIconImg.src = data.web.logoProcess;
-                    }
-                    else {
-                        processStateBtnIconImg.removeAttribute('src');
-                        processStateBtnIconImg.style.opacity = '0';
-                    }
-                    if (data.web.logoReply) {
-                        replyStateBtnIconImg.src = data.web.logoReply;
-                    }
-                    else {
-                        replyStateBtnIconImg.removeAttribute('src');
-                        replyStateBtnIconImg.style.opacity = '0';
+                        if (data.web.logoIdle) {
+                            defaultStateBtnIconImg.src = data.web.logoIdle;
+                        }
+                        else {
+                            defaultStateBtnIconImg.src = micIconSrc;
+                        }
+                        if (data.web.logoListen) {
+                            listenStateBtnIconImg.src = data.web.logoListen;
+                        }
+                        else {
+                            listenStateBtnIconImg.removeAttribute('src');
+                            listenStateBtnIconImg.style.opacity = '0';
+                        }
+                        if (data.web.logoProcess) {
+                            processStateBtnIconImg.src = data.web.logoProcess;
+                        }
+                        else {
+                            processStateBtnIconImg.removeAttribute('src');
+                            processStateBtnIconImg.style.opacity = '0';
+                        }
+                        if (data.web.logoReply) {
+                            replyStateBtnIconImg.src = data.web.logoReply;
+                        }
+                        else {
+                            replyStateBtnIconImg.removeAttribute('src');
+                            replyStateBtnIconImg.style.opacity = '0';
+                        }
                     }
                 }
             }
@@ -3162,8 +3765,8 @@
                 try {
                     alanBtnSavedOptions = JSON.parse(localStorage.getItem(getStorageKey()));
                     if (alanBtnSavedOptions && alanBtnSavedOptions.web) {
-                        if (alanBtnSavedOptions.web.btnOptions) {
-                            applyBtnOptions(alanBtnSavedOptions.web.btnOptions);
+                        if (alanBtnSavedOptions.web) {
+                            applyBtnOptions(alanBtnSavedOptions.web);
                         }
                     }
                 }
@@ -3223,6 +3826,9 @@
                     rootEl.style.setProperty('top', dndBtnTopPos + 'px', 'important');
                     rootEl.style.setProperty('bottom', 'auto', 'important');
                 }
+                if (Math.abs(tempDeltaX) > 15 || Math.abs(tempDeltaY) > 15) {
+                    hideTextChat();
+                }
                 afterMouseMove = true;
                 newLeftPos = dndBtnLeftPos + posInfo.clientX - dndInitMousePos[0];
                 newTopPos = dndBtnTopPos + posInfo.clientY - dndInitMousePos[1];
@@ -3258,6 +3864,7 @@
                     isLeftAligned = true;
                     isRightAligned = false;
                     setTextPanelPosition(recognisedTextHolder, curY);
+                    setTextChatPosition(chatHolderDiv, curY);
                     btnWasMoved = true;
                     setTimeout(function () {
                         togglePopupVisibility(true);
@@ -3272,6 +3879,7 @@
                         isLeftAligned = false;
                         isRightAligned = true;
                         setTextPanelPosition(recognisedTextHolder, curY);
+                        setTextChatPosition(chatHolderDiv, curY);
                         saveBtnPosition('right', dndFinalHorPos, curY);
                         btnWasMoved = true;
                         dndBackAnimFinished = true;
