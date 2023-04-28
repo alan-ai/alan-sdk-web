@@ -1,6 +1,6 @@
-# Alan AI: In-app voice assistant SDK for Web
+# Alan AI: Conversational AI SDK for Web
 
-[Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
+[Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
 [![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
@@ -8,42 +8,42 @@
 [![CircleCI](https://circleci.com/gh/alan-ai/alan-sdk-web.svg?style=shield)](https://circleci.com/gh/alan-ai/alan-sdk-web)
 
 
-Quickly add voice to your app with the Alan Platform. Create an in-app voice assistant to enable human-like conversations and provide a personalized voice experience for every user.
+Quickly create AI assistants and AI chats with the Alan AI Platform. Enable human-like conversations and perform actions in any app through voice and text commands.
 
 <img src="https://storage.googleapis.com/alan-public-images/github/tablet-tasks.gif" height="325px" align="right"/>
 
 
-## Alan is a Voice AI Platform
+## Actionable AI Platform
 
-Alan is a conversational voice AI platform that lets you create an intelligent voice assistant for your app. It offers all necessary tools to design, embed and host your voice solutions:
+Alan AI is an Actionable AI Platform that lets you create a voice AI assistant and voice/text AI chat for your app. It offers all necessary tools to design, embed and host conversational experiences:
 
-#### Alan Studio
-A powerful web-based IDE where you can write, test and debug dialog scenarios for your voice assistant or chatbot.
+#### Alan AI Studio
+A powerful web-based IDE where you can write, test and debug dialog scenarios for your AI assistant or AI chat.
 
-#### Alan Client SDKs
+#### Alan AI SDKs
 
-Alan's lightweight SDKs to quickly embed a voice assistant to your app.
+Alan AI's lightweight SDKs to quickly embed an AI assistant or AI chat to your app.
 
-#### Alan Cloud
+#### Alan AI Cloud
 
-Alan's AI-backend powered by the industry’s best Automatic Speech Recognition (ASR), Natural Language Understanding (NLU) and Speech Synthesis. The Alan Cloud provisions and handles the infrastructure required to maintain your voice deployments and perform all the voice processing tasks.
+Alan AI's backend powered by the industry’s best Automatic Speech Recognition (ASR), Natural Language Understanding (NLU) and Speech Synthesis. Alan AI provisions and handles the infrastructure required to maintain your conversational experiences and perform all the data processing tasks.
 
-To get more details on how Alan works, see <a href="https://alan.app/platform" target="_blank">Alan Platform</a>.
+To get more details on how Alan AI works, see <a href="https://alan.app/platform" target="_blank">Alan AI Platform</a>.
 
-## Why Alan?
+## Why Alan AI?
 
-* **No or minimum changes to your UI**: To voice enable your app, you only need to get the Alan Client SDK and drop it to your app.
-* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components - the Alan Platform does the bulk of the work.
+* **No or minimum changes to your UI**: To create a conversational experience, you only need to get the Alan AI SDK and drop it to your app.
+* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components - the Alan AI Platform does the bulk of the work.
 * **On-the-fly updates**: All changes to the dialogs become available immediately.
-* **Voice flow testing and analytics**: Alan Studio provides advanced tools for testing your dialog flows and getting the analytics data on users' interactions, all in the same console.
+* **Dialog flow testing and analytics**: Alan AI Studio provides advanced tools for testing your dialog flows and getting the conversational analytics data on users' interactions, all in the same console.
 
 
 ## How to start
 
-To create a voice assistant for your web app or page:
+To create an AI assistant or AI chat for your web app or page:
 
-1. <a href="https://studio.alan.app/register" target="_blank">Sign up for Alan Studio</a> to build voice scripts in JavaScript and test them.
-2. Use the Alan Web SDK to embed a voice assistant to your app or page. For details, see Alan AI documentation for the necessary framework:
+1. <a href="https://studio.alan.app/register" target="_blank">Sign up for Alan AI Studio</a> to build dialog scripts in JavaScript and test them.
+2. Use the Alan AI SDK for Web to embed an AI assistant or chat to your app or page. For details, see Alan AI documentation for the necessary framework:
 
     * <a href="https://alan.app/docs/client-api/web/vanilla" target="_blank">JavaScript</a>
 	* <a href="https://alan.app/docs/client-api/web/react" target="_blank">React</a>
@@ -57,8 +57,8 @@ Check out our <a href="https://alan-ai.github.io/alan-sdk-web/" target="_blank">
 
 ## Downloads
 
-* <a href="https://www.npmjs.com/package/@alan-ai/alan-sdk-web" target="_blank">Alan package</a>
-* <a href="https://github.com/alan-ai/alan-sdk-web/releases" target="_blank">Alan Web SDK releases</a>
+* <a href="https://www.npmjs.com/package/@alan-ai/alan-sdk-web" target="_blank">Alan AI package</a>
+* <a href="https://github.com/alan-ai/alan-sdk-web/releases" target="_blank">Alan AI SDK for Web releases</a>
 
 ## Example apps
 
@@ -70,11 +70,11 @@ In the [Examples](https://github.com/alan-ai/alan-sdk-web/tree/master/examples) 
 * Ember
 * Electron
 
-To launch the app, follow the instructions in the README file inside the example app folder. Then press the Alan button and try interacting with Alan.
+To launch the app, follow the instructions in the README file inside the example app folder. Then press the Alan AI button and try interacting with Alan AI.
 
 ## Other platforms
 
-You may also want to try Alan Client SDKs for the following platforms:
+You may also want to try Alan AI SDKs for the following platforms:
 
 * <a href="https://github.com/alan-ai/alan-sdk-ios" target="_blank">iOS</a>
 * <a href="https://github.com/alan-ai/alan-sdk-android" target="_blank">Android</a>
