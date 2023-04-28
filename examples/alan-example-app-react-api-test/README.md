@@ -1,6 +1,6 @@
-# Web App with Alan
+# Web App with Alan AI
 
-[Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
+[Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
 ## Prerequisites
@@ -8,13 +8,13 @@ Install [Node.js](https://nodejs.org/) which includes [Node Package Manager](htt
 
 ## Running example project
 
-This is an example of using the Alan voice assistant SDK in a web app. To run this app:
+This is an example of using the Alan AI SDK for Web in a web app. To run this app:
 
 1. Clone this repository to your computer. 
 2. Navigate to the example folder.
 3. Run `npm i`.
 4. Run `npm run start`.
-5. In the app, click `activate()`, `deactivate()`, `activate() and playText()` and `callProjectAPI()` buttons to check how [Alan button methods](https://alan.app/docs/client-api/web/web-api#alan-button-methods) can be used in an app.
+5. In the app, click `activate()`, `deactivate()`, `activate() and playText()` and `callProjectAPI()` buttons to check how [client API methods](https://alan.app/docs/client-api/web/web-api#alan-button-methods) can be used in an app.
 
 ## Documentation
   

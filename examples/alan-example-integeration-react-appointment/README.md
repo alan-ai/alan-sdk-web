@@ -1,6 +1,6 @@
-# React App with Alan
+# React App with Alan AI
 
-[Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
+[Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
 ## Prerequisites
@@ -14,11 +14,11 @@ This is an example of using the voice assistant SDK for Web in a React app. To u
 1. Clone this repository to your computer
 2. Navigate to 'appointment-frontend' folder .
 3. Rename the .env-example to .env file in the 'appointment-frontend' root.
-4. replace the REACT_APP_ALAN_KEY value with your Alan SDK key in following format of `KEY=VALUE`. You can learn more about Alan SDK key here:(https://alan.app/docs/client-api/web/web-api/#specifying-the-alan-button-parameters)
+4. Replace the REACT_APP_ALAN_KEY value with your Alan AI SDK key in following format of `KEY=VALUE`. You can learn more about Alan AI SDK key here:(https://alan.app/docs/client-api/web/web-api/#specifying-the-alan-button-parameters)
 5. Run `npm run build`.
 6. Navigate to 'appointment-backend' folder.
 7. Rename the .env-example to .env file in 'appointment-backend' root.
-8. replace the MONGO_URL value with your Alan studio key in following format of `KEY=VALUE`.
+8. Replace the MONGO_URL value with your Alan AI Studio key in following format of `KEY=VALUE`.
 
 - Steps to create MongoDB Atlas account and get a mangodb URL: (https://www.mongodb.com/docs/atlas/getting-started/)
 

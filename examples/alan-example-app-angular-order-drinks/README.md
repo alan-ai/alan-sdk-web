@@ -1,6 +1,6 @@
-# Order Drinks with Alan Demo
+# Order Drinks with Alan AI Demo
 
-[Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
+[Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
 ## Prerequisites
@@ -8,13 +8,13 @@ Install [Node.js](https://nodejs.org/) which includes [Node Package Manager](htt
 
 ## Running example project
 
-This example shows how to add a voice assistant to a sample drink ordering app with Alan. To use this demo:
+This example shows how to add a voice assistant to a sample drink ordering app with Alan AI. To use this demo:
 
 1. Clone this repository to your computer.
 2. Navigate to the demo folder.
 3. Run `npm start` for a dev server. 
 4. Navigate to `http://localhost:4200/`. 
-5. In the demo app, click the Alan button and say: `Hello`, `What can I do here?`
+5. In the demo app, click the Alan AI button and say: `Hello`, `What can I do here?`
 
 ## Documentation
   

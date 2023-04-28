@@ -1,6 +1,6 @@
-# Electron App with Alan
+# Electron App with Alan AI
 
-[Alan Platform](https://alan.app/) • [Alan Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
+[Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
 ## Prerequisites
@@ -8,7 +8,7 @@ Install [Node.js](https://nodejs.org/) which includes [Node Package Manager](htt
 
 ## Running example project
 
-This is an example of using the voice assistant SDK for Web in an Electron app. To use this app:
+This is an example of using the Alan AI SDK for Web in an Electron app. To use this app:
 
 1. Clone this repository to your computer. 
 2. Navigate to the example folder.
