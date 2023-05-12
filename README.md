@@ -60,7 +60,7 @@ Check out our <a href="https://alan-ai.github.io/alan-sdk-web/" target="_blank">
 * <a href="https://www.npmjs.com/package/@alan-ai/alan-sdk-web" target="_blank">Alan AI package</a>
 * <a href="https://github.com/alan-ai/alan-sdk-web/releases" target="_blank">Alan AI SDK for Web releases</a>
 
-## Example apps
+## Voice assistant examples
 
 In the [Examples](https://github.com/alan-ai/alan-sdk-web/tree/master/examples) folder, you can find example web apps created with:
 
@@ -71,6 +71,12 @@ In the [Examples](https://github.com/alan-ai/alan-sdk-web/tree/master/examples) 
 * Electron
 
 To launch the app, follow the instructions in the README file inside the example app folder. Then press the Alan AI button and try interacting with Alan AI.
+
+## Web chat example
+
+In the [Website chat demo](https://github.com/alan-ai/website-chat-demo) repository, you can find an example project demonstrating how to quickly add a voice and text AI chat to your web page, website or web app. 
+
+Check out the live web chat demo here: [https://alan-ai.github.io/website-chat-demo/](https://alan-ai.github.io/website-chat-demo/).
 
 ## Other platforms
 
