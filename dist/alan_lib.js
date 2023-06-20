@@ -3227,9 +3227,103 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             read: msg.read !== void 0 ? msg.read : !textChatIsHidden
         };
     }
+    // alan_btn/src/mergeProgressiveMessages.ts
+    function mergeProgressiveMessages(messages, i, message) {
+        var _a;
+        var newImages = message.images || [];
+        var oldText = messages[i].text || "";
+        var newText = message.text || "";
+        messages[i].text = oldText + ((oldText && newText ? " " : "") + newText);
+        messages[i].images = __spreadArray(__spreadArray([], messages[i].images || [], true), newImages, true);
+        messages[i].links = __spreadArray(__spreadArray([], messages[i].links || [], true), message.links || [], true);
+        messages[i].hasLikes = messages[i].hasLikes || message.hasLikes;
+        if (((_a = message.ctx) === null || _a === void 0 ? void 0 : _a.format) === "markdown") {
+            if (messages[i].ctx) {
+                messages[i].ctx.format = "markdown";
+            }
+            else {
+                messages[i].ctx = { format: "markdown" };
+            }
+        }
+    }
+    // alan_btn/src/processMessageForChat.ts
+    function processMessageForChat(msg, messages) {
+        var _a, _b;
+        var isNew = true;
+        var replaceLoader = false;
+        var msgInd = null;
+        var updateResponse = false;
+        var msgReqId = msg.reqId || ((_a = msg === null || msg === void 0 ? void 0 : msg.ctx) === null || _a === void 0 ? void 0 : _a.reqId);
+        var msgResponseId = (_b = msg === null || msg === void 0 ? void 0 : msg.ctx) === null || _b === void 0 ? void 0 : _b.responseId;
+        if (msg.type === "response" && msg.name === "text") {
+            var loadingMsgReqId = messages.findIndex(function (m) {
+                var _a;
+                return m.name === "loading" && msgReqId && (((_a = m === null || m === void 0 ? void 0 : m.ctx) === null || _a === void 0 ? void 0 : _a.reqId) || m.reqId) === msgReqId;
+            });
+            if (loadingMsgReqId > -1) {
+                msgInd = loadingMsgReqId;
+                messages[msgInd] = __assign({}, msg);
+                replaceLoader = true;
+                isNew = false;
+            }
+            else {
+                var unfinalizeMsgInd = messages.findIndex(function (m) {
+                    var _a;
+                    return m.type === "response" && msgResponseId && ((_a = m === null || m === void 0 ? void 0 : m.ctx) === null || _a === void 0 ? void 0 : _a.responseId) === msgResponseId;
+                });
+                var hasUnfinalizedResponses = unfinalizeMsgInd !== -1;
+                if (hasUnfinalizedResponses) {
+                    msgInd = unfinalizeMsgInd;
+                    updateResponse = true;
+                    replaceLoader = false;
+                    isNew = false;
+                    mergeProgressiveMessages(messages, msgInd, msg);
+                }
+            }
+        }
+        if (isNew) {
+            messages.push(__assign({}, msg));
+            return {
+                isNew: isNew,
+                msgInd: messages.length - 1,
+                replaceLoader: replaceLoader,
+                updateResponse: updateResponse
+            };
+        }
+        return {
+            isNew: isNew,
+            updateResponse: updateResponse,
+            replaceLoader: replaceLoader,
+            msgInd: msgInd
+        };
+    }
+    // alan_btn/src/filterImagesForTextChat.ts
+    function filterImagesForTextChat(images) {
+        return (images || []).filter(function (image) {
+            if (image && image.src) {
+                return image.src.match(/\.(jpg|jpeg|png|gif|svg|webp)$/i);
+            }
+            return null;
+        });
+    }
+    // alan_btn/src/isYouTubeUrl.ts
+    function isYouTubeUrl(url) {
+        var regExp = /^(http(s)?:\/\/)?((w){3}.)?youtu(be|.be)?(\.com)?\/.+/gm;
+        if (url.match(regExp)) {
+            return true;
+        }
+        return false;
+    }
+    // alan_btn/src/getLinkIcon.ts
+    function getLinkIcon(link) {
+        if (isYouTubeUrl(link.href)) {
+            return "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\"  viewBox=\"0 0 24 24\" width=\"20px\" height=\"20px\">    <path d=\"M 12 4 C 12 4 5.7455469 3.9999687 4.1855469 4.4179688 C 3.3245469 4.6479688 2.6479687 5.3255469 2.4179688 6.1855469 C 1.9999687 7.7455469 2 12 2 12 C 2 12 1.9999687 16.254453 2.4179688 17.814453 C 2.6479687 18.675453 3.3255469 19.352031 4.1855469 19.582031 C 5.7455469 20.000031 12 20 12 20 C 12 20 18.254453 20.000031 19.814453 19.582031 C 20.674453 19.352031 21.352031 18.674453 21.582031 17.814453 C 22.000031 16.254453 22 12 22 12 C 22 12 22.000031 7.7455469 21.582031 6.1855469 C 21.352031 5.3255469 20.674453 4.6479688 19.814453 4.4179688 C 18.254453 3.9999687 12 4 12 4 z M 12 6 C 14.882 6 18.490875 6.1336094 19.296875 6.3496094 C 19.465875 6.3946094 19.604391 6.533125 19.650391 6.703125 C 19.891391 7.601125 20 10.342 20 12 C 20 13.658 19.891391 16.397875 19.650391 17.296875 C 19.605391 17.465875 19.466875 17.604391 19.296875 17.650391 C 18.491875 17.866391 14.882 18 12 18 C 9.119 18 5.510125 17.866391 4.703125 17.650391 C 4.534125 17.605391 4.3956094 17.466875 4.3496094 17.296875 C 4.1086094 16.398875 4 13.658 4 12 C 4 10.342 4.1086094 7.6011719 4.3496094 6.7011719 C 4.3946094 6.5331719 4.533125 6.3946094 4.703125 6.3496094 C 5.508125 6.1336094 9.118 6 12 6 z M 10 8.5351562 L 10 15.464844 L 16 12 L 10 8.5351562 z\" fill=\"#919191\"/></svg>";
+        }
+        return "<svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n    <path d=\"M7.22602 9.27842L5.17192 11.3326C5.17192 11.3326 5.17192 11.3326 5.17187 11.3326C5.17187 11.3326 5.17187 11.3327 5.17183 11.3327C4.32239 12.1821 2.94018 12.1822 2.09065 11.3327C1.67911 10.9211 1.45252 10.374 1.45252 9.79203C1.45252 9.21015 1.67911 8.66309 2.09051 8.25154C2.09056 8.25149 2.09061 8.25144 2.09065 8.25139L4.14475 6.19725C4.42833 5.91362 4.42833 5.45375 4.1447 5.17017C3.86112 4.88659 3.40126 4.88659 3.11763 5.17017L1.06353 7.22432C1.06339 7.22447 1.06324 7.22466 1.0631 7.2248C0.377557 7.91058 0 8.82233 0 9.79203C0 10.762 0.377702 11.6739 1.06358 12.3597C1.77154 13.0676 2.70139 13.4216 3.63129 13.4216C4.56119 13.4216 5.49109 13.0676 6.19895 12.3597C6.199 12.3597 6.199 12.3596 6.199 12.3596L8.25309 10.3055C8.53667 10.0219 8.53667 9.56205 8.25305 9.27842C7.96951 8.99484 7.5097 8.99484 7.22602 9.27842Z\" fill=\"#919191\"/>\n    <path d=\"M13.4249 3.62955C13.4249 2.65961 13.0472 1.74772 12.3613 1.06184C10.9455 -0.353972 8.64171 -0.353923 7.22595 1.06184C7.2259 1.06194 7.2258 1.06199 7.22576 1.06209L5.17171 3.11609C4.88808 3.39967 4.88808 3.85958 5.17171 4.14316C5.31357 4.28502 5.49939 4.35591 5.68527 4.35591C5.87109 4.35591 6.05701 4.28497 6.19878 4.14316L8.25283 2.08916C8.25288 2.08906 8.25297 2.08901 8.25307 2.08892C9.1025 1.23949 10.4847 1.23944 11.3342 2.08892C11.7457 2.50046 11.9724 3.04762 11.9724 3.62955C11.9724 4.21143 11.7458 4.75849 11.3344 5.17004L11.3342 5.17018L9.28014 7.22433C8.99656 7.50791 8.99656 7.96778 9.28019 8.2514C9.42201 8.39322 9.60788 8.46415 9.7937 8.46415C9.97958 8.46415 10.1655 8.39322 10.3073 8.2514L12.3614 6.19726C12.3615 6.19711 12.3617 6.19692 12.3618 6.19677C13.0473 5.51099 13.4249 4.59925 13.4249 3.62955Z\" fill=\"#919191\"/>\n    <path d=\"M4.14491 9.27836C4.28672 9.42018 4.4726 9.49111 4.65842 9.49111C4.8443 9.49111 5.03017 9.42018 5.17198 9.27836L9.28028 5.17007C9.56391 4.88649 9.56391 4.42663 9.28028 4.143C8.9967 3.85942 8.53683 3.85942 8.2532 4.143L4.14491 8.25124C3.86128 8.53492 3.86128 8.99479 4.14491 9.27836Z\" fill=\"#919191\"/>\n</svg>";
+    }
     // alan_btn/alan_btn.ts
     (function (ns) {
-        var alanButtonVersion = "alan-version.1.8.44";
+        var alanButtonVersion = "alan-version.1.8.45";
         alanButtonVersion = alanButtonVersion.replace("alan-version.", "");
         if (window.alanBtn) {
             console.warn("Alan: the Alan Button source code has already added (v." + alanButtonVersion + ")");
@@ -3559,8 +3653,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             var rootEl = options2.rootEl || document.createElement("div");
             var body = document.getElementsByTagName("body")[0];
             var btn = document.createElement("div");
+            var noWiFiChatIcon = "<svg width=\"35\" height=\"35\" viewBox=\"0 0 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path d=\"M7.90233 10.4566C7.52988 9.72656 6.63602 9.42857 5.90602 9.78613C4.95254 10.2629 4.02887 11.0525 3.32866 11.708C2.71784 12.2593 2.68803 13.2127 3.23926 13.8086C3.53722 14.1215 3.93946 14.2854 4.34171 14.2854C4.69926 14.2854 5.05681 14.1513 5.35477 13.898C5.65273 13.6298 6.54661 12.7956 7.24682 12.4529C7.97682 12.0805 8.27478 11.1866 7.91723 10.4566H7.90233Z\" />\n        <path d=\"M32.1414 11.4398C28.1636 7.92391 23.0983 5.9872 17.884 5.9872C15.4258 5.9872 13.0273 6.40437 10.733 7.22376C10.6883 7.23866 10.6436 7.28335 10.5989 7.31315L8.40888 4.97415C7.84276 4.37823 6.9042 4.33355 6.30828 4.89967C5.71236 5.4658 5.68256 6.40434 6.23379 7.00026L27.091 29.3472C27.3889 29.6601 27.7763 29.824 28.1785 29.824C28.5361 29.824 28.9085 29.6899 29.1916 29.4217C29.7875 28.8556 29.8173 27.917 29.2661 27.3211L18.2714 15.5368C21.5638 15.6411 24.6328 17.0266 26.9718 19.4848C27.2698 19.7976 27.6571 19.9466 28.0444 19.9466C28.4169 19.9466 28.7893 19.8127 29.0724 19.5296C29.6683 18.9635 29.6981 18.0248 29.132 17.4288C26.1375 14.2705 22.1299 12.5424 17.884 12.5424C17.1391 12.5424 16.3942 12.6019 15.6642 12.7062C15.6642 12.7062 15.6493 12.7062 15.6344 12.7062L12.8187 9.68189C14.4575 9.20515 16.1558 8.9519 17.884 8.9519C22.3683 8.9519 26.7334 10.6205 30.1749 13.6597C30.4579 13.913 30.8155 14.0322 31.1581 14.0322C31.5753 14.0322 31.9775 13.8682 32.2755 13.5256C32.8267 12.9148 32.7671 11.9613 32.1414 11.425V11.4398Z\" />\n        <path d=\"M12.2079 15.1643C11.7908 14.4492 10.882 14.2109 10.1669 14.628C8.94526 15.3282 7.8279 16.2072 6.82973 17.2203C6.24871 17.8013 6.26361 18.7548 6.82973 19.3209C7.12769 19.6039 7.50014 19.7529 7.87259 19.7529C8.24504 19.7529 8.64731 19.6039 8.93037 19.306C9.74976 18.4717 10.6585 17.7715 11.6418 17.1905C12.3569 16.7733 12.5953 15.8645 12.1781 15.1494L12.2079 15.1643Z\" />\n        <path d=\"M16.7666 20.3637C16.5282 19.5741 15.694 19.1421 14.9044 19.3805C13.355 19.8572 11.8354 21.2874 11.0756 22.0919C10.5094 22.6878 10.5243 23.6263 11.1352 24.1924C11.4182 24.4605 11.7907 24.6097 12.1631 24.6097C12.5505 24.6097 12.9527 24.4607 13.2358 24.1478C14.1595 23.1795 15.1576 22.4346 15.7833 22.2409C16.5729 22.0025 17.005 21.1682 16.7666 20.3786V20.3637Z\" />\n        <path d=\"M17.7499 29.7644C18.7785 29.7644 19.6122 28.9307 19.6122 27.9021C19.6122 26.8737 18.7785 26.0399 17.7499 26.0399C16.7214 26.0399 15.8877 26.8737 15.8877 27.9021C15.8877 28.9307 16.7214 29.7644 17.7499 29.7644Z\"/>\n        </svg>\n        ";
+            var disconnectedChatIcon = "\n        <svg class=\"alan-btn_disconnected-chat-icon-rotate\" width=\"35\" height=\"35\" viewBox=\"0 0 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path opacity=\"0.8\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M24.0579 3.47502C18.5874 0.922942 12.1534 1.67973 7.4383 5.76748C2.7232 9.85523 1.24337 15.2725 2.34798 20.767C3.45259 26.2615 7.87342 31.0097 13.2994 32.4594C19.715 34.174 26.6107 31.7302 30.2577 26.2615C26.9893 30.6213 20.7089 33.242 15.1228 32.2771C9.62181 31.3275 4.71002 26.606 3.45259 21.1573C2.11284 15.3541 3.59462 10.949 8.37598 6.57398C13.1573 2.19898 22.9638 1.8344 28.2519 8.2146C29.2614 9.43264 30.6224 11.6781 30.9871 14.4125C31.1694 15.5063 31.1694 15.6886 31.3518 16.6C31.3518 16.9646 31.7165 17.3292 32.0812 17.3292C32.6282 17.3292 33.0612 16.918 32.9929 16.2354C32.4459 10.7667 29.0622 5.80967 24.0579 3.47502Z\" fill=\"#B8B6B6\"/>\n        </svg>";
+            var sendChatIcon = "\n        <svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path d=\"M28.0134 15.9238L8.98646 6.40981C7.82892 5.83162 6.75249 5.99963 6.17778 6.77248C5.89042 7.15832 5.61697 7.85122 5.94952 8.96241L8.09542 16.1092C8.39668 17.1138 8.39668 18.8797 8.09542 19.8843L5.94952 27.0311C5.61697 28.1423 5.88926 28.8363 6.17662 29.2222C6.51959 29.681 7.04564 29.9348 7.65743 29.9348C8.07109 29.9348 8.51834 29.8166 8.9853 29.5837L28.0134 20.0697C28.9635 19.5946 29.5093 18.838 29.5093 17.9968C29.5093 17.1555 28.9647 16.3989 28.0134 15.9238ZM8.27386 27.3486L10.3155 20.5494C10.4383 20.1403 10.5217 19.6606 10.575 19.1554H16.6868C17.3276 19.1554 17.8455 18.6375 17.8455 17.9968C17.8455 17.356 17.3276 16.8381 16.6868 16.8381H10.575C10.5217 16.3329 10.4395 15.8532 10.3155 15.4441L8.27386 8.64493L26.9775 17.9968L8.27386 27.3486Z\" fill=\"#B8B6B6\"/>\n        </svg>";
+            var chatMicIcon = "\n        <svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <path d=\"M18.2623 24.0476C16.7915 24.0458 15.3814 23.4608 14.3414 22.4208C13.3014 21.3808 12.7164 19.9707 12.7147 18.5V10.7333C12.7147 9.26204 13.2992 7.85099 14.3395 6.81061C15.3799 5.77024 16.791 5.18576 18.2623 5.18576C19.7336 5.18576 21.1446 5.77024 22.185 6.81061C23.2254 7.85099 23.8099 9.26204 23.8099 10.7333V18.5C23.8081 19.9707 23.2231 21.3808 22.1831 22.4208C21.1431 23.4608 19.733 24.0458 18.2623 24.0476ZM18.2623 7.4048C17.3798 7.40576 16.5337 7.75676 15.9097 8.38078C15.2857 9.00479 14.9347 9.85086 14.9337 10.7333V18.5C14.9337 19.3828 15.2844 20.2294 15.9086 20.8536C16.5329 21.4778 17.3795 21.8285 18.2623 21.8285C19.1451 21.8285 19.9917 21.4778 20.6159 20.8536C21.2401 20.2294 21.5908 19.3828 21.5908 18.5V10.7333C21.5899 9.85086 21.2389 9.00479 20.6148 8.38078C19.9908 7.75676 19.1448 7.40576 18.2623 7.4048ZM28.2479 18.5C28.2479 18.2057 28.131 17.9235 27.923 17.7154C27.7149 17.5073 27.4327 17.3905 27.1384 17.3905C26.8441 17.3905 26.5619 17.5073 26.3539 17.7154C26.1458 17.9235 26.0289 18.2057 26.0289 18.5C26.0289 20.5598 25.2106 22.5353 23.7541 23.9918C22.2976 25.4483 20.3221 26.2666 18.2623 26.2666C16.2024 26.2666 14.227 25.4483 12.7704 23.9918C11.3139 22.5353 10.4956 20.5598 10.4956 18.5C10.4956 18.2057 10.3788 17.9235 10.1707 17.7154C9.9626 17.5073 9.68039 17.3905 9.38613 17.3905C9.09187 17.3905 8.80966 17.5073 8.60158 17.7154C8.39351 17.9235 8.27661 18.2057 8.27661 18.5C8.27661 21.1483 9.32867 23.6882 11.2013 25.5609C13.074 27.4336 15.6139 28.4856 18.2623 28.4856C20.9106 28.4856 23.4505 27.4336 25.3232 25.5609C27.1959 23.6882 28.2479 21.1483 28.2479 18.5ZM19.3718 30.7047V27.3761C19.3718 27.0818 19.2549 26.7996 19.0468 26.5916C18.8387 26.3835 18.5565 26.2666 18.2623 26.2666C17.968 26.2666 17.6858 26.3835 17.4777 26.5916C17.2696 26.7996 17.1528 27.0818 17.1528 27.3761V30.7047C17.1528 30.9989 17.2696 31.2811 17.4777 31.4892C17.6858 31.6973 17.968 31.8142 18.2623 31.8142C18.5565 31.8142 18.8387 31.6973 19.0468 31.4892C19.2549 31.2811 19.3718 30.9989 19.3718 30.7047Z\" fill=\"#171717\"/>\n        </svg>\n        <div class=\"alan-text-chat__animated-btn-bars\">\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n        </div>";
+            var chatNoMicIcon = "<svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.9675 16.3602V18.6166C12.9692 20.0539 13.541 21.432 14.5574 22.4483C15.5738 23.4647 16.9518 24.0365 18.3892 24.0382C19.2643 24.0371 20.1175 23.8248 20.8804 23.4294L19.0569 21.8003C18.8389 21.846 18.6153 21.8695 18.3892 21.8695C17.5264 21.8695 16.699 21.5268 16.089 20.9168C15.4789 20.3067 15.1362 19.4793 15.1362 18.6166V18.2976L12.9675 16.3602ZM21.6421 16.7466V11.0263C21.6412 10.1638 21.2982 9.33696 20.6883 8.72712C20.0785 8.11727 19.2516 7.77424 18.3892 7.7733C17.5267 7.77424 16.6999 8.11727 16.09 8.72712C15.5048 9.31233 15.1653 10.0974 15.138 10.9219L13.2678 9.24713C13.5339 8.48102 13.9711 7.77698 14.5555 7.1926C15.5723 6.17585 16.9513 5.60464 18.3892 5.60464C19.8271 5.60464 21.2061 6.17585 22.2228 7.1926C23.2396 8.20935 23.8108 9.58837 23.8108 11.0263V18.6166C23.8108 18.6404 23.8106 18.6643 23.8102 18.6882L21.6421 16.7466ZM22.5782 24.9462C21.345 25.7623 19.89 26.2068 18.3892 26.2068C16.3761 26.2068 14.4455 25.4071 13.022 23.9837C11.5986 22.5602 10.7989 20.6296 10.7989 18.6166C10.7989 18.329 10.6847 18.0532 10.4813 17.8498C10.2779 17.6465 10.0021 17.5322 9.71457 17.5322C9.42699 17.5322 9.15118 17.6465 8.94783 17.8498C8.74448 18.0532 8.63024 18.329 8.63024 18.6166C8.63024 21.2048 9.65841 23.687 11.4886 25.5172C13.0613 27.0899 15.1156 28.0704 17.3048 28.3151V30.5441C17.3048 30.8317 17.4191 31.1075 17.6224 31.3109C17.8258 31.5142 18.1016 31.6285 18.3892 31.6285C18.6768 31.6285 18.9526 31.5142 19.1559 31.3109C19.3593 31.1075 19.4735 30.8317 19.4735 30.5441V28.3151C21.2027 28.1218 22.8477 27.4695 24.2378 26.4288L22.5782 24.9462ZM27.5342 22.0231L25.7589 20.4332C25.9042 19.8436 25.9794 19.2339 25.9794 18.6166C25.9794 18.329 26.0937 18.0532 26.297 17.8498C26.5004 17.6465 26.7762 17.5322 27.0638 17.5322C27.3514 17.5322 27.6272 17.6465 27.8305 17.8498C28.0339 18.0532 28.1481 18.329 28.1481 18.6166C28.1481 19.7909 27.9364 20.9434 27.5342 22.0231Z\" fill=\"#B8B6B6\"/>\n        <path d=\"M8.18825 6.56812L31.2883 27.1759C31.8123 27.6433 31.8581 28.4471 31.3906 28.9711C30.9232 29.4951 30.1194 29.5409 29.5954 29.0735L6.49538 8.46573C5.97137 7.99826 5.92553 7.1945 6.39301 6.67049C6.86048 6.14648 7.66424 6.10065 8.18825 6.56812Z\" fill=\"#B8B6B6\"/>\n        </svg>\n        ";
             var micIconSrc = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==";
-            var alanLogoIconSrc = "data:image/png;base64,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isMLqGuJE2BoW3N17lDnczfSMeex7fOU6p/gz6073zXl9h4691dD9j1rE+18Hhtupix+1o48X75MHTUWrUKqCUA6RTcd6sRlVZBpV4k9HLaSDlamGSm09yIUPjRSKc1Ore5RFlTmLi41jQE/Bo0uB586U3PWH9eHAPkmOn8O0IutovH15thG29qrIgOSDY6nAfdRjm7bkIqO01jyZDLMA011ot3vREcnXm5RHZUF9+V2PNdfLRnwE1SsD8EnvkdRPqkPAfIddPRumdyiOlaxdL94BiQLLAeGVhzrDrgvoim3U8kwu5saRPvXoPPpJr0E+5/C5gbqWOIEONicGjLgVdSmT8EnuJr22qYPAfIDdH4boBdb5XAMXhrb6Lj2igYgZ/9pVHjTuJXuiP562tf48iQykJ4lllq0uoY6rijJs2gA0nBdekrXIRV/DW8+G2KcILwNvV0hupF1VMeiS/eLdT5n3ioa//bIQGszpx8HrQ6sVKkseC511JWoiBQLQFr7mSItzu80NAvupGp35K/eMx6vLOS3zOWPM+58GnxeqUZn9qv/1+MdgT5LZcGzqKOuSNmlVAacluw306Hb6OBG1owFNY+8feagzH+vyOzvGXeNUGJXio7Q0/+zY9ut3N6p1E9zvyFyNUpPhyhG1jmFvgkdr0ZznTUAB1lgW7Tad8vQp2j/kU1VJgv+Hp1bmvQS7df/PZI1JrI6A5qygBacTqMspdFbAxt+DXqaqcgty3C4NqdTPQfKIoOzX1NuauS0ipb7n0SWe6IJALw+gs7GJr0E+/dicz11/G8C24eYzJkBL8b7NAef4B9LCV0D+DV0n9RBmeUE/GmcnkWyZEDO5mNojZZbHZelVXU70ULQ5WSYvzZVE26apdjSpJdgv15LouVayU+AXBnwgzTIwXcgUrTy+6MHPjb+ez0af2/Uiq+g1+FtjG/2UIvJMyBnsYJcYx/9yMhygMC/+PMyMoyWx48U+G1GocRMxWP4fSt1TPpIKEcG1F2vgw8Is0SLb9806/uojzewc98ohUT7FmN3eSLbB83mCECdSZZDCWic1SiDcVipt2slv/wnD0AAPgjlmxpJT5fCrXDRLwCDBF29U+bmIOV4Sjvwq6FTUkk+BlTtGccs4s/nKOsp03wzomds36V8mM59nL9jCRzfxgEXUlZQdBlPIcrMP6R8gTpW8wP2FA21TRMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARMwARPoC4H/A+Gj/yJlPcQaAAAAAElFTkSuQmCC";
+            var alanLogoIconSrc = "data:image/png;base64,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";
             var roundedTriangleSecondLayerSrc = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n";
             var circleSecondLayerSrc = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n";
             var micIconDiv = document.createElement("div");
@@ -3657,6 +3756,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             }
             function getDefaultBtnState(state2) {
                 if (state2 === void 0) { state2 = DEFAULT; }
+                if (btnDisabled) {
+                    return state2;
+                }
                 if (!isOriginSecure()) {
                     return NOT_SECURE_ORIGIN;
                 }
@@ -3866,7 +3968,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     el.style.display = "flex";
                     setTimeout(function () {
                         var textareaEl = document.getElementById("chatTextarea");
-                        if (textareaEl) {
+                        if (textareaEl && state === DEFAULT) {
                             textareaEl.focus();
                         }
                     }, 0);
@@ -4291,8 +4393,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 var hoverSelector = !isMobile() ? ":hover" : ":active";
                 if (!isMobile()) {
                     keyFrames += getStyleSheetMarker() + ".alanBtn{transform: scale(1); transition: " + transitionCss + ";} .alanBtn" + hoverSelector + "{transform: scale(1.11111);transition:" + transitionCss + ";}.alanBtn:focus {transform: scale(1);" + transitionCss + ";  border: solid 3px #50e3c2;  outline: none;  }";
+                    keyFrames += getStyleSheetMarker(true) + ".alan-btn-disconnected  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
+                    keyFrames += getStyleSheetMarker(true) + ".alan-btn-offline  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
+                    keyFrames += getStyleSheetMarker(true) + ".alan-btn-no-voice-support  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
                 }
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn__page-scrolled .alanBtn {\n                transform: scale(0.8);\n                pointer-events: none;\n                transition: ".concat(transitionCss, ";\n            }");
+                keyFrames += getStyleSheetMarker(true) + ".alan-btn__page-scrolled .alanBtn {\n                transform: scale(0.4);\n                opacity: 0.5;\n                pointer-events: none;\n                transition: ".concat(transitionCss, ";\n            }");
                 keyFrames += getStyleSheetMarker() + ".alanBtn-recognised-text-holder { position:fixed; transform: translateY(" + (isTopAligned ? "-" : "") + "50%); max-width:236px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}";
                 keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__left-side { text-align: left;}";
                 keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__right-side { text-align: right;}";
@@ -4362,7 +4467,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 keyFrames += ".mobile" + getStyleSheetMarker() + ".alan-btn__chat {\n                border-radius: 0px;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea-holder {\n                width: 100%;\n                height: ".concat(textareaHolderHeight, "px;\n                max-height: ").concat(textareaHolderHeight, "px;\n                min-height: ").concat(textareaHolderHeight, "px;\n            }");
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-empty-block {\n                flex: 1 1 auto;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages {\n                width: 100%;\n                height: calc(100% - ".concat(chatHeaderHeight + textareaHolderHeight, "px);\n                max-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n                min-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n                overflow-y: scroll;\n                overflow-x: hidden;\n                padding: 20px 10px;\n                display: flex;\n                flex-shrink: 0;\n                flex-direction: column;\n            }");
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper {\n                width: 100%;\n                height: calc(100% - ".concat(chatHeaderHeight + textareaHolderHeight, "px);\n                max-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n                min-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n                overflow-y: scroll;\n                overflow-x: hidden;\n                padding: 20px 10px;\n                display: flex;\n                flex-shrink: 0;\n                flex-direction: column-reverse;\n            }");
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages {\n                display: flex;\n                flex-shrink: 0;\n                flex-direction: column;\n            }";
                 var headerBg = ((_3 = (_2 = (_1 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _1 === void 0 ? void 0 : _1.textChat) === null || _2 === void 0 ? void 0 : _2.header) === null || _3 === void 0 ? void 0 : _3.backgroundColor) || "#FFFFFF";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header {\n                width: 100%;\n                height: ".concat(chatHeaderHeight, "px;\n                max-height: ").concat(chatHeaderHeight, "px;\n                min-height: ").concat(chatHeaderHeight, "px;\n                color: #0f2029;\n                padding: 0px 15px;\n                padding-top: 12px;\n                background: ").concat(headerBg, ";\n                color: ").concat(((_6 = (_5 = (_4 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _4 === void 0 ? void 0 : _4.textChat) === null || _5 === void 0 ? void 0 : _5.header) === null || _6 === void 0 ? void 0 : _6.color) || "#000000", ";\n                text-align: center;\n                text-overflow: ellipsis;\n                white-space: nowrap;\n                position:relative;\n            }");
                 var headerFontSize = ((_9 = (_8 = (_7 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _7 === void 0 ? void 0 : _7.textChat) === null || _8 === void 0 ? void 0 : _8.header) === null || _9 === void 0 ? void 0 : _9.fontSize) || 16;
@@ -4396,10 +4502,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 if (!isMobile()) {
                     keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn:hover svg path {\n                    fill: ".concat(((_45 = (_44 = (_43 = (_42 = (_41 = (_40 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _40 === void 0 ? void 0 : _40.textChat) === null || _41 === void 0 ? void 0 : _41.popup) === null || _42 === void 0 ? void 0 : _42.icons) === null || _43 === void 0 ? void 0 : _43.close) === null || _44 === void 0 ? void 0 : _44.hover) === null || _45 === void 0 ? void 0 : _45.fill) || "rgba(151, 152, 156, 1)", ";\n                }");
                 }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar {\n                width: ".concat(textChatScrollSize, "px;\n                height: ").concat(textChatScrollSize, "px;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar-thumb {\n                border-radius: 3px;\n                background-color: rgba(224, 224, 224, 0.795);\n                transition: background-color 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar-thumb:hover {\n                background-color: rgba(230, 230, 230, 0.856);\n                transition: background-color 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages::-webkit-scrollbar-track {\n                border-radius: 3px;\n                background: transparent;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar {\n                width: ".concat(textChatScrollSize, "px;\n                height: ").concat(textChatScrollSize, "px;\n            }");
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-thumb {\n                border-radius: 3px;\n                background-color: rgba(224, 224, 224, 0.795);\n                transition: background-color 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-thumb:hover {\n                background-color: rgba(230, 230, 230, 0.856);\n                transition: background-color 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-track {\n                border-radius: 3px;\n                background: transparent;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea-holder-gradient {\n                background: linear-gradient(0deg, ".concat(((_48 = (_47 = (_46 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _46 === void 0 ? void 0 : _46.textChat) === null || _47 === void 0 ? void 0 : _47.popup) === null || _48 === void 0 ? void 0 : _48.backgroundColor) || "rgba(218, 235, 255, 1)", " 30%, rgba(255, 255, 255, 0) 100%);\n                height:15px;\n                min-height:15px;\n                width: calc(100% - 10px);\n                position: absolute;\n                bottom: ").concat(textareaHolderHeight, "px;\n                left:0;\n            }");
                 keyFrames += getStyleSheetMarker() + ".show-gradient .alan-btn__chat-textarea-gradient {\n                position: absolute;\n                left: 26px;\n                border-radius: 16px;\n                bottom: 15px;\n                width: 15px;\n                opacity: 0;\n                transition: opacity 300ms ease-in-out;\n                height: ".concat(chatTextareaHeight, "px;\n                background: linear-gradient(90deg, ").concat(((_51 = (_50 = (_49 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _49 === void 0 ? void 0 : _49.textChat) === null || _50 === void 0 ? void 0 : _50.textarea) === null || _51 === void 0 ? void 0 : _51.backgroundColor) || "rgb(255, 255, 255)", " 60%, rgba(255, 255, 255, 0) 100%);\n            }");
                 keyFrames += getStyleSheetMarker() + ".show-gradient .alan-btn__chat-textarea-gradient {\n                opacity: 1;\n                transition: opacity 300ms ease-in-out;\n            }";
@@ -4411,15 +4517,26 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-thumb:hover {\n                background-color: rgba(230, 230, 230, 0.856);\n                transition: background-color 300ms ease-in-out;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-track {\n                border-radius: 3px;\n                background: transparent;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-text-chat__voice-enabled .alan-btn__chat-textarea {\n                padding-left: 42px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.active .alan-btn__chat-textarea {\n                opacity: 0.6;\n                transition: opacity 300ms ease-in-out;\n                pointer-events: none;\n                -webkit-touch-callout: none;\n                -webkit-user-select: none;\n                -khtml-user-select: none;\n                -moz-user-select: none;\n                -ms-user-select: none;\n                user-select: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.active .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__mic-active .alan-btn__chat-textarea {\n                opacity: 0.6;\n                transition: opacity 300ms ease-in-out;\n                pointer-events: none;\n                -webkit-touch-callout: none;\n                -webkit-user-select: none;\n                -khtml-user-select: none;\n                -moz-user-select: none;\n                -ms-user-select: none;\n                user-select: none;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__mic-active .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__inactive .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-textarea {\n                opacity: 0.6;\n                transition: opacity 300ms ease-in-out;\n                pointer-events: none;\n                -webkit-touch-callout: none;\n                -webkit-user-select: none;\n                -khtml-user-select: none;\n                -moz-user-select: none;\n                -ms-user-select: none;\n                user-select: none;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-unmute-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-header-clear-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-send-btn svg path {\n                opacity: 1;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-mic-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__inactive .alan-btn__chat-mic-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn_disconnected-chat-icon-rotate {\n                animation: disconnected-chat-icon-rotate-animation 1500ms linear infinite;\n            }";
+                keyFrames += getStyleSheetMarker() + generateKeyFrame("disconnected-chat-icon-rotate-animation", "0%{  transform: rotate(0deg);  } 100%{  transform: rotate(360deg);  }");
+                keyFrames += getStyleSheetMarker() + ".alan-btn__disabled {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn {\n                position: absolute;\n                transition: opacity 300ms ease-in-out;\n                right: 20px;\n                bottom: 20px;\n                min-width: 40px;\n                width: 40px;\n                max-width: 40px;\n                height: 40px;\n                max-height: 40px;\n                min-height: 40px;\n                display: flex;\n                flex-direction: row;\n                justify-content: center;\n                align-items: center;\n                border-radius: 50%;\n                -webkit-touch-callout: none; /* iOS Safari */\n                -webkit-user-select: none; /* Chrome/Safari/Opera */\n                -khtml-user-select: none; /* Konqueror */\n                -moz-user-select: none; /* Firefox */\n                -ms-user-select: none; /* IE/Edge */\n                user-select: none;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg {\n                position: relative;\n                left: 2px;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg path {\n                fill: ".concat(((_66 = (_65 = (_64 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _64 === void 0 ? void 0 : _64.textChat) === null || _65 === void 0 ? void 0 : _65.textarea) === null || _66 === void 0 ? void 0 : _66.placeholderColor) || "rgba(116, 116, 116, 1)", ";\n                opacity: 0.5;\n            }");
-                keyFrames += getStyleSheetMarker() + ".ready-to-send .alan-btn__chat-send-btn svg path {\n                fill: ".concat(((_72 = (_71 = (_70 = (_69 = (_68 = (_67 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _67 === void 0 ? void 0 : _67.textChat) === null || _68 === void 0 ? void 0 : _68.popup) === null || _69 === void 0 ? void 0 : _69.icons) === null || _70 === void 0 ? void 0 : _70.general) === null || _71 === void 0 ? void 0 : _71["default"]) === null || _72 === void 0 ? void 0 : _72.fill) || "rgba(23, 23, 23, 1)", ";\n                opacity: 1;\n            }");
+                keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn svg path {\n                fill: ".concat(((_72 = (_71 = (_70 = (_69 = (_68 = (_67 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _67 === void 0 ? void 0 : _67.textChat) === null || _68 === void 0 ? void 0 : _68.popup) === null || _69 === void 0 ? void 0 : _69.icons) === null || _70 === void 0 ? void 0 : _70.general) === null || _71 === void 0 ? void 0 : _71["default"]) === null || _72 === void 0 ? void 0 : _72.fill) || "rgba(23, 23, 23, 1)", ";\n                opacity: 1;\n            }");
                 if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".ready-to-send .alan-btn__chat-send-btn:hover {\n                    cursor: pointer;\n                }";
-                    keyFrames += getStyleSheetMarker() + ".ready-to-send .alan-btn__chat-send-btn:hover svg path {\n                    fill: ".concat(((_78 = (_77 = (_76 = (_75 = (_74 = (_73 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _73 === void 0 ? void 0 : _73.textChat) === null || _74 === void 0 ? void 0 : _74.popup) === null || _75 === void 0 ? void 0 : _75.icons) === null || _76 === void 0 ? void 0 : _76.general) === null || _77 === void 0 ? void 0 : _77.hover) === null || _78 === void 0 ? void 0 : _78.fill) || "rgba(0, 120, 255, 1)", ";\n                    opacity:0.8;\n                }");
+                    keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn:hover {\n                    cursor: pointer;\n                }";
+                    keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn:hover svg path {\n                    fill: ".concat(((_78 = (_77 = (_76 = (_75 = (_74 = (_73 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _73 === void 0 ? void 0 : _73.textChat) === null || _74 === void 0 ? void 0 : _74.popup) === null || _75 === void 0 ? void 0 : _75.icons) === null || _76 === void 0 ? void 0 : _76.general) === null || _77 === void 0 ? void 0 : _77.hover) === null || _78 === void 0 ? void 0 : _78.fill) || "rgba(0, 120, 255, 1)", ";\n                    opacity:0.8;\n                }");
                 }
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn {\n                position: absolute;\n                left: 20px;\n                bottom: 22px;\n                min-width: ".concat(chatMicBtnActiveSize, "px;\n                width: ").concat(chatMicBtnActiveSize, "px;\n                max-width: ").concat(chatMicBtnActiveSize, "px;\n                height: ").concat(chatMicBtnActiveSize, "px;\n                max-height: ").concat(chatMicBtnActiveSize, "px;\n                min-height: ").concat(chatMicBtnActiveSize, "px;\n                display: flex;\n                flex-direction: row;\n                cursor: pointer;\n                justify-content: center;\n                align-items: center;\n                border-radius: 50%;\n            }");
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active::before {\n                content: '';\n                position: absolute;\n                z-index: -1;\n                left: 0;\n                top: 0;\n                height: 100%;\n                width: 100%;\n                background-color:  ".concat(((_84 = (_83 = (_82 = (_81 = (_80 = (_79 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _79 === void 0 ? void 0 : _79.textChat) === null || _80 === void 0 ? void 0 : _80.popup) === null || _81 === void 0 ? void 0 : _81.icons) === null || _82 === void 0 ? void 0 : _82.general) === null || _83 === void 0 ? void 0 : _83["default"]) === null || _84 === void 0 ? void 0 : _84.fill) || "#C8C8CC", ";\n                opacity: 0.3;\n                border-radius: 50%;\n            }");
@@ -4464,13 +4581,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper {\n                display: flex;\n                flex-wrap: wrap;\n                position: relative;\n                top: -9px;\n                left: -20px;\n                width: calc(100% + 40px);\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow {\n                position: absolute;\n                top: 50%;\n                transform: translateY(-50%);\n                left: 12px;\n                opacity:0.85;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow {\n                position: absolute;\n                top: 50%;\n                transform: translateY(-50%);\n                right: 12px;\n                opacity:0.85;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow * {\n                pointer-events: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow * {\n                pointer-events: none;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow:hover {\n                opacity:1;\n                cursor: pointer;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow:hover {\n                opacity:1;\n                cursor: pointer;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow.invisible {\n                opacity:0;\n                pointer-events: none;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow.invisible {\n                opacity:0;\n                pointer-events: none;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img-block {\n                overflow: hidden;\n                border-radius: 20px 20px 0 0;\n                width: 100%;\n                display: flex;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-video {\n                width: 100%;\n                min-width: 100%;\n                min-height: 220px;\n                height: 220px;\n                max-height: 220px;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img {\n                cursor: pointer;\n                transition: transform 300ms ease-in-out;\n                width: 100%;\n                min-width: 100%;\n                min-height: 220px;\n                height: 220px;\n                max-height: 220px;\n                object-fit: contain;\n                pointer-events: initial;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img.not-found {\n                opacity: 0.7;\n            }";
                 if (!isMobile()) {
@@ -4507,7 +4623,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn  {\n                    opacity: 0.7;\n                }";
                     keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn:hover  {\n                    opacity: 1;\n                }";
                 }
-                keyFrames += getStyleSheetMarker() + ".alan-incoming-msg {\n                display: flex;\n                align-items: center;\n            }";
+                keyFrames += getStyleSheetMarker() + ".alan-incoming-msg {\n                display: flex;\n                align-items: center;\n                overflow: hidden;\n                animation:chat-bubble-appear-w-opacity 300ms ease-in-out forwards 100ms, hide-buble 300ms forwards ease 30000ms !important;\n            }";
+                keyFrames += getStyleSheetMarker() + generateKeyFrame("hide-buble", "\n            0% { \n                height: 41px; \n                max-height:41px;    \n                min-height: 41px;\n            }\n              \n            100% {\n                height: 0px;\n                max-height: 0px;\n                min-height: 0px;\n                padding: 0px;\n                margin-bottom:0;\n            }");
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-incomming-msg-wrapper {\n                display: flex;\n                align-items: center;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-btn__chat-incomming-msg {\n                border-radius: 50%;\n                background-color: ".concat(((_136 = (_135 = (_134 = (_133 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _133 === void 0 ? void 0 : _133.textChat) === null || _134 === void 0 ? void 0 : _134.bubbles) === null || _135 === void 0 ? void 0 : _135.response) === null || _136 === void 0 ? void 0 : _136.color) || "rgba(8, 8, 8, 1)", ";\n                margin: 2px;\n                height: 6px;\n                width: 6px;\n                animation: alan-dot-bounce 1.5s infinite ease;\n            }");
                 keyFrames += getStyleSheetMarker() + ".msg-2 {\n                animation-delay: .2s;\n            }";
@@ -4525,9 +4642,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     "p {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "blockquote {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "dl {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "table {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
+                    "table {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                    word-break: initial!important;\n                }"),
                     "ul {\n                    padding-left: 30px!important; \n                    margin: 0!important; \n                    list-style-type: disc!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "ul li {\n                   list-style-type: dis!importantc;\n                   font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
+                    "ul li {\n                   list-style-type: disc!important;\n                   font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "ol {\n                    padding-left: 30px!important;\n                    margin: 0!important; \n                    list-style-type: decimal!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "ol li {\n                    list-style-type: decimal!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "h1 { font-size: 2.13em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
@@ -4565,12 +4682,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     "blockquote + * {\n                    margin-top: 16px!important;\n                }",
                     "audio {\n                    max-width: 100%!important;\n                    max-height: 100%!important;\n                }",
                     "video {\n                    max-width: 100%!important;\n                    max-height: 100%!important;\n                }",
-                    "img {\n                    max-width: 100%!important;\n                }",
+                    "img {\n                    max-width: 100%!important;\n                    pointer-events: auto!important;\n                    cursor: pointer;\n                }",
                     "code {\n                    background-color: #F8F8F8!important;\n                    border-radius: 3px!important;\n                    border: 1px solid #DDD!important;\n                    font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n                    margin: 0 2px!important;\n                    padding: 0 5px!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "pre {\n                    background-color: #F8F8F8!important;\n                    border-radius: 3px!important;\n                    border: 1px solid #DDD!important;\n                    font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n                    padding: 0 5px!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "pre code {\n                    border: none!important;\n                    margin: 0!important;\n                    padding: 0!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "hr {\n                    display: block!important;\n                    unicode-bidi: isolate!important;\n                    margin-block-start: 0.5em!important;\n                    margin-block-end: 0.5em!important;\n                    margin-inline-start: auto!important;\n                    margin-inline-end: auto!important;\n                    overflow: hidden!important;\n                    border-style: inset!important;\n                    border-width: 1px!important;\n                }",
-                    "blockquote {\n                    padding: 10px 20px!important;\n                    border-left: 5px solid #beb7b7!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
+                    "blockquote {\n                    padding: 5px 20px 0!important;\n                    border-left: 5px solid #beb7b7!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "table > tbody > tr > td {\n                    background-color: #fff!important;\n                    color: #000!important;\n                }",
                     "table > tbody > tr > th {\n                    color: #000!important;\n                    background-color: #fff!important;\n                }",
                     "table > thead > tr > th {\n                    padding: 4px!important;\n                    border-top: 1px solid #b7b5b5!important;\n                }",
@@ -4919,6 +5036,16 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                     else {
                         alanAudio.stop();
+                        if (state === NOT_SECURE_ORIGIN) {
+                            setTimeout(function () {
+                                showAlert(NOT_SECURE_ORIGIN_MSG);
+                            }, 300);
+                        }
+                        else if (state === PERMISSION_DENIED) {
+                            setTimeout(function () {
+                                showAlert(MIC_BLOCKED_MSG);
+                            }, 300);
+                        }
                     }
                 }
                 else {
@@ -5457,6 +5584,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     hidePopup(null);
                     if (err.name === "NotAllowedError") {
                         switchState(PERMISSION_DENIED);
+                        setTimeout(function () {
+                            if (firstClick) {
+                                showAlert(MIC_BLOCKED_MSG);
+                            }
+                        }, 300);
                     }
                     else if (err.name === "SecurityError") {
                         switchState(NOT_SECURE_ORIGIN);
@@ -5531,7 +5663,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 turnOffVoiceFn();
             }
             function _onTextCb(e) {
+                var _a;
                 var event = Object.assign(e, { name: "text", type: "response" /* Response */ });
+                if (((_a = event.images) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                    event.images = filterImagesForTextChat(event.images);
+                }
                 if (options2.onEvent) {
                     options2.onEvent(event);
                 }
@@ -5704,6 +5840,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 imgPreviewOverlayEl.id = "img-preview-overlay";
                 imgPreviewOverlayEl.classList.add("alan-btn__image-preview-overlay");
                 imgPreviewOverlayEl.style.zIndex = btnZIndex + 3;
+                imgPreviewOverlayEl.setAttribute("data-img-index", parentEl.getAttribute("data-img-index"));
+                imgPreviewOverlayEl.setAttribute("data-msg-req-id", parentEl.getAttribute("data-msg-req-id"));
                 var imgPreviewOverlayCloseIcon = document.createElement("div");
                 imgPreviewOverlayCloseIcon.id = "img-preview-overlay__close-icon";
                 imgPreviewOverlayCloseIcon.innerHTML = "\n            <svg width=\"17\" height=\"17\" viewBox=\"0 0 17 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M0.342029 15.0105C-0.113105 15.4658 -0.113035 16.2036 0.34217 16.6587C0.797374 17.1138 1.53533 17.1138 1.99046 16.6586L8.50015 10.1482L15.0104 16.658C15.4655 17.1131 16.2035 17.1131 16.6586 16.658C17.1138 16.2029 17.1138 15.4649 16.6586 15.0098L10.1483 8.49998L16.6582 1.98944C17.1132 1.53427 17.1132 0.796371 16.6579 0.341282C16.2028 -0.113819 15.4648 -0.113749 15.0097 0.341421L8.49991 6.85183L1.98966 0.341981C1.5345 -0.113143 0.796535 -0.113143 0.341377 0.341981C-0.113792 0.797116 -0.113792 1.53502 0.341377 1.99016L6.85187 8.5001L0.342029 15.0105Z\" fill=\"#FFFFFF\"/>\n</svg>\n";
@@ -5711,24 +5849,29 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 imgPreviewOverlayCloseIcon.addEventListener("click", closeImagePreview);
                 var imgElCloned = imgEl.cloneNode();
                 imgElCloned.className = "";
+                imgElCloned.classList.add("alan-btn__chat-response-img-el");
                 imgPreviewOverlayEl.appendChild(imgElCloned);
                 imgPreviewOverlayEl.appendChild(imgPreviewOverlayCloseIcon);
                 imgPreviewOverlayEl.addEventListener("click", closeImagePreview);
-                var leftArrow = parentEl.querySelector(".alan-btn__chat-response-imgs-wrapper-left-arrow");
-                var rightArrow = parentEl.querySelector(".alan-btn__chat-response-imgs-wrapper-right-arrow");
+                var leftArrow;
+                var rightArrow;
                 var leftArrowCloned = null;
                 var rightArrowCloned = null;
-                if (leftArrow && rightArrow) {
-                    leftArrowCloned = leftArrow.cloneNode(true);
-                    rightArrowCloned = rightArrow.cloneNode(true);
-                    leftArrowCloned.classList.add("alan-btn__image-preview-overlay-left-icon");
-                    leftArrowCloned.classList.remove("alan-btn__chat-response-imgs-wrapper-left-arrow");
-                    rightArrowCloned.classList.add("alan-btn__image-preview-overlay-right-icon");
-                    rightArrowCloned.classList.remove("alan-btn__chat-response-imgs-wrapper-right-arrow");
-                    leftArrowCloned.addEventListener("click", toLeftImage);
-                    rightArrowCloned.addEventListener("click", toRightImage);
-                    imgPreviewOverlayEl.appendChild(leftArrowCloned);
-                    imgPreviewOverlayEl.appendChild(rightArrowCloned);
+                if (parentEl) {
+                    leftArrow = parentEl.querySelector(".alan-btn__chat-response-imgs-wrapper-left-arrow");
+                    rightArrow = parentEl.querySelector(".alan-btn__chat-response-imgs-wrapper-right-arrow");
+                    if (leftArrow && rightArrow) {
+                        leftArrowCloned = leftArrow.cloneNode(true);
+                        rightArrowCloned = rightArrow.cloneNode(true);
+                        leftArrowCloned.classList.add("alan-btn__image-preview-overlay-left-icon");
+                        leftArrowCloned.classList.remove("alan-btn__chat-response-imgs-wrapper-left-arrow");
+                        rightArrowCloned.classList.add("alan-btn__image-preview-overlay-right-icon");
+                        rightArrowCloned.classList.remove("alan-btn__chat-response-imgs-wrapper-right-arrow");
+                        leftArrowCloned.addEventListener("click", toLeftImage);
+                        rightArrowCloned.addEventListener("click", toRightImage);
+                        imgPreviewOverlayEl.appendChild(leftArrowCloned);
+                        imgPreviewOverlayEl.appendChild(rightArrowCloned);
+                    }
                 }
                 document.addEventListener("keydown", closeImagePreviewByEsc);
                 body.appendChild(imgPreviewOverlayEl);
@@ -5748,15 +5891,44 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                 }
                 function toLeftImage(e) {
-                    switchImage(parentEl, [imgElCloned, imgEl], [leftArrowCloned, leftArrow], [rightArrowCloned, rightArrow], true);
+                    var previewWrapper = e.target.closest(".alan-btn__image-preview-overlay");
+                    var imgElInPreview = getImageEl(previewWrapper);
+                    var imgEl2 = getImageEl(parentEl);
+                    switchImage(previewWrapper, imgElInPreview, leftArrowCloned, rightArrowCloned, true);
+                    switchImage(parentEl, imgEl2, leftArrow, rightArrow, true);
                     e.stopPropagation();
                 }
                 function toRightImage(e) {
-                    switchImage(parentEl, [imgElCloned, imgEl], [leftArrowCloned, leftArrow], [rightArrowCloned, rightArrow], false);
+                    var previewWrapper = e.target.closest(".alan-btn__image-preview-overlay");
+                    var imgElInPreview = getImageEl(previewWrapper);
+                    var imgEl2 = getImageEl(parentEl);
+                    switchImage(previewWrapper, imgElInPreview, leftArrowCloned, rightArrowCloned, false);
+                    switchImage(parentEl, imgEl2, leftArrow, rightArrow, false);
                     e.stopPropagation();
                 }
             }
-            function switchImage(parentEl, imgEls, leftArrowEls, rightArrowEls, isLeftArrowClicked) {
+            function switchImagesAndFrames(imgEl, src) {
+                var parentEl = imgEl.parentNode;
+                if (isYouTubeUrl(src)) {
+                    if (imgEl.tagName.toLowerCase() === "iframe") {
+                        imgEl.src = src;
+                    }
+                    else {
+                        parentEl.insertAdjacentHTML("afterbegin", getYoutubeFrameHtml(src));
+                        imgEl.remove();
+                    }
+                }
+                else {
+                    if (imgEl.tagName.toLowerCase() === "img") {
+                        imgEl.src = src;
+                    }
+                    else {
+                        parentEl.insertAdjacentHTML("afterbegin", getImageHtml(src));
+                        imgEl.remove();
+                    }
+                }
+            }
+            function switchImage(parentEl, imgEl, leftArrowEl, rightArrowEl, isLeftArrowClicked) {
                 var imgInd = +parentEl.getAttribute("data-img-index");
                 var reqId = parentEl.getAttribute("data-msg-req-id");
                 var msg = textChatMessages.find(function (m) {
@@ -5765,24 +5937,16 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 });
                 if (msg) {
                     var imgCount = msg.images.length;
-                    leftArrowEls = leftArrowEls.filter(function (el) { return !!el; });
-                    rightArrowEls = rightArrowEls.filter(function (el) { return !!el; });
                     if (!isLeftArrowClicked) {
                         if (imgInd < imgCount) {
                             imgInd = imgInd + 1;
                             parentEl.setAttribute("data-img-index", imgInd.toString());
-                            for (var i2 = 0; i2 < imgEls.length; i2++) {
-                                imgEls[i2].src = msg.images[imgInd].src;
+                            switchImagesAndFrames(imgEl, msg.images[imgInd].src);
+                            if (imgInd > 0) {
+                                leftArrowEl.classList.remove("invisible");
                             }
-                            for (var i2 = 0; i2 < leftArrowEls.length; i2++) {
-                                if (imgInd > 0) {
-                                    leftArrowEls[i2].classList.remove("invisible");
-                                }
-                            }
-                            for (var i2 = 0; i2 < rightArrowEls.length; i2++) {
-                                if (imgInd === imgCount - 1) {
-                                    rightArrowEls[i2].classList.add("invisible");
-                                }
+                            if (imgInd === imgCount - 1) {
+                                rightArrowEl.classList.add("invisible");
                             }
                         }
                     }
@@ -5790,18 +5954,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         if (imgInd > 0) {
                             imgInd = imgInd - 1;
                             parentEl.setAttribute("data-img-index", imgInd.toString());
-                            for (var i2 = 0; i2 < imgEls.length; i2++) {
-                                imgEls[i2].src = msg.images[imgInd].src;
+                            switchImagesAndFrames(imgEl, msg.images[imgInd].src);
+                            if (imgInd === 0) {
+                                leftArrowEl.classList.add("invisible");
                             }
-                            for (var i2 = 0; i2 < leftArrowEls.length; i2++) {
-                                if (imgInd === 0) {
-                                    leftArrowEls[i2].classList.add("invisible");
-                                }
-                            }
-                            for (var i2 = 0; i2 < rightArrowEls.length; i2++) {
-                                if (imgInd < imgCount - 1) {
-                                    rightArrowEls[i2].classList.remove("invisible");
-                                }
+                            if (imgInd < imgCount - 1) {
+                                rightArrowEl.classList.remove("invisible");
                             }
                         }
                     }
@@ -5810,19 +5968,26 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             window.addEventListener("click", function (e) {
                 var clickedEl = e.target;
                 var isImageWasClicked = clickedEl.classList.contains("alan-btn__chat-response-img");
+                if (clickedEl.tagName.toLowerCase() === "img" && clickedEl.closest(".alan-btn__chat-response-text-wrapper")) {
+                    openImagePreview(clickedEl, null);
+                    return;
+                }
                 if (clickedEl.classList.contains("alan-btn__chat-response-imgs-wrapper-right-arrow") || clickedEl.classList.contains("alan-btn__chat-response-imgs-wrapper-left-arrow") || isImageWasClicked) {
                     var parentEl = clickedEl.closest(".alan-btn__chat-response-imgs-wrapper");
                     if (isImageWasClicked) {
                         openImagePreview(clickedEl, parentEl);
                         return;
                     }
-                    var imgEl = parentEl.querySelectorAll("img")[0];
+                    var imgEl = getImageEl(parentEl);
                     var leftArrowEl = parentEl.querySelectorAll(".alan-btn__chat-response-imgs-wrapper-left-arrow")[0];
                     var rightArrowEl = parentEl.querySelectorAll(".alan-btn__chat-response-imgs-wrapper-right-arrow")[0];
-                    switchImage(parentEl, [imgEl], [leftArrowEl], [rightArrowEl], clickedEl.classList.contains("alan-btn__chat-response-imgs-wrapper-left-arrow"));
+                    switchImage(parentEl, imgEl, leftArrowEl, rightArrowEl, clickedEl.classList.contains("alan-btn__chat-response-imgs-wrapper-left-arrow"));
                     e.stopPropagation();
                 }
             });
+            function getImageEl(parentEl) {
+                return parentEl.querySelectorAll(".alan-btn__chat-response-img-el")[0] || parentEl.querySelectorAll("iframe")[0];
+            }
             function getLinkTarget(link) {
                 try {
                     return link.target ? link.target : window.location.host === new URL(link.href).host ? "_self" : "_blank";
@@ -5842,17 +6007,29 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 tempNode.remove();
                 return resultHtml;
             }
+            function getImageHtml(src) {
+                var imgNotFoundSrc = "data:image/png;base64,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";
+                return "<img class=\"alan-btn__chat-response-img alan-btn__chat-response-img-el\" src=\"".concat(src, "\" onerror=\"this.src = '").concat(imgNotFoundSrc, "'; this.classList.add('not-found');\"/>");
+            }
+            function getYoutubeFrameHtml(src) {
+                return "<iframe class=\"alan-btn__chat-response-video\" width=\"560\" height=\"315\" src=\"".concat(src, "?autoplay=1&mute=1\" title=\"YouTube video player\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe>");
+            }
             function buildImagesContent(msg) {
                 var _a, _b, _c, _d;
                 var imgsBlock = "";
                 var imgsHtml = "";
-                var imgNotFoundSrc = "data:image/png;base64,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";
                 if (((_a = msg.images) === null || _a === void 0 ? void 0 : _a.length) > 0) {
-                    imgsHtml += "<img class=\"alan-btn__chat-response-img\" src=\"".concat(msg.images[0].src, "\" onerror=\"this.src = '").concat(imgNotFoundSrc, "'; this.classList.add('not-found');\"/>");
+                    var imageSrc = msg.images[0].src;
+                    if (isYouTubeUrl(imageSrc)) {
+                        imgsHtml = getYoutubeFrameHtml(imageSrc);
+                    }
+                    else {
+                        imgsHtml = getImageHtml(imageSrc);
+                    }
                 }
                 if (((_b = msg.images) === null || _b === void 0 ? void 0 : _b.length) > 0) {
-                    var arrowLeftSvg = "<svg class=\"alan-btn__chat-response-imgs-wrapper-left-arrow invisible\" width=\"30\" height=\"50\" viewBox=\"0 0 30 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <g filter=\"url(#filter0_d_305_1502)\">\n                    <path d=\"M3.50135 25.2074L23.8526 45.5024C24.5194 46.167 25.599 46.1659 26.2646 45.499C26.9298 44.8322 26.9281 43.7521 26.2612 43.087L7.12128 23.9999L26.2619 4.91293C26.9287 4.24778 26.9304 3.16832 26.2653 2.50145C25.9316 2.16715 25.4945 2 25.0573 2C24.6213 2 24.1858 2.16603 23.8527 2.49801L3.50135 22.7925C3.1802 23.112 2.99999 23.5469 2.99999 23.9999C2.99999 24.453 3.18071 24.8873 3.50135 25.2074Z\" fill=\"white\"/>\n                    </g>\n                    <defs>\n                    <filter id=\"filter0_d_305_1502\" x=\"0\" y=\"0\" width=\"29.7631\" height=\"50\" filterUnits=\"userSpaceOnUse\" color-interpolation-filters=\"sRGB\">\n                    <feFlood flood-opacity=\"0\" result=\"BackgroundImageFix\"/>\n                    <feColorMatrix in=\"SourceAlpha\" type=\"matrix\" values=\"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0\" result=\"hardAlpha\"/>\n                    <feOffset dy=\"1\"/>\n                    <feGaussianBlur stdDeviation=\"1.5\"/>\n                    <feComposite in2=\"hardAlpha\" operator=\"out\"/>\n                    <feColorMatrix type=\"matrix\" values=\"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0\"/>\n                    <feBlend mode=\"normal\" in2=\"BackgroundImageFix\" result=\"effect1_dropShadow_305_1502\"/>\n                    <feBlend mode=\"normal\" in=\"SourceGraphic\" in2=\"effect1_dropShadow_305_1502\" result=\"shape\"/>\n                    </filter>\n                    </defs>\n                    </svg>\n                    ";
-                    var arrowRightSvg = "<svg class=\"alan-btn__chat-response-imgs-wrapper-right-arrow ".concat(((_c = msg.images) === null || _c === void 0 ? void 0 : _c.length) > 1 ? "" : "invisible", "\" width=\"30\" height=\"50\" viewBox=\"0 0 30 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <g filter=\"url(#filter0_d_305_1497)\">\n                    <path d=\"M26.2617 22.7926L5.91041 2.49757C5.24363 1.83301 4.16409 1.83413 3.49842 2.501C2.83326 3.16779 2.83498 4.24794 3.50185 4.913L22.6418 24.0001L3.50117 43.0871C2.83438 43.7522 2.83266 44.8317 3.49773 45.4986C3.83142 45.8328 4.26859 46 4.70575 46C5.14179 46 5.57724 45.834 5.91033 45.502L26.2617 25.2075C26.5829 24.888 26.7631 24.4531 26.7631 24.0001C26.7631 23.547 26.5823 23.1127 26.2617 22.7926Z\" fill=\"white\"/>\n                    </g>\n                    <defs>\n                    <filter id=\"filter0_d_305_1497\" x=\"0\" y=\"0\" width=\"29.7631\" height=\"50\" filterUnits=\"userSpaceOnUse\" color-interpolation-filters=\"sRGB\">\n                    <feFlood flood-opacity=\"0\" result=\"BackgroundImageFix\"/>\n                    <feColorMatrix in=\"SourceAlpha\" type=\"matrix\" values=\"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0\" result=\"hardAlpha\"/>\n                    <feOffset dy=\"1\"/>\n                    <feGaussianBlur stdDeviation=\"1.5\"/>\n                    <feComposite in2=\"hardAlpha\" operator=\"out\"/>\n                    <feColorMatrix type=\"matrix\" values=\"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0\"/>\n                    <feBlend mode=\"normal\" in2=\"BackgroundImageFix\" result=\"effect1_dropShadow_305_1497\"/>\n                    <feBlend mode=\"normal\" in=\"SourceGraphic\" in2=\"effect1_dropShadow_305_1497\" result=\"shape\"/>\n                    </filter>\n                    </defs>\n                    </svg>\n                    ");
+                    var arrowLeftSvg = "<img class=\"alan-btn__chat-response-imgs-wrapper-left-arrow invisible\" src=\"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCAzMCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiPgogICAgICAgICAgICAgICAgICAgIDxnIGZpbHRlcj0idXJsKCNmaWx0ZXIwX2RfMzA1XzE1MDIpIj4KICAgICAgICAgICAgICAgICAgICA8cGF0aCBkPSJNMy41MDEzNSAyNS4yMDc0TDIzLjg1MjYgNDUuNTAyNEMyNC41MTk0IDQ2LjE2NyAyNS41OTkgNDYuMTY1OSAyNi4yNjQ2IDQ1LjQ5OUMyNi45Mjk4IDQ0LjgzMjIgMjYuOTI4MSA0My43NTIxIDI2LjI2MTIgNDMuMDg3TDcuMTIxMjggMjMuOTk5OUwyNi4yNjE5IDQuOTEyOTNDMjYuOTI4NyA0LjI0Nzc4IDI2LjkzMDQgMy4xNjgzMiAyNi4yNjUzIDIuNTAxNDVDMjUuOTMxNiAyLjE2NzE1IDI1LjQ5NDUgMiAyNS4wNTczIDJDMjQuNjIxMyAyIDI0LjE4NTggMi4xNjYwMyAyMy44NTI3IDIuNDk4MDFMMy41MDEzNSAyMi43OTI1QzMuMTgwMiAyMy4xMTIgMi45OTk5OSAyMy41NDY5IDIuOTk5OTkgMjMuOTk5OUMyLjk5OTk5IDI0LjQ1MyAzLjE4MDcxIDI0Ljg4NzMgMy41MDEzNSAyNS4yMDc0WiIgZmlsbD0id2hpdGUiLz4KICAgICAgICAgICAgICAgICAgICA8L2c+CiAgICAgICAgICAgICAgICAgICAgPGRlZnM+CiAgICAgICAgICAgICAgICAgICAgPGZpbHRlciBpZD0iZmlsdGVyMF9kXzMwNV8xNTAyIiB4PSIwIiB5PSIwIiB3aWR0aD0iMjkuNzYzMSIgaGVpZ2h0PSI1MCIgZmlsdGVyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBjb2xvci1pbnRlcnBvbGF0aW9uLWZpbHRlcnM9InNSR0IiPgogICAgICAgICAgICAgICAgICAgIDxmZUZsb29kIGZsb29kLW9wYWNpdHk9IjAiIHJlc3VsdD0iQmFja2dyb3VuZEltYWdlRml4Ii8+CiAgICAgICAgICAgICAgICAgICAgPGZlQ29sb3JNYXRyaXggaW49IlNvdXJjZUFscGhhIiB0eXBlPSJtYXRyaXgiIHZhbHVlcz0iMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMTI3IDAiIHJlc3VsdD0iaGFyZEFscGhhIi8+CiAgICAgICAgICAgICAgICAgICAgPGZlT2Zmc2V0IGR5PSIxIi8+CiAgICAgICAgICAgICAgICAgICAgPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMS41Ii8+CiAgICAgICAgICAgICAgICAgICAgPGZlQ29tcG9zaXRlIGluMj0iaGFyZEFscGhhIiBvcGVyYXRvcj0ib3V0Ii8+CiAgICAgICAgICAgICAgICAgICAgPGZlQ29sb3JNYXRyaXggdHlwZT0ibWF0cml4IiB2YWx1ZXM9IjAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAuMjUgMCIvPgogICAgICAgICAgICAgICAgICAgIDxmZUJsZW5kIG1vZGU9Im5vcm1hbCIgaW4yPSJCYWNrZ3JvdW5kSW1hZ2VGaXgiIHJlc3VsdD0iZWZmZWN0MV9kcm9wU2hhZG93XzMwNV8xNTAyIi8+CiAgICAgICAgICAgICAgICAgICAgPGZlQmxlbmQgbW9kZT0ibm9ybWFsIiBpbj0iU291cmNlR3JhcGhpYyIgaW4yPSJlZmZlY3QxX2Ryb3BTaGFkb3dfMzA1XzE1MDIiIHJlc3VsdD0ic2hhcGUiLz4KICAgICAgICAgICAgICAgICAgICA8L2ZpbHRlcj4KICAgICAgICAgICAgICAgICAgICA8L2RlZnM+CiAgICAgICAgICAgICAgICAgICAgPC9zdmc+Cg==\" />";
+                    var arrowRightSvg = "<img class=\"alan-btn__chat-response-imgs-wrapper-right-arrow ".concat(((_c = msg.images) === null || _c === void 0 ? void 0 : _c.length) > 1 ? "" : "invisible", "\" src=\"data:image/svg+xml;base64,PHN2ZyAgd2lkdGg9IjMwIiBoZWlnaHQ9IjUwIiB2aWV3Qm94PSIwIDAgMzAgNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmVyc2lvbj0iMS4xIj4KICAgICAgICAgICAgICAgICAgICA8ZyBmaWx0ZXI9InVybCgjZmlsdGVyMF9kXzMwNV8xNDk3KSI+CiAgICAgICAgICAgICAgICAgICAgPHBhdGggZD0iTTI2LjI2MTcgMjIuNzkyNkw1LjkxMDQxIDIuNDk3NTdDNS4yNDM2MyAxLjgzMzAxIDQuMTY0MDkgMS44MzQxMyAzLjQ5ODQyIDIuNTAxQzIuODMzMjYgMy4xNjc3OSAyLjgzNDk4IDQuMjQ3OTQgMy41MDE4NSA0LjkxM0wyMi42NDE4IDI0LjAwMDFMMy41MDExNyA0My4wODcxQzIuODM0MzggNDMuNzUyMiAyLjgzMjY2IDQ0LjgzMTcgMy40OTc3MyA0NS40OTg2QzMuODMxNDIgNDUuODMyOCA0LjI2ODU5IDQ2IDQuNzA1NzUgNDZDNS4xNDE3OSA0NiA1LjU3NzI0IDQ1LjgzNCA1LjkxMDMzIDQ1LjUwMkwyNi4yNjE3IDI1LjIwNzVDMjYuNTgyOSAyNC44ODggMjYuNzYzMSAyNC40NTMxIDI2Ljc2MzEgMjQuMDAwMUMyNi43NjMxIDIzLjU0NyAyNi41ODIzIDIzLjExMjcgMjYuMjYxNyAyMi43OTI2WiIgZmlsbD0id2hpdGUiLz4KICAgICAgICAgICAgICAgICAgICA8L2c+CiAgICAgICAgICAgICAgICAgICAgPGRlZnM+CiAgICAgICAgICAgICAgICAgICAgPGZpbHRlciBpZD0iZmlsdGVyMF9kXzMwNV8xNDk3IiB4PSIwIiB5PSIwIiB3aWR0aD0iMjkuNzYzMSIgaGVpZ2h0PSI1MCIgZmlsdGVyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBjb2xvci1pbnRlcnBvbGF0aW9uLWZpbHRlcnM9InNSR0IiPgogICAgICAgICAgICAgICAgICAgIDxmZUZsb29kIGZsb29kLW9wYWNpdHk9IjAiIHJlc3VsdD0iQmFja2dyb3VuZEltYWdlRml4Ii8+CiAgICAgICAgICAgICAgICAgICAgPGZlQ29sb3JNYXRyaXggaW49IlNvdXJjZUFscGhhIiB0eXBlPSJtYXRyaXgiIHZhbHVlcz0iMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMTI3IDAiIHJlc3VsdD0iaGFyZEFscGhhIi8+CiAgICAgICAgICAgICAgICAgICAgPGZlT2Zmc2V0IGR5PSIxIi8+CiAgICAgICAgICAgICAgICAgICAgPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMS41Ii8+CiAgICAgICAgICAgICAgICAgICAgPGZlQ29tcG9zaXRlIGluMj0iaGFyZEFscGhhIiBvcGVyYXRvcj0ib3V0Ii8+CiAgICAgICAgICAgICAgICAgICAgPGZlQ29sb3JNYXRyaXggdHlwZT0ibWF0cml4IiB2YWx1ZXM9IjAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAuMjUgMCIvPgogICAgICAgICAgICAgICAgICAgIDxmZUJsZW5kIG1vZGU9Im5vcm1hbCIgaW4yPSJCYWNrZ3JvdW5kSW1hZ2VGaXgiIHJlc3VsdD0iZWZmZWN0MV9kcm9wU2hhZG93XzMwNV8xNDk3Ii8+CiAgICAgICAgICAgICAgICAgICAgPGZlQmxlbmQgbW9kZT0ibm9ybWFsIiBpbj0iU291cmNlR3JhcGhpYyIgaW4yPSJlZmZlY3QxX2Ryb3BTaGFkb3dfMzA1XzE0OTciIHJlc3VsdD0ic2hhcGUiLz4KICAgICAgICAgICAgICAgICAgICA8L2ZpbHRlcj4KICAgICAgICAgICAgICAgICAgICA8L2RlZnM+CiAgICAgICAgICAgICAgICAgICAgPC9zdmc+\"/>");
                     imgsBlock = "<div class=\"alan-btn__chat-response-imgs-wrapper\" data-img-index=\"0\" data-msg-req-id=\"".concat(msg.reqId || ((_d = msg.ctx) === null || _d === void 0 ? void 0 : _d.reqId), "\"><div class=\"alan-btn__chat-response-img-block\">").concat(imgsHtml, "</div>").concat(arrowLeftSvg).concat(arrowRightSvg, "</div>");
                 }
                 return imgsBlock;
@@ -5864,7 +6041,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 for (var i2 = 0; i2 < ((_a = msg.links) === null || _a === void 0 ? void 0 : _a.length); i2++) {
                     var curLink = msg.links[i2];
                     var target = getLinkTarget(curLink);
-                    linksHtml += "<a class=\"alan-btn__chat-response-link\" href=\"".concat(curLink.href, "\" target=\"").concat(target, "\">\n                    <svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path d=\"M7.22602 9.27842L5.17192 11.3326C5.17192 11.3326 5.17192 11.3326 5.17187 11.3326C5.17187 11.3326 5.17187 11.3327 5.17183 11.3327C4.32239 12.1821 2.94018 12.1822 2.09065 11.3327C1.67911 10.9211 1.45252 10.374 1.45252 9.79203C1.45252 9.21015 1.67911 8.66309 2.09051 8.25154C2.09056 8.25149 2.09061 8.25144 2.09065 8.25139L4.14475 6.19725C4.42833 5.91362 4.42833 5.45375 4.1447 5.17017C3.86112 4.88659 3.40126 4.88659 3.11763 5.17017L1.06353 7.22432C1.06339 7.22447 1.06324 7.22466 1.0631 7.2248C0.377557 7.91058 0 8.82233 0 9.79203C0 10.762 0.377702 11.6739 1.06358 12.3597C1.77154 13.0676 2.70139 13.4216 3.63129 13.4216C4.56119 13.4216 5.49109 13.0676 6.19895 12.3597C6.199 12.3597 6.199 12.3596 6.199 12.3596L8.25309 10.3055C8.53667 10.0219 8.53667 9.56205 8.25305 9.27842C7.96951 8.99484 7.5097 8.99484 7.22602 9.27842Z\" fill=\"#919191\"/>\n                        <path d=\"M13.4249 3.62955C13.4249 2.65961 13.0472 1.74772 12.3613 1.06184C10.9455 -0.353972 8.64171 -0.353923 7.22595 1.06184C7.2259 1.06194 7.2258 1.06199 7.22576 1.06209L5.17171 3.11609C4.88808 3.39967 4.88808 3.85958 5.17171 4.14316C5.31357 4.28502 5.49939 4.35591 5.68527 4.35591C5.87109 4.35591 6.05701 4.28497 6.19878 4.14316L8.25283 2.08916C8.25288 2.08906 8.25297 2.08901 8.25307 2.08892C9.1025 1.23949 10.4847 1.23944 11.3342 2.08892C11.7457 2.50046 11.9724 3.04762 11.9724 3.62955C11.9724 4.21143 11.7458 4.75849 11.3344 5.17004L11.3342 5.17018L9.28014 7.22433C8.99656 7.50791 8.99656 7.96778 9.28019 8.2514C9.42201 8.39322 9.60788 8.46415 9.7937 8.46415C9.97958 8.46415 10.1655 8.39322 10.3073 8.2514L12.3614 6.19726C12.3615 6.19711 12.3617 6.19692 12.3618 6.19677C13.0473 5.51099 13.4249 4.59925 13.4249 3.62955Z\" fill=\"#919191\"/>\n                        <path d=\"M4.14491 9.27836C4.28672 9.42018 4.4726 9.49111 4.65842 9.49111C4.8443 9.49111 5.03017 9.42018 5.17198 9.27836L9.28028 5.17007C9.56391 4.88649 9.56391 4.42663 9.28028 4.143C8.9967 3.85942 8.53683 3.85942 8.2532 4.143L4.14491 8.25124C3.86128 8.53492 3.86128 8.99479 4.14491 9.27836Z\" fill=\"#919191\"/>\n                    </svg>\n                    <span class=\"alan-btn__chat-response-link-title\">").concat(curLink.title || curLink.href, "</span>\n                </a>");
+                    linksHtml += "<a class=\"alan-btn__chat-response-link\" href=\"".concat(curLink.href, "\" target=\"").concat(target, "\">\n                   ").concat(getLinkIcon(curLink), "\n                    <span class=\"alan-btn__chat-response-link-title\">").concat(curLink.title || curLink.href, "</span>\n                </a>");
                 }
                 if ((_b = msg.links) === null || _b === void 0 ? void 0 : _b.length) {
                     linksBlock = "<div class=\"alan-btn__chat-response-links-wrapper\">\n                <span style=\"margin-right: 10px;display: inline-block;\">Read more: </span>\n                    ".concat(linksHtml, "\n            </div>");
@@ -5895,32 +6072,38 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 return "".concat(buildImagesContent(msg)).concat(buildMsgTextContent(msg)).concat(buildLinksContent(msg)).concat(buildLikesContent(msg)).concat(buildMsgIncommingLoader(msg));
             }
             function renderMessageInTextChat(msg, noAnimation, immidiateScroll) {
-                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
                 if (!textChatIsAvailable)
                     return;
-                var msgInd = null;
-                var msgHtml = "";
-                var isNewMsg = true;
-                var replaceLoadingMsg = true;
                 var innerMsgPart = "";
-                var updateMsg = false;
+                var msgHtml = "";
                 var msgHolder = document.getElementById("chatMessages");
-                if (msg.type !== "chat") {
+                if (msg.type === "response" && msg.name === "text") {
+                    if (window.fakeMsg) {
+                        msg.text = ((_a = window.fakeMsg) === null || _a === void 0 ? void 0 : _a.text) || msg.text;
+                        msg.images = ((_b = window.fakeMsg) === null || _b === void 0 ? void 0 : _b.images) || msg.images;
+                        msg.links = ((_c = window.fakeMsg) === null || _c === void 0 ? void 0 : _c.links) || msg.links;
+                        msg.hasLikes = ((_d = window.fakeMsg) === null || _d === void 0 ? void 0 : _d.hasLikes) || msg.hasLikes;
+                        if ((_e = window.fakeMsg) === null || _e === void 0 ? void 0 : _e.text) {
+                            if (msg.ctx) {
+                                msg.ctx.format = "markdown";
+                            }
+                            else {
+                                msg.ctx = { format: "markdown" };
+                            }
+                        }
+                        window.fakeMsg = null;
+                    }
+                }
+                if (msg.type === "chat") {
+                    msgHtml = "<div class=\"alan-btn__chat-popup\">".concat(msg.html, "</div>");
+                }
+                else {
                     if (msg.name === "text" || msg.name === "parsed" || msg.name === "recognized") {
                         if (msg.type === "request") {
                             innerMsgPart = escapeHtml(msg.text);
                         }
                         else {
-                            if (window.fakeMsg) {
-                                msg.text = ((_a = window.fakeMsg) === null || _a === void 0 ? void 0 : _a.text) || msg.text;
-                                msg.images = ((_b = window.fakeMsg) === null || _b === void 0 ? void 0 : _b.images) || msg.images;
-                                msg.links = ((_c = window.fakeMsg) === null || _c === void 0 ? void 0 : _c.links) || msg.links;
-                                msg.hasLikes = ((_d = window.fakeMsg) === null || _d === void 0 ? void 0 : _d.hasLikes) || msg.hasLikes;
-                                if ((_e = window.fakeMsg) === null || _e === void 0 ? void 0 : _e.text) {
-                                    msg.ctx.format = "markdown";
-                                }
-                                window.fakeMsg = null;
-                            }
                             innerMsgPart = buildMsgContent(msg);
                         }
                         msgHtml = "<div class=\"".concat(msg.type === "request" ? "alan-btn__chat-request" : "alan-btn__chat-response", " ").concat(((_f = msg.images) === null || _f === void 0 ? void 0 : _f.length) > 0 ? "with-images" : "", "\">").concat(innerMsgPart, "</div>");
@@ -5928,52 +6111,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     if (msg.name === "loading") {
                         msgHtml = "<div class=\"alan-btn__chat-response animated alan-incoming-msg\">".concat(getMsgLoader(), "</div>");
                     }
-                    var msgResponseId_1 = msg.responseId || ((_g = msg === null || msg === void 0 ? void 0 : msg.ctx) === null || _g === void 0 ? void 0 : _g.responseId);
-                    if ((msg.name === "recognized" || msg.name === "parsed" || msg.name === "text" && msg.type !== "request") && textChatMessages.length > 0) {
-                        var lastMsg = textChatMessages[textChatMessages.length - 1];
-                        if (lastMsg.name === "loading" || lastMsg.name === "recognized" && msg.name === "recognized" || lastMsg.name === "recognized" && msg.name === "parsed" && msg.text === lastMsg.text || msg.type === "request" && lastMsg.type === "request" && lastMsg.reqId && msg.reqId === lastMsg.reqId || msg.name === "text" && lastMsg.name === "text" && msgResponseId_1 && ((_h = lastMsg.ctx) === null || _h === void 0 ? void 0 : _h.responseId) === msgResponseId_1) {
-                            msgInd = textChatMessages.length - 1;
-                            if (msgInd === null || msgInd === -1) {
-                                return;
-                            }
-                            var unfinalizeMsgInd = textChatMessages.findIndex(function (m) {
-                                var _a;
-                                return m.type === "response" && msgResponseId_1 && ((_a = m === null || m === void 0 ? void 0 : m.ctx) === null || _a === void 0 ? void 0 : _a.responseId) === msgResponseId_1;
-                            });
-                            var hasUnfinalizedResponses = unfinalizeMsgInd !== -1;
-                            if (((_j = textChatMessages[msgInd]) === null || _j === void 0 ? void 0 : _j.name) === "loading" && !hasUnfinalizedResponses) {
-                                replaceLoadingMsg = true;
-                            }
-                            if (msg.name === "text" && hasUnfinalizedResponses) {
-                                msgInd = unfinalizeMsgInd;
-                                updateMsg = true;
-                                replaceLoadingMsg = false;
-                                textChatMessages[msgInd].text = (textChatMessages[msgInd].text || "") + (" " + (msg.text || ""));
-                                textChatMessages[msgInd].images = __spreadArray(__spreadArray([], textChatMessages[msgInd].images || [], true), msg.images || [], true);
-                                textChatMessages[msgInd].links = __spreadArray(__spreadArray([], textChatMessages[msgInd].links || [], true), msg.links || [], true);
-                                textChatMessages[msgInd].hasLikes = textChatMessages[msgInd].hasLikes || msg.hasLikes;
-                                if (((_k = msg.ctx) === null || _k === void 0 ? void 0 : _k.format) === "markdown") {
-                                    if (textChatMessages[msgInd].ctx) {
-                                        textChatMessages[msgInd].ctx.format = "markdown";
-                                    }
-                                    else {
-                                        textChatMessages[msgInd].ctx = msg.ctx;
-                                    }
-                                }
-                            }
-                            else {
-                                textChatMessages[msgInd] = __assign(__assign({}, msg), getMsgReadProp(msg, textChatIsHidden));
-                            }
-                            isNewMsg = false;
-                        }
-                    }
                 }
-                if (isNewMsg) {
-                    textChatMessages.push(__assign(__assign({}, msg), getMsgReadProp(msg, textChatIsHidden)));
+                msg = __assign(__assign({}, msg), getMsgReadProp(msg, textChatIsHidden));
+                var _m = processMessageForChat(msg, textChatMessages), isNew = _m.isNew, msgInd = _m.msgInd, replaceLoader = _m.replaceLoader, updateResponse = _m.updateResponse;
+                if (isNew) {
                     var div = document.createElement("div");
-                    div.id = "msg-" + (textChatMessages.length - 1);
+                    div.id = "msg-" + msgInd;
                     if (msg.type === "chat") {
-                        msgHtml = "<div class=\"alan-btn__chat-popup\">".concat(msg.html, "</div>");
                         addPopupStyle(msg, div);
                     }
                     div.innerHTML = msgHtml;
@@ -5991,33 +6135,33 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 else {
                     var msgEl = document.getElementById("msg-" + msgInd);
                     if (msgEl) {
-                        if (replaceLoadingMsg) {
+                        if (replaceLoader) {
                             var innerEl = msgEl.children[0];
                             if (innerEl) {
                                 innerEl.innerHTML = innerMsgPart;
                                 innerEl.classList.remove("alan-incoming-msg");
-                                if (msg.type !== "chat" && ((_l = msg.images) === null || _l === void 0 ? void 0 : _l.length) > 0) {
+                                if (msg.type !== "chat" && ((_g = msg.images) === null || _g === void 0 ? void 0 : _g.length) > 0) {
                                     innerEl.classList.add("with-images");
                                 }
                                 scrollTextChat(msgHolder, "smooth");
                             }
                         }
-                        else if (updateMsg && msg.type !== "chat") {
+                        else if (updateResponse && msg.type !== "chat") {
                             var innerEl = msgEl.children[0];
-                            var imagesWrapper = innerEl.querySelector(".alan-btn__chat-response-imgs-wrapper");
                             var updatedMsg = textChatMessages[msgInd];
-                            if (((_m = updatedMsg.images) === null || _m === void 0 ? void 0 : _m.length) > 0 && !imagesWrapper) {
+                            var imagesWrapper = innerEl.querySelector(".alan-btn__chat-response-imgs-wrapper");
+                            if (((_h = updatedMsg.images) === null || _h === void 0 ? void 0 : _h.length) > 0 && !imagesWrapper) {
                                 innerEl.insertAdjacentHTML("afterbegin", buildImagesContent(updatedMsg));
                                 innerEl = msgEl.children[0];
                             }
-                            if (((_o = updatedMsg.images) === null || _o === void 0 ? void 0 : _o.length) > 1 && imagesWrapper) {
+                            if (((_j = updatedMsg.images) === null || _j === void 0 ? void 0 : _j.length) > 1 && imagesWrapper) {
                                 imagesWrapper.querySelector(".alan-btn__chat-response-imgs-wrapper-right-arrow").classList.remove("invisible");
                             }
-                            if (updatedMsg.type !== "chat" && ((_p = updatedMsg.images) === null || _p === void 0 ? void 0 : _p.length) > 0) {
+                            if (updatedMsg.type !== "chat" && ((_k = updatedMsg.images) === null || _k === void 0 ? void 0 : _k.length) > 0) {
                                 innerEl.classList.add("with-images");
                             }
                             var msgParts = innerEl.children;
-                            var stop_1 = ((_q = updatedMsg.images) === null || _q === void 0 ? void 0 : _q.length) === 0 ? 0 : 1;
+                            var stop_1 = ((_l = updatedMsg.images) === null || _l === void 0 ? void 0 : _l.length) === 0 ? 0 : 1;
                             while (msgParts.length > stop_1) {
                                 msgParts[msgParts.length - 1].remove();
                             }
@@ -6167,18 +6311,27 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
+            var lastSendMsgTs = null;
             var sendMessageToTextChat = throttle(function sendMessageToTextChat2() {
                 return __awaiter(this, void 0, void 0, function () {
-                    var textareaEl, text;
+                    var textareaEl, textareaHolderEl, text;
                     return __generator(this, function (_a) {
                         textareaEl = document.getElementById("chatTextarea");
+                        textareaHolderEl = document.getElementById("textarea-holder");
                         text = textareaEl.value;
-                        if (text.trim() === "")
+                        if (lastSendMsgTs) {
                             return [2 /*return*/];
-                        if (document.getElementsByClassName("alan-btn__chat-incomming-msg-wrapper").length > 0)
+                        }
+                        lastSendMsgTs = setTimeout(function () {
+                            textareaHolderEl.classList.remove("alan-btn__inactive");
+                            clearTimeout(lastSendMsgTs);
+                            lastSendMsgTs = null;
+                        }, 5e3);
+                        if (text.trim() === "")
                             return [2 /*return*/];
                         textareaEl.value = "";
                         _sendText(text);
+                        textareaHolderEl.classList.add("alan-btn__inactive");
                         textChatScrollPosition = null;
                         return [2 /*return*/];
                     });
@@ -6291,7 +6444,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 var _a, _b, _c;
                 var textareaDiv = document.getElementById("textarea-holder");
                 var chatTextarea = document.getElementById("chatTextarea");
-                var simpleAlanBtn = document.getElementById("chat-mic-btn");
+                var chatMicBtn = document.getElementById("chat-mic-btn");
                 var unmuteAlanBtn = document.getElementById("chat-unmute-btn");
                 var chatSendBtn = document.getElementById("chat-send-btn");
                 var headerDiv = document.getElementById("chat-header");
@@ -6302,11 +6455,15 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     var messagesDiv = document.createElement("div");
                     messagesDiv.id = "chatMessages";
                     messagesDiv.classList.add("alan-btn__chat-messages");
+                    var messagesWrapperDiv = document.createElement("div");
+                    messagesWrapperDiv.id = "chatMessagesWrapper";
+                    messagesWrapperDiv.classList.add("alan-btn__chat-messages-wrapper");
+                    messagesWrapperDiv.appendChild(messagesDiv);
                     if (isMobile()) {
-                        messagesDiv.addEventListener("touchmove", onTextChatScroll);
+                        messagesWrapperDiv.addEventListener("touchmove", onTextChatScroll);
                     }
                     else {
-                        messagesDiv.addEventListener("mousewheel", onTextChatScroll);
+                        messagesWrapperDiv.addEventListener("mousewheel", onTextChatScroll);
                     }
                     var messagesEmptyDiv = document.createElement("div");
                     messagesEmptyDiv.classList.add("alan-btn__chat-messages-empty-block");
@@ -6356,13 +6513,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     chatSendBtn.id = "chat-send-btn";
                     chatSendBtn.classList.add("alan-btn__chat-send-btn");
                     chatSendBtn.addEventListener("click", sendMessageToTextChat);
-                    chatSendBtn.innerHTML = "\n                <svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path d=\"M28.0134 15.9238L8.98646 6.40981C7.82892 5.83162 6.75249 5.99963 6.17778 6.77248C5.89042 7.15832 5.61697 7.85122 5.94952 8.96241L8.09542 16.1092C8.39668 17.1138 8.39668 18.8797 8.09542 19.8843L5.94952 27.0311C5.61697 28.1423 5.88926 28.8363 6.17662 29.2222C6.51959 29.681 7.04564 29.9348 7.65743 29.9348C8.07109 29.9348 8.51834 29.8166 8.9853 29.5837L28.0134 20.0697C28.9635 19.5946 29.5093 18.838 29.5093 17.9968C29.5093 17.1555 28.9647 16.3989 28.0134 15.9238ZM8.27386 27.3486L10.3155 20.5494C10.4383 20.1403 10.5217 19.6606 10.575 19.1554H16.6868C17.3276 19.1554 17.8455 18.6375 17.8455 17.9968C17.8455 17.356 17.3276 16.8381 16.6868 16.8381H10.575C10.5217 16.3329 10.4395 15.8532 10.3155 15.4441L8.27386 8.64493L26.9775 17.9968L8.27386 27.3486Z\" fill=\"#B8B6B6\"/>\n</svg>";
+                    chatSendBtn.innerHTML = sendChatIcon;
                     textareaDiv.appendChild(chatTextarea);
                     textareaDiv.appendChild(chatSendBtn);
                     textareaDiv.appendChild(textareaGradient);
                     textareaDiv.appendChild(textareaDivGr);
                     chatDiv.appendChild(headerDiv);
-                    chatDiv.appendChild(messagesDiv);
+                    chatDiv.appendChild(messagesWrapperDiv);
                     chatDiv.appendChild(textareaDiv);
                     chatDiv.appendChild(headerDivGr);
                     chatHolderDiv.classList.add("alan-btn__chat-holder");
@@ -6400,11 +6557,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 if (voiceEnabledInTextChat) {
                     chatTextarea.setAttribute("placeholder", "Ask me anything...");
                     chatHolderDiv.classList.add("alan-text-chat__voice-enabled");
-                    if (!simpleAlanBtn) {
-                        simpleAlanBtn = document.createElement("div");
-                        simpleAlanBtn.classList.add("alan-btn__chat-mic-btn");
-                        simpleAlanBtn.id = "chat-mic-btn";
-                        simpleAlanBtn.addEventListener("click", function () {
+                    if (!chatMicBtn) {
+                        chatMicBtn = document.createElement("div");
+                        chatMicBtn.classList.add("alan-btn__chat-mic-btn");
+                        chatMicBtn.id = "chat-mic-btn";
+                        chatMicBtn.addEventListener("click", function () {
                             chatTextarea.value = "";
                             textareaDiv.classList.remove("show-gradient");
                             if (!isAlanActive) {
@@ -6414,16 +6571,31 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 textChatScrollPosition = null;
                             }
                             onBtnClickInTextChat();
+                            if (state === NOT_SECURE_ORIGIN || state === NO_VOICE_SUPPORT) {
+                                chatMicBtn.classList.add("alan-btn__disabled");
+                            }
                         });
-                        simpleAlanBtn.innerHTML = "\n                <svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M18.2623 24.0476C16.7915 24.0458 15.3814 23.4608 14.3414 22.4208C13.3014 21.3808 12.7164 19.9707 12.7147 18.5V10.7333C12.7147 9.26204 13.2992 7.85099 14.3395 6.81061C15.3799 5.77024 16.791 5.18576 18.2623 5.18576C19.7336 5.18576 21.1446 5.77024 22.185 6.81061C23.2254 7.85099 23.8099 9.26204 23.8099 10.7333V18.5C23.8081 19.9707 23.2231 21.3808 22.1831 22.4208C21.1431 23.4608 19.733 24.0458 18.2623 24.0476ZM18.2623 7.4048C17.3798 7.40576 16.5337 7.75676 15.9097 8.38078C15.2857 9.00479 14.9347 9.85086 14.9337 10.7333V18.5C14.9337 19.3828 15.2844 20.2294 15.9086 20.8536C16.5329 21.4778 17.3795 21.8285 18.2623 21.8285C19.1451 21.8285 19.9917 21.4778 20.6159 20.8536C21.2401 20.2294 21.5908 19.3828 21.5908 18.5V10.7333C21.5899 9.85086 21.2389 9.00479 20.6148 8.38078C19.9908 7.75676 19.1448 7.40576 18.2623 7.4048ZM28.2479 18.5C28.2479 18.2057 28.131 17.9235 27.923 17.7154C27.7149 17.5073 27.4327 17.3905 27.1384 17.3905C26.8441 17.3905 26.5619 17.5073 26.3539 17.7154C26.1458 17.9235 26.0289 18.2057 26.0289 18.5C26.0289 20.5598 25.2106 22.5353 23.7541 23.9918C22.2976 25.4483 20.3221 26.2666 18.2623 26.2666C16.2024 26.2666 14.227 25.4483 12.7704 23.9918C11.3139 22.5353 10.4956 20.5598 10.4956 18.5C10.4956 18.2057 10.3788 17.9235 10.1707 17.7154C9.9626 17.5073 9.68039 17.3905 9.38613 17.3905C9.09187 17.3905 8.80966 17.5073 8.60158 17.7154C8.39351 17.9235 8.27661 18.2057 8.27661 18.5C8.27661 21.1483 9.32867 23.6882 11.2013 25.5609C13.074 27.4336 15.6139 28.4856 18.2623 28.4856C20.9106 28.4856 23.4505 27.4336 25.3232 25.5609C27.1959 23.6882 28.2479 21.1483 28.2479 18.5ZM19.3718 30.7047V27.3761C19.3718 27.0818 19.2549 26.7996 19.0468 26.5916C18.8387 26.3835 18.5565 26.2666 18.2623 26.2666C17.968 26.2666 17.6858 26.3835 17.4777 26.5916C17.2696 26.7996 17.1528 27.0818 17.1528 27.3761V30.7047C17.1528 30.9989 17.2696 31.2811 17.4777 31.4892C17.6858 31.6973 17.968 31.8142 18.2623 31.8142C18.5565 31.8142 18.8387 31.6973 19.0468 31.4892C19.2549 31.2811 19.3718 30.9989 19.3718 30.7047Z\" fill=\"#171717\"/>\n                </svg>\n                <div class=\"alan-text-chat__animated-btn-bars\">\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n                    <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n                </div>";
+                        switch (state) {
+                            case PERMISSION_DENIED:
+                            case NO_VOICE_SUPPORT:
+                            case NOT_SECURE_ORIGIN:
+                                chatMicBtn.innerHTML = chatNoMicIcon;
+                                if (state === PERMISSION_DENIED) {
+                                    chatMicBtn.classList.add("alan-btn__disabled");
+                                }
+                                break;
+                            default:
+                                chatMicBtn.innerHTML = chatMicIcon;
+                                break;
+                        }
                         if (textareaDiv) {
-                            textareaDiv.appendChild(simpleAlanBtn);
+                            textareaDiv.appendChild(chatMicBtn);
                         }
                     }
                 }
                 else {
-                    if (simpleAlanBtn) {
-                        simpleAlanBtn.remove();
+                    if (chatMicBtn) {
+                        chatMicBtn.remove();
                     }
                     chatTextarea.setAttribute("placeholder", "Ask me anything...");
                     chatTextarea.style.paddingTop = calculateTextareaTopPadding() + "px";
@@ -6553,40 +6725,49 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 saveMessageHistory();
             }
+            function applyStylesForDefaultState() {
+                btn.style.animation = "";
+                micIconDiv.style.animation = "";
+                roundedTriangleIconDiv.style.animation = "";
+                btnBgDefault.classList.remove("super-hidden");
+                btnBgDefault.style.opacity = onOpacity;
+                btnOval1.style.animation = "";
+                btnOval2.style.animation = "";
+                btnOval1.style.opacity = "0";
+                btnOval2.style.opacity = "0";
+                changeBgColors(DEFAULT);
+                micIconDiv.style.opacity = "1";
+                roundedTriangleIconDiv.style.opacity = "0";
+                disconnectedMicLoaderIconImg.style.opacity = "0";
+                changeCustomLogoVisibility(defaultStateBtnIconImg, [
+                    listenStateBtnIconImg,
+                    processStateBtnIconImg,
+                    replyStateBtnIconImg
+                ]);
+                hideLayers([
+                    btnBgListening,
+                    btnBgSpeaking,
+                    btnBgIntermediate,
+                    btnBgUnderstood
+                ]);
+                lowVolumeMicIconImg.style.opacity = "0";
+                noVoiceSupportMicIconImg.style.opacity = "0";
+                rootEl.classList.remove("alan-btn-low-volume");
+                rootEl.classList.remove("alan-btn-permission-denied");
+                rootEl.classList.remove("alan-btn-disconnected");
+                rootEl.classList.remove("alan-btn-offline");
+                rootEl.classList.remove("alan-btn-no-voice-support");
+            }
+            window.switchState = switchState;
             function switchState(newState) {
+                console.info("newState", newState);
                 if (options2.onButtonState) {
                     options2.onButtonState(btnStateMapping[newState]);
                 }
                 var tempLogoParts = [], i2 = 0;
-                if (newState !== DISCONNECTED) {
-                    previousState = newState;
-                }
                 currentErrMsg = null;
                 if (newState === DEFAULT) {
-                    btn.style.animation = "";
-                    micIconDiv.style.animation = "";
-                    roundedTriangleIconDiv.style.animation = "";
-                    btnBgDefault.classList.remove("super-hidden");
-                    btnBgDefault.style.opacity = onOpacity;
-                    btnOval1.style.animation = "";
-                    btnOval2.style.animation = "";
-                    btnOval1.style.opacity = "0";
-                    btnOval2.style.opacity = "0";
-                    changeBgColors(DEFAULT);
-                    micIconDiv.style.opacity = "1";
-                    roundedTriangleIconDiv.style.opacity = "0";
-                    disconnectedMicLoaderIconImg.style.opacity = "0";
-                    changeCustomLogoVisibility(defaultStateBtnIconImg, [
-                        listenStateBtnIconImg,
-                        processStateBtnIconImg,
-                        replyStateBtnIconImg
-                    ]);
-                    hideLayers([
-                        btnBgListening,
-                        btnBgSpeaking,
-                        btnBgIntermediate,
-                        btnBgUnderstood
-                    ]);
+                    applyStylesForDefaultState();
                 }
                 if (textChatIsHidden) {
                     if (newState === LISTENING) {
@@ -6733,7 +6914,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             tempLogoParts[i2].style.animationName = "";
                         }
                     }
-                    if (newState === LOW_VOLUME || newState === PERMISSION_DENIED || newState === NO_VOICE_SUPPORT || newState === NOT_SECURE_ORIGIN) {
+                }
+                if (newState === LOW_VOLUME || newState === PERMISSION_DENIED || newState === NO_VOICE_SUPPORT || newState === NOT_SECURE_ORIGIN) {
+                    if (textChatIsAvailable) {
+                        applyStylesForDefaultState();
+                    }
+                    else {
                         if (newState === LOW_VOLUME) {
                             rootEl.classList.add("alan-btn-low-volume");
                             currentErrMsg = LOW_VOLUME_MSG;
@@ -6775,7 +6961,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         btnOval1.style.opacity = "0";
                         btnOval2.style.opacity = "0";
                     }
-                    else if (newState === DISCONNECTED || newState === OFFLINE) {
+                }
+                else if (newState === DISCONNECTED || newState === OFFLINE) {
+                    if (textChatIsAvailable) {
+                        applyStylesForDefaultState();
+                    }
+                    else {
                         if (newState === DISCONNECTED) {
                             rootEl.classList.add("alan-btn-disconnected");
                         }
@@ -6805,38 +6996,67 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             offlineIconImg.style.opacity = "1";
                         }
                     }
-                    else {
-                        lowVolumeMicIconImg.style.opacity = "0";
-                        offlineIconImg.style.opacity = "0";
-                        disconnectedMicLoaderIconImg.style.opacity = "0";
-                        rootEl.classList.remove("alan-btn-low-volume");
-                        rootEl.classList.remove("alan-btn-permission-denied");
-                        rootEl.classList.remove("alan-btn-disconnected");
-                        rootEl.classList.remove("alan-btn-offline");
-                        rootEl.classList.remove("alan-btn-no-voice-support");
+                }
+                else {
+                    lowVolumeMicIconImg.style.opacity = "0";
+                    offlineIconImg.style.opacity = "0";
+                    disconnectedMicLoaderIconImg.style.opacity = "0";
+                    rootEl.classList.remove("alan-btn-low-volume");
+                    rootEl.classList.remove("alan-btn-permission-denied");
+                    rootEl.classList.remove("alan-btn-disconnected");
+                    rootEl.classList.remove("alan-btn-offline");
+                    rootEl.classList.remove("alan-btn-no-voice-support");
+                }
+                if (textChatIsAvailable) {
+                    var simpleAlanBtn = document.getElementById("chat-mic-btn");
+                    var sendBtn = document.getElementById("chat-send-btn");
+                    var textChatEl = document.getElementById("alan-text-chat");
+                    if (textChatEl) {
+                        switch (newState) {
+                            case OFFLINE:
+                            case DISCONNECTED:
+                                sendBtn.innerHTML = newState === OFFLINE ? noWiFiChatIcon : disconnectedChatIcon;
+                                textChatEl.classList.add("alan-btn__disconnected");
+                                break;
+                            case LISTENING:
+                            case INTERMEDIATE:
+                            case SPEAKING:
+                            case UNDERSTOOD:
+                                textChatEl.classList.add("alan-btn__mic-active");
+                                break;
+                            default:
+                                textChatEl.classList.remove("alan-btn__mic-active");
+                                textChatEl.classList.remove("alan-btn__disconnected");
+                                sendBtn.innerHTML = sendChatIcon;
+                                break;
+                        }
+                        if (simpleAlanBtn) {
+                            switch (newState) {
+                                case LISTENING:
+                                case INTERMEDIATE:
+                                case SPEAKING:
+                                case UNDERSTOOD:
+                                    simpleAlanBtn.classList.add("active");
+                                    simpleAlanBtn.style.animation = pulsatingAnimationForMicBtnInTextChat;
+                                    break;
+                                case PERMISSION_DENIED:
+                                case NO_VOICE_SUPPORT:
+                                case NOT_SECURE_ORIGIN:
+                                    simpleAlanBtn.innerHTML = chatNoMicIcon;
+                                    if (state === PERMISSION_DENIED) {
+                                        simpleAlanBtn.classList.add("alan-btn__disabled");
+                                    }
+                                    break;
+                                default:
+                                    simpleAlanBtn.classList.remove("active");
+                                    simpleAlanBtn.style.animation = "";
+                                    break;
+                            }
+                        }
                     }
                 }
-                if (textChatIsAvailable && !textChatIsHidden) {
-                    var simpleAlanBtn = document.getElementById("chat-mic-btn");
-                    var textChatEl = document.getElementById("alan-text-chat");
-                    if (simpleAlanBtn) {
-                        if (newState === LISTENING || newState === INTERMEDIATE || newState === SPEAKING || newState === UNDERSTOOD) {
-                            simpleAlanBtn.classList.add("active");
-                            simpleAlanBtn.style.animation = pulsatingAnimationForMicBtnInTextChat;
-                        }
-                        else {
-                            simpleAlanBtn.classList.remove("active");
-                            simpleAlanBtn.style.animation = "";
-                        }
-                    }
-                    if (textChatEl) {
-                        if (newState === LISTENING || newState === INTERMEDIATE || newState === SPEAKING || newState === UNDERSTOOD) {
-                            textChatEl.classList.add("active");
-                        }
-                        else {
-                            textChatEl.classList.remove("active");
-                        }
-                    }
+                if (newState !== DISCONNECTED) {
+                    previousState = newState;
                 }
                 state = newState;
             }
