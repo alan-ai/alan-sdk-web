@@ -475,6 +475,9 @@
     var MIC_ACTIVE   = 'micActive';
     var MIC_STOPPED  = 'micStopped';
 
+    var PROCESSING_IDLE = 'processingIdle';
+    var PROCESSING_ACTIVE = 'processingActive';
+
     var AUDIO_RUNNING = 'audioRunning';
 
     var config = {
@@ -500,6 +503,7 @@
     var handlers     = {};
     var micState     = MIC_STOPPED;
     var playState    = PLAY_STOPPED;
+    var processingState    = PROCESSING_IDLE;
     var audioQueue   = [];
     var audioElement = null;
     var audioContext = null;
@@ -539,7 +543,9 @@
                 console.log('Alan: audio worker initialized');
                 break;
             case 'page':
-                fireEvent('frame', config.sampleRate, data['page']);
+                if (playState !== PLAY_ACTIVE && processingState !== PROCESSING_ACTIVE) {
+                    fireEvent('frame', config.sampleRate, data['page']);
+                }
                 break;
             case 'done':
                 encoder.removeEventListener("message", encoderCallback);
@@ -611,6 +617,7 @@
     }
 
     function playAudio(audio) {
+        processingState = PROCESSING_IDLE;
         if (isMobileIos) {
             const base64prefix = "data:audio/mpeg;base64,";
             if (audio.startsWith(base64prefix)) {
@@ -738,6 +745,10 @@
         getAudioElement().muted = true;
     };
 
+    ns.setProcessingState = function() {
+        processingState = PROCESSING_ACTIVE;
+    };
+
     ns.playText = function (text) {
         if (text && text.ctx && text.ctx.opts && text.ctx.opts.force === true) {
             fireEvent('text', text);
@@ -827,6 +838,7 @@
         // if (micState === MIC_ACTIVE) {
         //     return;
         // }
+        processingState = PROCESSING_IDLE;
         getAudioElement().setAttribute("src", "");
         playState = PLAY_IDLE;
         openMicrophone()
@@ -954,11 +966,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
         return '<div class="alan-btn__chat-incomming-msg-wrapper"> <div class="alan-btn__chat-incomming-msg msg-1">&nbsp;</div> <div class="alan-btn__chat-incomming-msg msg-2">&nbsp;</div> <div class="alan-btn__chat-incomming-msg msg-3">&nbsp;</div>  </div>';
     }
     // alan_btn/src/buildMsgIncommingLoader.ts
-    function buildMsgIncommingLoader(msg) {
+    function isFinalMessage(msg) {
         var _a;
+        return ((_a = msg.ctx) === null || _a === void 0 ? void 0 : _a.final) !== false;
+    }
+    function buildMsgIncommingLoader(msg) {
         if (msg.initLoad)
             return "";
-        return ((_a = msg.ctx) === null || _a === void 0 ? void 0 : _a.final) === false ? "<div style=\"margin-top: 12px;margin-bottom: 12px;\">".concat(getMsgLoader(), "</div>") : "";
+        return !isFinalMessage(msg) ? "<div style=\"margin-top: 12px;margin-bottom: 12px;\">".concat(getMsgLoader(), "</div>") : "";
     }
     // node_modules/marked/lib/marked.esm.js
     function getDefaults() {
@@ -3321,9 +3336,40 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
         }
         return "<svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n    <path d=\"M7.22602 9.27842L5.17192 11.3326C5.17192 11.3326 5.17192 11.3326 5.17187 11.3326C5.17187 11.3326 5.17187 11.3327 5.17183 11.3327C4.32239 12.1821 2.94018 12.1822 2.09065 11.3327C1.67911 10.9211 1.45252 10.374 1.45252 9.79203C1.45252 9.21015 1.67911 8.66309 2.09051 8.25154C2.09056 8.25149 2.09061 8.25144 2.09065 8.25139L4.14475 6.19725C4.42833 5.91362 4.42833 5.45375 4.1447 5.17017C3.86112 4.88659 3.40126 4.88659 3.11763 5.17017L1.06353 7.22432C1.06339 7.22447 1.06324 7.22466 1.0631 7.2248C0.377557 7.91058 0 8.82233 0 9.79203C0 10.762 0.377702 11.6739 1.06358 12.3597C1.77154 13.0676 2.70139 13.4216 3.63129 13.4216C4.56119 13.4216 5.49109 13.0676 6.19895 12.3597C6.199 12.3597 6.199 12.3596 6.199 12.3596L8.25309 10.3055C8.53667 10.0219 8.53667 9.56205 8.25305 9.27842C7.96951 8.99484 7.5097 8.99484 7.22602 9.27842Z\" fill=\"#919191\"/>\n    <path d=\"M13.4249 3.62955C13.4249 2.65961 13.0472 1.74772 12.3613 1.06184C10.9455 -0.353972 8.64171 -0.353923 7.22595 1.06184C7.2259 1.06194 7.2258 1.06199 7.22576 1.06209L5.17171 3.11609C4.88808 3.39967 4.88808 3.85958 5.17171 4.14316C5.31357 4.28502 5.49939 4.35591 5.68527 4.35591C5.87109 4.35591 6.05701 4.28497 6.19878 4.14316L8.25283 2.08916C8.25288 2.08906 8.25297 2.08901 8.25307 2.08892C9.1025 1.23949 10.4847 1.23944 11.3342 2.08892C11.7457 2.50046 11.9724 3.04762 11.9724 3.62955C11.9724 4.21143 11.7458 4.75849 11.3344 5.17004L11.3342 5.17018L9.28014 7.22433C8.99656 7.50791 8.99656 7.96778 9.28019 8.2514C9.42201 8.39322 9.60788 8.46415 9.7937 8.46415C9.97958 8.46415 10.1655 8.39322 10.3073 8.2514L12.3614 6.19726C12.3615 6.19711 12.3617 6.19692 12.3618 6.19677C13.0473 5.51099 13.4249 4.59925 13.4249 3.62955Z\" fill=\"#919191\"/>\n    <path d=\"M4.14491 9.27836C4.28672 9.42018 4.4726 9.49111 4.65842 9.49111C4.8443 9.49111 5.03017 9.42018 5.17198 9.27836L9.28028 5.17007C9.56391 4.88649 9.56391 4.42663 9.28028 4.143C8.9967 3.85942 8.53683 3.85942 8.2532 4.143L4.14491 8.25124C3.86128 8.53492 3.86128 8.99479 4.14491 9.27836Z\" fill=\"#919191\"/>\n</svg>";
     }
+    // alan_btn/src/replaceAttrInPopupHtml.ts
+    function replaceAttrInPopupHtml(html) {
+        return html.replace(/send-text/gi, "data-alan-btn-send-text").replace(/call-project-api/gi, "data-alan-btn-call-project-api").replace(/project-api-param/gi, "data-alan-btn-project-api-param");
+    }
+    // alan_btn/src/processClickByButtonInPopup.ts
+    function processClickByButtonInPopup(clickedEl, btnInstance, sendTextCall) {
+        var elWithSendText = clickedEl.closest("[data-alan-btn-send-text]");
+        if (elWithSendText) {
+            var text = elWithSendText.getAttribute("data-alan-btn-send-text");
+            if (text) {
+                sendTextCall(text);
+                return;
+            }
+        }
+        var elWithCallProjectApi = clickedEl.closest("[data-alan-btn-call-project-api]");
+        if (elWithCallProjectApi) {
+            var method = elWithCallProjectApi.getAttribute("data-alan-btn-call-project-api");
+            var data = null;
+            try {
+                data = elWithCallProjectApi.getAttribute("data-alan-btn-project-api-param");
+                data = JSON.parse(data);
+            }
+            catch (err) {
+                console.log("Alan: unable to parse params for calling project api method");
+            }
+            if (method) {
+                btnInstance.callProjectApi(method, data);
+                return;
+            }
+        }
+    }
     // alan_btn/alan_btn.ts
     (function (ns) {
-        var alanButtonVersion = "alan-version.1.8.46";
+        var alanButtonVersion = "alan-version.1.8.47";
         alanButtonVersion = alanButtonVersion.replace("alan-version.", "");
         if (window.alanBtn) {
             console.warn("Alan: the Alan Button source code has already added (v." + alanButtonVersion + ")");
@@ -4594,6 +4640,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 keyFrames += ".alan-btn__image-preview-overlay {\n                position: fixed;\n                top: 0;\n                left: 0;\n                height: 100vh;\n                min-height: 100vh;\n                width: 100vw;\n                min-width: 100vw;\n                background-color: rgba(0,0,0,0.6);\n                display: flex;\n                align-items: center;\n                justify-content: center;\n            }";
                 keyFrames += ".alan-btn__image-preview-overlay img {\n                max-width: calc(100% - 100px);\n                max-height: calc(100% - 100px);\n            }";
+                keyFrames += "@media (orientation: landscape) { \n                .alan-btn__image-preview-overlay {\n                    align-items: flex-start;\n                    padding-top: 40px;\n                }\n                .alan-btn__image-preview-overlay img {\n                    max-height: calc(100% - 120px);\n                }\n                .alan-btn__image-preview-overlay iframe {\n                    max-height: calc(100% - 120px);\n                }\n            }";
+                keyFrames += ".alan-btn__image-preview-overlay iframe {\n                max-width: calc(100% - 100px);\n                max-height: calc(100% - 100px);\n                width: calc(100% - 100px);\n                height: calc(100% - 100px);\n            }";
                 keyFrames += ".alan-btn__image-preview-overlay-close-icon {\n                position: absolute;\n                top: 16px;\n                right: 16px;\n                cursor: pointer;\n                opacity: 0.7;\n            }";
                 if (!isMobile()) {
                     keyFrames += ".alan-btn__image-preview-overlay-close-icon:hover {\n                    opacity: 1;\n                }";
@@ -5184,11 +5232,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 if (popupOptions.type !== "chat" && isMobile()) {
                     return;
                 }
+                if (popupOptions && popupOptions.html) {
+                    popupOptions.html = replaceAttrInPopupHtml(popupOptions.html);
+                }
                 if (options2.onEvent) {
                     options2.onEvent(Object.assign(p, { name: "popup" }));
                 }
                 if (p) {
-                    showPopup(p.popup ? p.popup : p);
+                    showPopup(popupOptions);
                 }
             }
             function addPopupStyle(popupOptions, popup) {
@@ -5730,6 +5781,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         text: "",
                         reqId: event.reqId
                     });
+                    alanAudio.setProcessingState();
                 }
                 turnOffVoiceFn();
             }
@@ -6182,6 +6234,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 if (textChatIsAvailable && textChatIsHidden) {
                     showChatNotifications();
                 }
+                if (isFinalMessage(msg) && msg.type === "response" && textChatMessages.filter(function (m) { return !isFinalMessage(m); }).length === 0) {
+                    if (msg.name !== "loading") {
+                        enableTextareaInTheChat();
+                    }
+                }
             }
             function scrollTextChat(msgHolder, behavior) {
                 var scrollOptions = {
@@ -6312,6 +6369,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 });
             }
             var lastSendMsgTs = null;
+            function enableTextareaInTheChat() {
+                var textareaHolderEl = document.getElementById("textarea-holder");
+                textareaHolderEl.classList.remove("alan-btn__inactive");
+                clearTimeout(lastSendMsgTs);
+                lastSendMsgTs = null;
+            }
             var sendMessageToTextChat = throttle(function sendMessageToTextChat2() {
                 return __awaiter(this, void 0, void 0, function () {
                     var textareaEl, textareaHolderEl, text;
@@ -6323,9 +6386,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             return [2 /*return*/];
                         }
                         lastSendMsgTs = setTimeout(function () {
-                            textareaHolderEl.classList.remove("alan-btn__inactive");
-                            clearTimeout(lastSendMsgTs);
-                            lastSendMsgTs = null;
+                            enableTextareaInTheChat();
                         }, 5e3);
                         if (text.trim() === "")
                             return [2 /*return*/];
@@ -6440,6 +6501,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                 }
             }
+            function onMessageClickListener(e) {
+                var clickedEl = e.target;
+                processClickByButtonInPopup(clickedEl, btnInstance, _sendText);
+            }
             function initTextChat() {
                 var _a, _b, _c;
                 var textareaDiv = document.getElementById("textarea-holder");
@@ -6455,6 +6520,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     var messagesDiv = document.createElement("div");
                     messagesDiv.id = "chatMessages";
                     messagesDiv.classList.add("alan-btn__chat-messages");
+                    messagesDiv.removeEventListener("click", onMessageClickListener);
+                    messagesDiv.addEventListener("click", onMessageClickListener);
                     var messagesWrapperDiv = document.createElement("div");
                     messagesWrapperDiv.id = "chatMessagesWrapper";
                     messagesWrapperDiv.classList.add("alan-btn__chat-messages-wrapper");
@@ -7436,7 +7503,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 return null;
             }
             var pageScrolled = false;
-            window.addEventListener("scroll", onPageScroll);
+            if (isMobile()) {
+                window.addEventListener("scroll", onPageScroll);
+            }
             var managePageScrollFlag = debounce(function () {
                 pageScrolled = false;
                 rootEl.classList.remove("alan-btn__page-scrolled");
