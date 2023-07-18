@@ -3369,7 +3369,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     // alan_btn/alan_btn.ts
     (function (ns) {
-        var alanButtonVersion = "alan-version.1.8.47";
+        var alanButtonVersion = "alan-version.1.8.48";
         alanButtonVersion = alanButtonVersion.replace("alan-version.", "");
         if (window.alanBtn) {
             console.warn("Alan: the Alan Button source code has already added (v." + alanButtonVersion + ")");
@@ -3446,6 +3446,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             var textChatOptions = null;
             var clearChatIsInProcess = false;
             var textChatScrollPosition = null;
+            var sentMessageInd = null;
+            var sentMessages = [];
             var defaultMinChatHeight = 400;
             var defaultChatHeight = 700;
             var defaultMinChatWidth = 250;
@@ -4013,7 +4015,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                     el.style.display = "flex";
                     setTimeout(function () {
-                        var textareaEl = document.getElementById("chatTextarea");
+                        var textareaEl = getChatTextareaEl();
                         if (textareaEl && state === DEFAULT) {
                             textareaEl.focus();
                         }
@@ -4733,7 +4735,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     "img {\n                    max-width: 100%!important;\n                    pointer-events: auto!important;\n                    cursor: pointer;\n                }",
                     "code {\n                    background-color: #F8F8F8!important;\n                    border-radius: 3px!important;\n                    border: 1px solid #DDD!important;\n                    font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n                    margin: 0 2px!important;\n                    padding: 0 5px!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "pre {\n                    background-color: #F8F8F8!important;\n                    border-radius: 3px!important;\n                    border: 1px solid #DDD!important;\n                    font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n                    padding: 0 5px!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "pre code {\n                    border: none!important;\n                    margin: 0!important;\n                    padding: 0!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
+                    "pre code {\n                    border: none!important;\n                    margin: 0!important;\n                    padding: 0!important;\n                    white-space: pre-wrap!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "hr {\n                    display: block!important;\n                    unicode-bidi: isolate!important;\n                    margin-block-start: 0.5em!important;\n                    margin-block-end: 0.5em!important;\n                    margin-inline-start: auto!important;\n                    margin-inline-end: auto!important;\n                    overflow: hidden!important;\n                    border-style: inset!important;\n                    border-width: 1px!important;\n                }",
                     "blockquote {\n                    padding: 5px 20px 0!important;\n                    border-left: 5px solid #beb7b7!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
                     "table > tbody > tr > td {\n                    background-color: #fff!important;\n                    color: #000!important;\n                }",
@@ -4750,6 +4752,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened .alanBtn {\n                transform: scale(0);\n                opacity: 0;\n                animation: text-chat-disappear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n            }");
                 keyFrames += getStyleSheetMarker(true) + ".text-chat-is-closing .alanBtn {\n                transform: scale(0);\n                opacity: 0;\n                animation: text-chat-appear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n            }");
                 keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened .alanBtn-recognised-text-holder {\n                display: none;\n            }";
+                keyFrames += getStyleSheetMarker() + " mjx-container svg {\n                max-width: 100%;\n            }";
                 keyFrames += getStyleSheetMarker() + ".alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}";
                 keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__default-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);}";
                 keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__right {border-top-right-radius: 0!important;}";
@@ -5579,6 +5582,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     curDialogId = dialogId;
                     saveDialogId(dialogId);
                     restoreMessageList(true);
+                    sentMessages = restoreSentMessages();
                 }
                 if (options2.onConnectionStatus) {
                     options2.onConnectionStatus(res);
@@ -5876,7 +5880,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 return resultStr;
             }
             function renderInterimForTextChat(msg) {
-                var textarea = document.getElementById("chatTextarea");
+                var textarea = getChatTextareaEl();
                 if (textarea) {
                     if (msg.final === true) {
                         renderMessageInTextChat(msg);
@@ -5892,8 +5896,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 imgPreviewOverlayEl.id = "img-preview-overlay";
                 imgPreviewOverlayEl.classList.add("alan-btn__image-preview-overlay");
                 imgPreviewOverlayEl.style.zIndex = btnZIndex + 3;
-                imgPreviewOverlayEl.setAttribute("data-img-index", parentEl.getAttribute("data-img-index"));
-                imgPreviewOverlayEl.setAttribute("data-msg-req-id", parentEl.getAttribute("data-msg-req-id"));
+                if (parentEl) {
+                    imgPreviewOverlayEl.setAttribute("data-img-index", parentEl.getAttribute("data-img-index"));
+                    imgPreviewOverlayEl.setAttribute("data-msg-req-id", parentEl.getAttribute("data-msg-req-id"));
+                }
                 var imgPreviewOverlayCloseIcon = document.createElement("div");
                 imgPreviewOverlayCloseIcon.id = "img-preview-overlay__close-icon";
                 imgPreviewOverlayCloseIcon.innerHTML = "\n            <svg width=\"17\" height=\"17\" viewBox=\"0 0 17 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M0.342029 15.0105C-0.113105 15.4658 -0.113035 16.2036 0.34217 16.6587C0.797374 17.1138 1.53533 17.1138 1.99046 16.6586L8.50015 10.1482L15.0104 16.658C15.4655 17.1131 16.2035 17.1131 16.6586 16.658C17.1138 16.2029 17.1138 15.4649 16.6586 15.0098L10.1483 8.49998L16.6582 1.98944C17.1132 1.53427 17.1132 0.796371 16.6579 0.341282C16.2028 -0.113819 15.4648 -0.113749 15.0097 0.341421L8.49991 6.85183L1.98966 0.341981C1.5345 -0.113143 0.796535 -0.113143 0.341377 0.341981C-0.113792 0.797116 -0.113792 1.53502 0.341377 1.99016L6.85187 8.5001L0.342029 15.0105Z\" fill=\"#FFFFFF\"/>\n</svg>\n";
@@ -6123,8 +6129,77 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             function buildMsgContent(msg) {
                 return "".concat(buildImagesContent(msg)).concat(buildMsgTextContent(msg)).concat(buildLinksContent(msg)).concat(buildLikesContent(msg)).concat(buildMsgIncommingLoader(msg));
             }
+            function highlightCode() {
+                if (window.hljs) {
+                    setTimeout(function () {
+                        var msgHolder = document.getElementById("chatMessages");
+                        if (msgHolder) {
+                            msgHolder.querySelectorAll("pre code:not(.alan-btn__hljs-processed)").forEach(function (el) {
+                                window.hljs.highlightElement(el);
+                                el.classList.add("alan-btn__hljs-processed");
+                            });
+                        }
+                    });
+                }
+            }
+            function loadHighlightJs() {
+                var script = document.createElement("script");
+                script.src = "https://studio.alan.app/js/hljs/highlight.min.js?v=1";
+                script.async = true;
+                script.onload = function () {
+                    highlightCode();
+                };
+                document.head.appendChild(script);
+                var link = document.createElement("link");
+                link.rel = "stylesheet";
+                link.href = "https://studio.alan.app/js/hljs/github.min.css?v=1";
+                document.getElementsByTagName("head")[0].appendChild(link);
+            }
+            loadHighlightJs();
+            function loadMathJax() {
+                window.MathJax = {
+                    startup: {
+                        pageReady: function () {
+                            return window.MathJax.startup.defaultPageReady();
+                        }
+                    },
+                    tex: {
+                        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+                        processEscapes: true
+                    }
+                };
+                var script = document.createElement("script");
+                script.src = "https://studio.alan.app/js/mathjax/tex-svg.js?v=1";
+                script.async = true;
+                script.setAttribute("id", "MathJax-script");
+                script.onload = function () {
+                    processFormulasInMsgs();
+                };
+                document.head.appendChild(script);
+            }
+            loadMathJax();
+            function processFormulas(msgInd) {
+                var MathJax = window.MathJax;
+                if (MathJax) {
+                    setTimeout(function () {
+                        var output = document.getElementById("msg-" + msgInd).querySelectorAll(".alan-btn__chat-response-text-wrapper")[0];
+                        if (output && MathJax.texReset) {
+                            MathJax.texReset();
+                            MathJax.typesetClear();
+                            MathJax.typesetPromise([output])["catch"](function (err) {
+                                console.error(err);
+                            });
+                        }
+                    });
+                }
+            }
+            function processFormulasInMsgs() {
+                for (var i2 = 0; i2 < textChatMessages.length; i2++) {
+                    processFormulas(i2);
+                }
+            }
             function renderMessageInTextChat(msg, noAnimation, immidiateScroll) {
-                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
                 if (!textChatIsAvailable)
                     return;
                 var innerMsgPart = "";
@@ -6165,7 +6240,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                 }
                 msg = __assign(__assign({}, msg), getMsgReadProp(msg, textChatIsHidden));
-                var _m = processMessageForChat(msg, textChatMessages), isNew = _m.isNew, msgInd = _m.msgInd, replaceLoader = _m.replaceLoader, updateResponse = _m.updateResponse;
+                var _p = processMessageForChat(msg, textChatMessages), isNew = _p.isNew, msgInd = _p.msgInd, replaceLoader = _p.replaceLoader, updateResponse = _p.updateResponse;
                 if (isNew) {
                     var div = document.createElement("div");
                     div.id = "msg-" + msgInd;
@@ -6183,6 +6258,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     else {
                         scrollTextChat(msgHolder);
                     }
+                    if (((_g = msg.ctx) === null || _g === void 0 ? void 0 : _g.final) !== false) {
+                        processFormulas(msgInd);
+                        highlightCode();
+                    }
                 }
                 else {
                     var msgEl = document.getElementById("msg-" + msgInd);
@@ -6192,7 +6271,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             if (innerEl) {
                                 innerEl.innerHTML = innerMsgPart;
                                 innerEl.classList.remove("alan-incoming-msg");
-                                if (msg.type !== "chat" && ((_g = msg.images) === null || _g === void 0 ? void 0 : _g.length) > 0) {
+                                if (msg.type !== "chat" && ((_h = msg.images) === null || _h === void 0 ? void 0 : _h.length) > 0) {
                                     innerEl.classList.add("with-images");
                                 }
                                 scrollTextChat(msgHolder, "smooth");
@@ -6202,18 +6281,18 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             var innerEl = msgEl.children[0];
                             var updatedMsg = textChatMessages[msgInd];
                             var imagesWrapper = innerEl.querySelector(".alan-btn__chat-response-imgs-wrapper");
-                            if (((_h = updatedMsg.images) === null || _h === void 0 ? void 0 : _h.length) > 0 && !imagesWrapper) {
+                            if (((_j = updatedMsg.images) === null || _j === void 0 ? void 0 : _j.length) > 0 && !imagesWrapper) {
                                 innerEl.insertAdjacentHTML("afterbegin", buildImagesContent(updatedMsg));
                                 innerEl = msgEl.children[0];
                             }
-                            if (((_j = updatedMsg.images) === null || _j === void 0 ? void 0 : _j.length) > 1 && imagesWrapper) {
+                            if (((_k = updatedMsg.images) === null || _k === void 0 ? void 0 : _k.length) > 1 && imagesWrapper) {
                                 imagesWrapper.querySelector(".alan-btn__chat-response-imgs-wrapper-right-arrow").classList.remove("invisible");
                             }
-                            if (updatedMsg.type !== "chat" && ((_k = updatedMsg.images) === null || _k === void 0 ? void 0 : _k.length) > 0) {
+                            if (updatedMsg.type !== "chat" && ((_l = updatedMsg.images) === null || _l === void 0 ? void 0 : _l.length) > 0) {
                                 innerEl.classList.add("with-images");
                             }
                             var msgParts = innerEl.children;
-                            var stop_1 = ((_l = updatedMsg.images) === null || _l === void 0 ? void 0 : _l.length) === 0 ? 0 : 1;
+                            var stop_1 = ((_m = updatedMsg.images) === null || _m === void 0 ? void 0 : _m.length) === 0 ? 0 : 1;
                             while (msgParts.length > stop_1) {
                                 msgParts[msgParts.length - 1].remove();
                             }
@@ -6228,6 +6307,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         else {
                             msgEl.innerHTML = msgHtml;
                         }
+                    }
+                    if (((_o = msg.ctx) === null || _o === void 0 ? void 0 : _o.final) !== false) {
+                        processFormulas(msgInd);
+                        highlightCode();
                     }
                 }
                 saveMessageHistory();
@@ -6356,6 +6439,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             case 1:
                                 res = _a.sent();
                                 msg = __assign(__assign({}, msg), { reqId: res.reqId });
+                                saveSentMessages(text);
                                 renderMessageInTextChat(msg);
                                 renderMessageInTextChat({
                                     type: "response",
@@ -6379,7 +6463,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 return __awaiter(this, void 0, void 0, function () {
                     var textareaEl, textareaHolderEl, text;
                     return __generator(this, function (_a) {
-                        textareaEl = document.getElementById("chatTextarea");
+                        textareaEl = getChatTextareaEl();
                         textareaHolderEl = document.getElementById("textarea-holder");
                         text = textareaEl.value;
                         if (lastSendMsgTs) {
@@ -6429,6 +6513,72 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                 }
             }
+            function getRestoreMsgsLsKey() {
+                var projectId = getProjectId();
+                return "alan-btn-chat-sent-history-".concat(projectId);
+            }
+            function restoreSentMessages() {
+                var messages = [];
+                if (isLocalStorageAvailable) {
+                    var key = getRestoreMsgsLsKey();
+                    try {
+                        messages = JSON.parse(localStorage.getItem(key)) || [];
+                    }
+                    catch (e) {
+                    }
+                }
+                return messages;
+            }
+            function saveSentMessages(text) {
+                if (isLocalStorageAvailable) {
+                    var maxSavedForHistoryMsgCount = 25;
+                    var key = getRestoreMsgsLsKey();
+                    sentMessages.push(text);
+                    if (sentMessages.length > 50) {
+                        sentMessages = sentMessages.slice(Math.max(sentMessages.length - maxSavedForHistoryMsgCount, 0));
+                    }
+                    if (sentMessages.length > 0) {
+                        localStorage.setItem(key, JSON.stringify(sentMessages));
+                    }
+                }
+            }
+            function switchMessages(keyCode) {
+                var messages = __spreadArray([], sentMessages, true);
+                messages = messages.reverse();
+                if (messages.length === 0) {
+                    return;
+                }
+                if (keyCode === 38) {
+                    if (sentMessageInd === null || sentMessageInd + 1 === messages.length) {
+                        sentMessageInd = 0;
+                    }
+                    else {
+                        sentMessageInd = sentMessageInd + 1;
+                    }
+                }
+                if (keyCode === 40) {
+                    if (sentMessageInd === null || sentMessageInd - 1 === -1) {
+                        sentMessageInd = messages.length - 1;
+                    }
+                    else {
+                        sentMessageInd = sentMessageInd - 1;
+                    }
+                }
+                var textareaEl = getChatTextareaEl();
+                textareaEl.value = messages[sentMessageInd];
+                moveCursorToEnd(textareaEl);
+            }
+            function moveCursorToEnd(el) {
+                el.focus();
+                if (typeof el.selectionStart == "number") {
+                    el.selectionStart = el.selectionEnd = el.value.length;
+                }
+                else if (typeof el.createTextRange != "undefined") {
+                    var range = el.createTextRange();
+                    range.collapse(false);
+                    range.select();
+                }
+            }
             function onChatTextAreaKeyDown(e) {
                 var keyCode = e.keyCode || e.which;
                 if (keyCode === 13 && e.shiftKey) {
@@ -6442,6 +6592,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     sendMessageToTextChat();
                     e.stopPropagation();
                     e.preventDefault();
+                }
+                var goToPrev = keyCode === 38;
+                var goToNext = keyCode === 40;
+                if (goToPrev || goToNext) {
+                    switchMessages(keyCode);
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return;
                 }
             }
             function disableVoiceEnabledBtn() {
@@ -6486,7 +6644,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             }
             function hideKeyboard() {
                 if (isMobile()) {
-                    var chatTextarea = document.getElementById("chatTextarea");
+                    var chatTextarea = getChatTextareaEl();
                     if (chatTextarea) {
                         chatTextarea.blur();
                     }
@@ -6505,10 +6663,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 var clickedEl = e.target;
                 processClickByButtonInPopup(clickedEl, btnInstance, _sendText);
             }
+            function getChatTextareaEl() {
+                return document.getElementById("chatTextarea");
+            }
             function initTextChat() {
                 var _a, _b, _c;
                 var textareaDiv = document.getElementById("textarea-holder");
-                var chatTextarea = document.getElementById("chatTextarea");
+                var chatTextarea = getChatTextareaEl();
                 var chatMicBtn = document.getElementById("chat-mic-btn");
                 var unmuteAlanBtn = document.getElementById("chat-unmute-btn");
                 var chatSendBtn = document.getElementById("chat-send-btn");
@@ -7523,6 +7684,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             var dndInitMousePos = [0, 0];
             var chatHeight, chatWidth, typeBorderHor, typeBorderVert;
             var chatInitLeftPos, chatInitRightPos, chatInitTopPos, chatInitBottomPos;
+            var chatTopPosBeforeResize;
+            var chatBottomPosBeforeResize;
             var chatRightAligned, chatLeftAligned, chatTopAligned, chatBottomAligned;
             if (!isMobile()) {
                 chatHolderDiv.addEventListener("mousedown", onMouseDownForResizeTextChat);
@@ -7565,14 +7728,17 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     posInfo.clientX,
                     posInfo.clientY
                 ];
-                chatHeight = chatHolderDiv.getBoundingClientRect().height;
-                chatWidth = chatHolderDiv.getBoundingClientRect().width;
+                var chatRect = chatHolderDiv.getBoundingClientRect();
+                chatHeight = chatRect.height;
+                chatWidth = chatRect.width;
                 typeBorderHor = getBorderType(posInfo).typeBorderHor;
                 typeBorderVert = getBorderType(posInfo).typeBorderVert;
                 chatInitLeftPos = parseInt(chatHolderDiv.style.left);
                 chatInitRightPos = parseInt(chatHolderDiv.style.right);
                 chatInitTopPos = parseInt(chatHolderDiv.style.top);
                 chatInitBottomPos = parseInt(chatHolderDiv.style.bottom);
+                chatTopPosBeforeResize = chatRect.top;
+                chatBottomPosBeforeResize = chatRect.bottom;
                 chatRightAligned = chatHolderDiv.style.right;
                 chatLeftAligned = chatHolderDiv.style.left;
                 chatTopAligned = chatHolderDiv.style.top;
@@ -7625,8 +7791,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 var minChatHeight = ((_a = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _a === void 0 ? void 0 : _a.minHeight) || defaultMinChatHeight;
                 var expanding = borderType === "bottom" && delta > 0 || borderType === "top" && delta < 0;
                 var h = borderType === "bottom" ? chatHeight + delta : chatHeight - delta;
-                var newBottomtPos = chatInitBottomPos - delta;
-                var newTopPos = chatInitTopPos + delta;
+                var newBottomtPos = chatBottomPosBeforeResize - delta;
+                var newTopPos = chatTopPosBeforeResize + delta;
                 if (borderType === "bottom" && newBottomtPos <= 0 && h >= chatHeight) {
                     return false;
                 }
