@@ -11,4 +11,5 @@ export interface AlanButton {
     textChat: {
         setAudioOutputEnabled: (value: boolean) => void,
         isAudioOutputEnabled: () => boolean
+    };
 }

@@ -3369,7 +3369,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     // alan_btn/alan_btn.ts
     (function (ns) {
-        var alanButtonVersion = "alan-version.1.8.51";
+        var alanButtonVersion = "alan-version.1.8.52";
         alanButtonVersion = alanButtonVersion.replace("alan-version.", "");
         if (window.alanBtn) {
             console.warn("Alan: the Alan Button source code has already added (v." + alanButtonVersion + ")");
