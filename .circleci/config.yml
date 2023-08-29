@@ -9,7 +9,8 @@ orbs:
 jobs:
   build_web:
     macos:
-      xcode: 13.0.0
+      xcode: 14.3.1
+    resource_class: macos.m1.medium.gen1
     steps:
       - checkout
       - node/install:
