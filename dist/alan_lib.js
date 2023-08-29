@@ -3369,7 +3369,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     // alan_btn/alan_btn.ts
     (function (ns) {
-        var alanButtonVersion = "alan-version.1.8.50";
+        var alanButtonVersion = "alan-version.1.8.51";
         alanButtonVersion = alanButtonVersion.replace("alan-version.", "");
         if (window.alanBtn) {
             console.warn("Alan: the Alan Button source code has already added (v." + alanButtonVersion + ")");
@@ -5623,7 +5623,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 playSoundNext();
                 isAlanActive = true;
                 if (window.tutorProject) {
+                    window.tutorProject.off("recognized", onRecognizedCbInMicBtn);
+                    window.tutorProject.off("parsed", onParsedCbInMicBtn);
+                    window.tutorProject.off("options", onOptionsReceived);
                     window.tutorProject.on("recognized", onRecognizedCbInMicBtn);
+                    window.tutorProject.on("parsed", onParsedCbInMicBtn);
                     window.tutorProject.on("options", onOptionsReceived);
                 }
             }
@@ -7006,7 +7010,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             }
             window.switchState = switchState;
             function switchState(newState) {
-                console.info("newState", newState);
                 if (options2.onButtonState) {
                     options2.onButtonState(btnStateMapping[newState]);
                 }
