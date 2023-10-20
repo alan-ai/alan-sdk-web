@@ -3229,13 +3229,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     var parseInline = marked.parseInline;
     var parser = Parser.parse;
     var lexer = Lexer.lex;
-    // alan_btn/src/getTextAreaFontSize.ts
-    function getTextAreaFontSize(mobile, value) {
-        if (mobile) {
-            return Math.max(16, value);
-        }
-        return value;
-    }
     // alan_btn/src/getMsgReadProp.ts
     function getMsgReadProp(msg, textChatIsHidden) {
         return {
@@ -3338,6 +3331,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     // alan_btn/src/replaceAttrInPopupHtml.ts
     function replaceAttrInPopupHtml(html) {
+        if (html === void 0) { html = ""; }
         return html.replace(/send-text/gi, "data-alan-btn-send-text").replace(/call-project-api/gi, "data-alan-btn-call-project-api").replace(/project-api-param/gi, "data-alan-btn-project-api-param");
     }
     // alan_btn/src/processClickByButtonInPopup.ts
@@ -3367,61 +3361,1256 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             }
         }
     }
-    // alan_btn/alan_btn.ts
-    (function (ns) {
-        var alanButtonVersion = "alan-version.1.8.53";
-        alanButtonVersion = alanButtonVersion.replace("alan-version.", "");
-        if (window.alanBtn) {
-            console.warn("Alan: the Alan Button source code has already added (v." + alanButtonVersion + ")");
+    // alan_btn/src/helpers/mini/copyTextToBuffer.ts
+    function copyTextToBuffer(text) {
+        var el = document.createElement("textarea");
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+    }
+    // alan_btn/src/helpers/documentHelpers.ts
+    function createDiv(options2) {
+        if (options2 === void 0) { options2 = {}; }
+        var div = document.createElement("div");
+        if (options2.id) {
+            div.id = options2.id;
         }
-        var alanAltPrefix = "Alan voice assistant";
-        var currentProjectId = null;
-        var deviceId;
-        var firstClick = null;
-        var btnInstance;
-        var isLocalStorageAvailable = false;
-        try {
-            localStorage.getItem("test");
-            isLocalStorageAvailable = true;
+        if (options2["class"]) {
+            div.classList.add(options2["class"]);
         }
-        catch (e) {
-            isLocalStorageAvailable = false;
+        return div;
+    }
+    function createDivWithSvg(svgIcon, options2) {
+        if (options2 === void 0) { options2 = {}; }
+        var div = document.createElement("div");
+        if (options2.id) {
+            div.id = options2.id;
         }
-        var isSessionStorageAvailable = false;
-        try {
-            sessionStorage.getItem("test");
-            isSessionStorageAvailable = true;
+        if (options2["class"]) {
+            div.classList.add(options2["class"]);
         }
-        catch (e) {
-            isSessionStorageAvailable = false;
-        }
-        function printNavigatorFlag(flag) {
-            return flag ? "1" : "0";
-        }
-        function getDebugInfo() {
-            return "\n        Debug Info:\n        alanBtn: v.".concat(alanButtonVersion, "\n        alanSDK: v.").concat(window.alanSDKVersion, "\n        projectId: ").concat(currentProjectId || "unknown", "\n        deviceId: ").concat(getDeviceId(), "\n        navigator: \n        getUserMedia: ").concat(printNavigatorFlag(navigator.getUserMedia), ", \n        mediaDevices: ").concat(printNavigatorFlag(navigator.mediaDevices), ", \n        mediaDevices.getUserMedia: ").concat(printNavigatorFlag(navigator.mediaDevices && navigator.mediaDevices.getUserMedia), ",\n        webkitGUM: ").concat(printNavigatorFlag(navigator.webkitGetUserMedia), ",\n        mozGUM: ").concat(printNavigatorFlag(navigator.mozGetUserMedia), ",\n        msGUM: ").concat(printNavigatorFlag(navigator.msGetUserMedia), ",\n        window:\n        AudioContext: ").concat(printNavigatorFlag(window.AudioContext), ",\n        webkitAC: ").concat(printNavigatorFlag(window.webkitAudioContext), ",\n        mozAC: ").concat(printNavigatorFlag(window.mozAudioContext), ",\n        userAgent: ").concat(navigator.userAgent, "\n        ");
-        }
-        function getDeviceId() {
-            if (!currentProjectId)
-                return;
-            var deviceIdKey = "alan-btn-uuid-" + currentProjectId;
-            if (isLocalStorageAvailable) {
-                deviceId = localStorage.getItem(deviceIdKey);
+        div.innerHTML = svgIcon;
+        return div;
+    }
+    function findHighestZIndex() {
+        var elements = document.getElementsByTagName("*");
+        var defaultZIndex = 4;
+        for (var i = 0; i < elements.length; i++) {
+            var zindex = Number.parseInt(document.defaultView.getComputedStyle(elements[i], null).getPropertyValue("z-index"), 10);
+            if (zindex > defaultZIndex) {
+                defaultZIndex = zindex;
             }
-            if (!deviceId) {
-                deviceId = guid();
-                if (isLocalStorageAvailable) {
-                    localStorage.setItem(deviceIdKey, deviceId);
+        }
+        return defaultZIndex;
+    }
+    // alan_btn/src/assets/chatIcons.ts
+    var chatIcons = {
+        toogleChatSideBar: '<svg fill="#000000" width="24px" height="24px" viewBox="0 0 32 32" id="icon" xmlns="http://www.w3.org/2000/svg"><defs><style>.cls-1{fill:none;}</style></defs><path d="M28,4H4A2,2,0,0,0,2,6V26a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V6A2,2,0,0,0,28,4ZM4,6h6V26H4ZM28,26H12V6H28Z"/><rect id="_Transparent_Rectangle_" data-name="&lt;Transparent Rectangle&gt;" class="cls-1" width="32" height="32"/></svg>',
+        closeChat: "<svg width=\"17\" height=\"17\" viewBox=\"0 0 17 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M0.342029 15.0105C-0.113105 15.4658 -0.113035 16.2036 0.34217 16.6587C0.797374 17.1138 1.53533 17.1138 1.99046 16.6586L8.50015 10.1482L15.0104 16.658C15.4655 17.1131 16.2035 17.1131 16.6586 16.658C17.1138 16.2029 17.1138 15.4649 16.6586 15.0098L10.1483 8.49998L16.6582 1.98944C17.1132 1.53427 17.1132 0.796371 16.6579 0.341282C16.2028 -0.113819 15.4648 -0.113749 15.0097 0.341421L8.49991 6.85183L1.98966 0.341981C1.5345 -0.113143 0.796535 -0.113143 0.341377 0.341981C-0.113792 0.797116 -0.113792 1.53502 0.341377 1.99016L6.85187 8.5001L0.342029 15.0105Z\" fill=\"#080808\"/>\n</svg>",
+        plus: "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n    <path d=\"M4 12H20M12 4V20\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n    </svg>",
+        clear: "<svg width=\"19\" height=\"22\" viewBox=\"0 0 19 22\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M6.33333 3.16667V2.63889C6.33333 1.93906 6.612 1.26772 7.10706 0.772667C7.60106 0.277611 8.27239 0 8.97222 0H10.0278C10.7276 0 11.399 0.277611 11.894 0.772667C12.3891 1.26772 12.6667 1.93906 12.6667 2.63889V3.16667H17.9444C18.5271 3.16667 19 3.63956 19 4.22222C19 4.80489 18.5271 5.27778 17.9444 5.27778H16.8889V16.8889C16.8889 19.2206 14.9994 21.1111 12.6667 21.1111C10.7329 21.1111 8.26817 21.1111 6.33333 21.1111C4.00161 21.1111 2.11111 19.2206 2.11111 16.8889V5.27778H1.05556C0.472889 5.27778 0 4.80489 0 4.22222C0 3.63956 0.472889 3.16667 1.05556 3.16667H6.33333ZM14.7778 5.27778H4.22222V16.8889C4.22222 18.0553 5.168 19 6.33333 19H12.6667C13.8331 19 14.7778 18.0553 14.7778 16.8889V5.27778ZM10.5556 8.44445V15.8333C10.5556 16.416 11.0284 16.8889 11.6111 16.8889C12.1938 16.8889 12.6667 16.416 12.6667 15.8333V8.44445C12.6667 7.86178 12.1938 7.38889 11.6111 7.38889C11.0284 7.38889 10.5556 7.86178 10.5556 8.44445ZM6.33333 8.44445V15.8333C6.33333 16.416 6.80622 16.8889 7.38889 16.8889C7.97156 16.8889 8.44444 16.416 8.44444 15.8333V8.44445C8.44444 7.86178 7.97156 7.38889 7.38889 7.38889C6.80622 7.38889 6.33333 7.86178 6.33333 8.44445ZM10.5556 3.16667V2.63889C10.5556 2.4985 10.5007 2.36444 10.4014 2.26522C10.3022 2.16706 10.1682 2.11111 10.0278 2.11111C9.68261 2.11111 9.31739 2.11111 8.97222 2.11111C8.83289 2.11111 8.69884 2.16706 8.59962 2.26522C8.50039 2.36444 8.44444 2.4985 8.44444 2.63889V3.16667H10.5556Z\" fill=\"black\"/>\n</svg>\n",
+        resizer: {
+            left: "<svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13.7266 0.273364C14.0911 0.63786 14.0911 1.22881 13.7266 1.59331L1.59331 13.7266C1.22881 14.0911 0.63786 14.0911 0.273364 13.7266C-0.0911215 13.3622 -0.0911215 12.7712 0.273364 12.4067L12.4067 0.273364C12.7712 -0.0911215 13.3622 -0.0911215 13.7266 0.273364ZM13.7266 6.80672C14.0911 7.17119 14.0911 7.76217 13.7266 8.12664L8.12664 13.7266C7.76217 14.0911 7.17119 14.0911 6.80672 13.7266C6.44225 13.3622 6.44225 12.7712 6.80672 12.4067L12.4067 6.80672C12.7712 6.44225 13.3622 6.44225 13.7266 6.80672Z\" fill=\"#CCD4DD\"/>\n    </svg>\n    ",
+            right: "<svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13.7266 0.273364C14.0911 0.63786 14.0911 1.22881 13.7266 1.59331L1.59331 13.7266C1.22881 14.0911 0.63786 14.0911 0.273364 13.7266C-0.0911215 13.3622 -0.0911215 12.7712 0.273364 12.4067L12.4067 0.273364C12.7712 -0.0911215 13.3622 -0.0911215 13.7266 0.273364ZM13.7266 6.80672C14.0911 7.17119 14.0911 7.76217 13.7266 8.12664L8.12664 13.7266C7.76217 14.0911 7.17119 14.0911 6.80672 13.7266C6.44225 13.3622 6.44225 12.7712 6.80672 12.4067L12.4067 6.80672C12.7712 6.44225 13.3622 6.44225 13.7266 6.80672Z\" fill=\"#CCD4DD\"/>\n    </svg>\n    "
+        },
+        send: "\n<svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path d=\"M28.0134 15.9238L8.98646 6.40981C7.82892 5.83162 6.75249 5.99963 6.17778 6.77248C5.89042 7.15832 5.61697 7.85122 5.94952 8.96241L8.09542 16.1092C8.39668 17.1138 8.39668 18.8797 8.09542 19.8843L5.94952 27.0311C5.61697 28.1423 5.88926 28.8363 6.17662 29.2222C6.51959 29.681 7.04564 29.9348 7.65743 29.9348C8.07109 29.9348 8.51834 29.8166 8.9853 29.5837L28.0134 20.0697C28.9635 19.5946 29.5093 18.838 29.5093 17.9968C29.5093 17.1555 28.9647 16.3989 28.0134 15.9238ZM8.27386 27.3486L10.3155 20.5494C10.4383 20.1403 10.5217 19.6606 10.575 19.1554H16.6868C17.3276 19.1554 17.8455 18.6375 17.8455 17.9968C17.8455 17.356 17.3276 16.8381 16.6868 16.8381H10.575C10.5217 16.3329 10.4395 15.8532 10.3155 15.4441L8.27386 8.64493L26.9775 17.9968L8.27386 27.3486Z\" fill=\"#B8B6B6\"/>\n</svg>",
+        mic: "\n<svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n    <path d=\"M18.2623 24.0476C16.7915 24.0458 15.3814 23.4608 14.3414 22.4208C13.3014 21.3808 12.7164 19.9707 12.7147 18.5V10.7333C12.7147 9.26204 13.2992 7.85099 14.3395 6.81061C15.3799 5.77024 16.791 5.18576 18.2623 5.18576C19.7336 5.18576 21.1446 5.77024 22.185 6.81061C23.2254 7.85099 23.8099 9.26204 23.8099 10.7333V18.5C23.8081 19.9707 23.2231 21.3808 22.1831 22.4208C21.1431 23.4608 19.733 24.0458 18.2623 24.0476ZM18.2623 7.4048C17.3798 7.40576 16.5337 7.75676 15.9097 8.38078C15.2857 9.00479 14.9347 9.85086 14.9337 10.7333V18.5C14.9337 19.3828 15.2844 20.2294 15.9086 20.8536C16.5329 21.4778 17.3795 21.8285 18.2623 21.8285C19.1451 21.8285 19.9917 21.4778 20.6159 20.8536C21.2401 20.2294 21.5908 19.3828 21.5908 18.5V10.7333C21.5899 9.85086 21.2389 9.00479 20.6148 8.38078C19.9908 7.75676 19.1448 7.40576 18.2623 7.4048ZM28.2479 18.5C28.2479 18.2057 28.131 17.9235 27.923 17.7154C27.7149 17.5073 27.4327 17.3905 27.1384 17.3905C26.8441 17.3905 26.5619 17.5073 26.3539 17.7154C26.1458 17.9235 26.0289 18.2057 26.0289 18.5C26.0289 20.5598 25.2106 22.5353 23.7541 23.9918C22.2976 25.4483 20.3221 26.2666 18.2623 26.2666C16.2024 26.2666 14.227 25.4483 12.7704 23.9918C11.3139 22.5353 10.4956 20.5598 10.4956 18.5C10.4956 18.2057 10.3788 17.9235 10.1707 17.7154C9.9626 17.5073 9.68039 17.3905 9.38613 17.3905C9.09187 17.3905 8.80966 17.5073 8.60158 17.7154C8.39351 17.9235 8.27661 18.2057 8.27661 18.5C8.27661 21.1483 9.32867 23.6882 11.2013 25.5609C13.074 27.4336 15.6139 28.4856 18.2623 28.4856C20.9106 28.4856 23.4505 27.4336 25.3232 25.5609C27.1959 23.6882 28.2479 21.1483 28.2479 18.5ZM19.3718 30.7047V27.3761C19.3718 27.0818 19.2549 26.7996 19.0468 26.5916C18.8387 26.3835 18.5565 26.2666 18.2623 26.2666C17.968 26.2666 17.6858 26.3835 17.4777 26.5916C17.2696 26.7996 17.1528 27.0818 17.1528 27.3761V30.7047C17.1528 30.9989 17.2696 31.2811 17.4777 31.4892C17.6858 31.6973 17.968 31.8142 18.2623 31.8142C18.5565 31.8142 18.8387 31.6973 19.0468 31.4892C19.2549 31.2811 19.3718 30.9989 19.3718 30.7047Z\" fill=\"#171717\"/>\n</svg>\n<div class=\"alan-text-chat__animated-btn-bars\">\n    <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n    <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n    <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n    <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n    <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n    <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n</div>",
+        noMic: "<svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.9675 16.3602V18.6166C12.9692 20.0539 13.541 21.432 14.5574 22.4483C15.5738 23.4647 16.9518 24.0365 18.3892 24.0382C19.2643 24.0371 20.1175 23.8248 20.8804 23.4294L19.0569 21.8003C18.8389 21.846 18.6153 21.8695 18.3892 21.8695C17.5264 21.8695 16.699 21.5268 16.089 20.9168C15.4789 20.3067 15.1362 19.4793 15.1362 18.6166V18.2976L12.9675 16.3602ZM21.6421 16.7466V11.0263C21.6412 10.1638 21.2982 9.33696 20.6883 8.72712C20.0785 8.11727 19.2516 7.77424 18.3892 7.7733C17.5267 7.77424 16.6999 8.11727 16.09 8.72712C15.5048 9.31233 15.1653 10.0974 15.138 10.9219L13.2678 9.24713C13.5339 8.48102 13.9711 7.77698 14.5555 7.1926C15.5723 6.17585 16.9513 5.60464 18.3892 5.60464C19.8271 5.60464 21.2061 6.17585 22.2228 7.1926C23.2396 8.20935 23.8108 9.58837 23.8108 11.0263V18.6166C23.8108 18.6404 23.8106 18.6643 23.8102 18.6882L21.6421 16.7466ZM22.5782 24.9462C21.345 25.7623 19.89 26.2068 18.3892 26.2068C16.3761 26.2068 14.4455 25.4071 13.022 23.9837C11.5986 22.5602 10.7989 20.6296 10.7989 18.6166C10.7989 18.329 10.6847 18.0532 10.4813 17.8498C10.2779 17.6465 10.0021 17.5322 9.71457 17.5322C9.42699 17.5322 9.15118 17.6465 8.94783 17.8498C8.74448 18.0532 8.63024 18.329 8.63024 18.6166C8.63024 21.2048 9.65841 23.687 11.4886 25.5172C13.0613 27.0899 15.1156 28.0704 17.3048 28.3151V30.5441C17.3048 30.8317 17.4191 31.1075 17.6224 31.3109C17.8258 31.5142 18.1016 31.6285 18.3892 31.6285C18.6768 31.6285 18.9526 31.5142 19.1559 31.3109C19.3593 31.1075 19.4735 30.8317 19.4735 30.5441V28.3151C21.2027 28.1218 22.8477 27.4695 24.2378 26.4288L22.5782 24.9462ZM27.5342 22.0231L25.7589 20.4332C25.9042 19.8436 25.9794 19.2339 25.9794 18.6166C25.9794 18.329 26.0937 18.0532 26.297 17.8498C26.5004 17.6465 26.7762 17.5322 27.0638 17.5322C27.3514 17.5322 27.6272 17.6465 27.8305 17.8498C28.0339 18.0532 28.1481 18.329 28.1481 18.6166C28.1481 19.7909 27.9364 20.9434 27.5342 22.0231Z\" fill=\"#B8B6B6\"/>\n<path d=\"M8.18825 6.56812L31.2883 27.1759C31.8123 27.6433 31.8581 28.4471 31.3906 28.9711C30.9232 29.4951 30.1194 29.5409 29.5954 29.0735L6.49538 8.46573C5.97137 7.99826 5.92553 7.1945 6.39301 6.67049C6.86048 6.14648 7.66424 6.10065 8.18825 6.56812Z\" fill=\"#B8B6B6\"/>\n</svg>\n",
+        disconnected: "\n        <svg class=\"alan-btn_disconnected-chat-icon-rotate\" width=\"35\" height=\"35\" viewBox=\"0 0 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path opacity=\"0.8\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M24.0579 3.47502C18.5874 0.922942 12.1534 1.67973 7.4383 5.76748C2.7232 9.85523 1.24337 15.2725 2.34798 20.767C3.45259 26.2615 7.87342 31.0097 13.2994 32.4594C19.715 34.174 26.6107 31.7302 30.2577 26.2615C26.9893 30.6213 20.7089 33.242 15.1228 32.2771C9.62181 31.3275 4.71002 26.606 3.45259 21.1573C2.11284 15.3541 3.59462 10.949 8.37598 6.57398C13.1573 2.19898 22.9638 1.8344 28.2519 8.2146C29.2614 9.43264 30.6224 11.6781 30.9871 14.4125C31.1694 15.5063 31.1694 15.6886 31.3518 16.6C31.3518 16.9646 31.7165 17.3292 32.0812 17.3292C32.6282 17.3292 33.0612 16.918 32.9929 16.2354C32.4459 10.7667 29.0622 5.80967 24.0579 3.47502Z\" fill=\"#B8B6B6\"/>\n        </svg>",
+        noWiFi: "<svg width=\"35\" height=\"35\" viewBox=\"0 0 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path d=\"M7.90233 10.4566C7.52988 9.72656 6.63602 9.42857 5.90602 9.78613C4.95254 10.2629 4.02887 11.0525 3.32866 11.708C2.71784 12.2593 2.68803 13.2127 3.23926 13.8086C3.53722 14.1215 3.93946 14.2854 4.34171 14.2854C4.69926 14.2854 5.05681 14.1513 5.35477 13.898C5.65273 13.6298 6.54661 12.7956 7.24682 12.4529C7.97682 12.0805 8.27478 11.1866 7.91723 10.4566H7.90233Z\" />\n        <path d=\"M32.1414 11.4398C28.1636 7.92391 23.0983 5.9872 17.884 5.9872C15.4258 5.9872 13.0273 6.40437 10.733 7.22376C10.6883 7.23866 10.6436 7.28335 10.5989 7.31315L8.40888 4.97415C7.84276 4.37823 6.9042 4.33355 6.30828 4.89967C5.71236 5.4658 5.68256 6.40434 6.23379 7.00026L27.091 29.3472C27.3889 29.6601 27.7763 29.824 28.1785 29.824C28.5361 29.824 28.9085 29.6899 29.1916 29.4217C29.7875 28.8556 29.8173 27.917 29.2661 27.3211L18.2714 15.5368C21.5638 15.6411 24.6328 17.0266 26.9718 19.4848C27.2698 19.7976 27.6571 19.9466 28.0444 19.9466C28.4169 19.9466 28.7893 19.8127 29.0724 19.5296C29.6683 18.9635 29.6981 18.0248 29.132 17.4288C26.1375 14.2705 22.1299 12.5424 17.884 12.5424C17.1391 12.5424 16.3942 12.6019 15.6642 12.7062C15.6642 12.7062 15.6493 12.7062 15.6344 12.7062L12.8187 9.68189C14.4575 9.20515 16.1558 8.9519 17.884 8.9519C22.3683 8.9519 26.7334 10.6205 30.1749 13.6597C30.4579 13.913 30.8155 14.0322 31.1581 14.0322C31.5753 14.0322 31.9775 13.8682 32.2755 13.5256C32.8267 12.9148 32.7671 11.9613 32.1414 11.425V11.4398Z\" />\n        <path d=\"M12.2079 15.1643C11.7908 14.4492 10.882 14.2109 10.1669 14.628C8.94526 15.3282 7.8279 16.2072 6.82973 17.2203C6.24871 17.8013 6.26361 18.7548 6.82973 19.3209C7.12769 19.6039 7.50014 19.7529 7.87259 19.7529C8.24504 19.7529 8.64731 19.6039 8.93037 19.306C9.74976 18.4717 10.6585 17.7715 11.6418 17.1905C12.3569 16.7733 12.5953 15.8645 12.1781 15.1494L12.2079 15.1643Z\" />\n        <path d=\"M16.7666 20.3637C16.5282 19.5741 15.694 19.1421 14.9044 19.3805C13.355 19.8572 11.8354 21.2874 11.0756 22.0919C10.5094 22.6878 10.5243 23.6263 11.1352 24.1924C11.4182 24.4605 11.7907 24.6097 12.1631 24.6097C12.5505 24.6097 12.9527 24.4607 13.2358 24.1478C14.1595 23.1795 15.1576 22.4346 15.7833 22.2409C16.5729 22.0025 17.005 21.1682 16.7666 20.3786V20.3637Z\" />\n        <path d=\"M17.7499 29.7644C18.7785 29.7644 19.6122 28.9307 19.6122 27.9021C19.6122 26.8737 18.7785 26.0399 17.7499 26.0399C16.7214 26.0399 15.8877 26.8737 15.8877 27.9021C15.8877 28.9307 16.7214 29.7644 17.7499 29.7644Z\"/>\n        </svg>\n        ",
+        mute: "\n        <svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <g clip-path=\"url(#clip0_185_822)\">\n            <path d=\"M2.96822 1.83729C2.5972 1.46626 2.04066 1.46626 1.66963 1.83729C1.2986 2.20832 1.2986 2.76486 1.66963 3.13589L16.5107 17.977C16.8818 18.348 17.4383 18.348 17.8093 17.977C18.1804 17.606 18.1804 17.0494 17.8093 16.6784L2.96822 1.83729Z\" fill=\"#171717\"/>\n            <path d=\"M14.2846 11.9477L15.5832 13.2463C17.0673 11.2984 16.9746 8.60848 15.4905 6.66059C15.2122 6.28956 14.5629 6.1968 14.1919 6.56783C13.8208 6.93886 13.7281 7.4954 14.0991 7.86643C15.1194 8.88675 15.1194 10.5564 14.2846 11.9477Z\" fill=\"#171717\"/>\n            <path d=\"M18.1804 9.90719C18.1804 11.3913 17.5311 12.8754 16.5107 13.9885L17.8093 15.2871C19.2007 13.803 19.9427 11.9478 20.0355 9.90719C20.0355 7.49551 18.8297 5.17659 16.8818 3.59972C16.5107 3.22869 15.7687 3.32145 15.5832 3.69248C15.3976 4.06351 15.3049 4.7128 15.6759 4.99107C17.2528 6.19691 18.1804 7.9593 18.1804 9.90719Z\" fill=\"#171717\"/>\n            <path d=\"M11.1308 15.6581L6.40023 12.4116C6.21471 12.3189 6.0292 12.2261 5.84368 12.2261H1.85514V7.77378H4.82336L2.96822 5.91864H0.927569C0.371028 5.91864 0 6.28967 0 6.84621V13.2464C0 13.803 0.371028 14.174 0.927569 14.174H5.56541L11.5019 18.2553C11.6874 18.3481 11.8729 18.4408 12.0584 18.4408C12.6149 18.4408 12.986 18.0698 12.986 17.5133V15.9364L11.1308 14.0812V15.6581Z\" fill=\"#171717\"/>\n            <path d=\"M11.1309 4.24897V8.7013L12.986 10.5564V2.48659C12.986 1.93005 12.615 1.55902 12.0584 1.55902C11.8729 1.55902 11.6874 1.65178 11.5019 1.74453L7.14233 4.71276L8.44093 6.01135L11.1309 4.24897Z\" fill=\"#171717\"/>\n            </g>\n            <defs>\n            <clipPath id=\"clip0_185_822\">\n            <rect width=\"20\" height=\"20\" fill=\"white\"/>\n            </clipPath>\n            </defs>\n            </svg>\n            ",
+        unmute: "<svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <path d=\"M15.5556 6.64349C15.2778 6.27312 14.6296 6.18053 14.2593 6.5509C13.8889 6.92127 13.7963 7.47682 14.1667 7.84719C15.0926 9.14348 15.0926 10.9027 14.1667 12.199C13.8889 12.5694 13.8889 13.2175 14.2593 13.4953C14.4445 13.5879 14.6296 13.6805 14.8148 13.6805C15.0926 13.6805 15.3704 13.5879 15.5556 13.3101C17.037 11.3657 17.037 8.58793 15.5556 6.64349Z\" fill=\"#171717\"/>\n            <path d=\"M16.7593 3.68063C16.3889 3.31026 15.7408 3.40285 15.463 3.77322C15.1852 4.14359 15.1852 4.79174 15.5556 5.06952C17.1297 6.27322 18.0556 8.03247 18.0556 9.97691C18.0556 11.9213 17.1297 13.6806 15.6482 14.7917C15.2778 15.1621 15.1852 15.7176 15.5556 16.088C15.7408 16.2732 16.0186 16.4584 16.2963 16.4584C16.4815 16.4584 16.7593 16.3658 16.8519 16.2732C18.7963 14.7917 19.9074 12.4769 20 9.97691C19.9074 7.56951 18.7037 5.2547 16.7593 3.68063Z\" fill=\"#171717\"/>\n            <path d=\"M12.5 1.73615C12.2222 1.55096 11.8518 1.55096 11.574 1.73615L5.55554 5.9028H0.925923C0.370369 5.9028 0 6.27317 0 6.82872V13.2176C0 13.7731 0.370369 14.1435 0.925923 14.1435H5.55554L11.4814 18.2176C11.6666 18.3102 11.8518 18.4028 12.037 18.4028C12.5926 18.4028 12.9629 18.0324 12.9629 17.4768V2.56948C12.9629 2.19911 12.7777 1.92133 12.5 1.73615ZM11.1111 15.625L6.38887 12.3843C6.20368 12.2917 6.0185 12.1991 5.83331 12.1991H1.85185V7.75465H5.83331C6.0185 7.75465 6.20368 7.66205 6.38887 7.56946L11.1111 4.32873V15.625Z\" fill=\"#171717\"/>\n            </svg>\n            ",
+        like: "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M15.0501 7.04419C15.4673 5.79254 14.5357 4.5 13.2163 4.5C12.5921 4.5 12.0062 4.80147 11.6434 5.30944L8.47155 9.75H5.85748L5.10748 10.5V18L5.85748 18.75H16.8211L19.1247 14.1428C19.8088 12.7747 19.5406 11.1224 18.4591 10.0408C17.7926 9.37439 16.8888 9 15.9463 9H14.3981L15.0501 7.04419ZM9.60751 10.7404L12.864 6.1813C12.9453 6.06753 13.0765 6 13.2163 6C13.5118 6 13.7205 6.28951 13.627 6.56984L12.317 10.5H15.9463C16.491 10.5 17.0133 10.7164 17.3984 11.1015C18.0235 11.7265 18.1784 12.6814 17.7831 13.472L15.8941 17.25H9.60751V10.7404ZM8.10751 17.25H6.60748V11.25H8.10751V17.25Z\" fill=\"#080341\"/>\n            </svg>",
+        dislike: "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M15.0501 16.9558C15.4673 18.2075 14.5357 19.5 13.2164 19.5C12.5921 19.5 12.0063 19.1985 11.6435 18.6906L8.47164 14.25L5.85761 14.25L5.10761 13.5L5.10761 6L5.85761 5.25L16.8211 5.25L19.1247 9.85722C19.8088 11.2253 19.5407 12.8776 18.4591 13.9592C17.7927 14.6256 16.8888 15 15.9463 15L14.3982 15L15.0501 16.9558ZM9.60761 13.2596L12.8641 17.8187C12.9453 17.9325 13.0765 18 13.2164 18C13.5119 18 13.7205 17.7105 13.6271 17.4302L12.317 13.5L15.9463 13.5C16.491 13.5 17.0133 13.2836 17.3984 12.8985C18.0235 12.2735 18.1784 11.3186 17.7831 10.528L15.8941 6.75L9.60761 6.75L9.60761 13.2596ZM8.10761 6.75L6.60761 6.75L6.60761 12.75L8.10761 12.75L8.10761 6.75Z\" fill=\"#080341\"/>\n            </svg>",
+        copy: "<svg  class=\"alan-btn__copy-icon\" width=\"24px\" height=\"24px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M19.5 16.5L19.5 4.5L18.75 3.75H9L8.25 4.5L8.25 7.5L5.25 7.5L4.5 8.25V20.25L5.25 21H15L15.75 20.25V17.25H18.75L19.5 16.5ZM15.75 15.75L15.75 8.25L15 7.5L9.75 7.5V5.25L18 5.25V15.75H15.75ZM6 9L14.25 9L14.25 19.5L6 19.5L6 9Z\" fill=\"#080341\"/>\n    </svg>",
+        copied: "<svg class=\"alan-btn__copied-icon\" width=\"24px\" height=\"24px\" viewBox=\"0 0 24 24\" role=\"img\" xmlns=\"http://www.w3.org/2000/svg\" aria-labelledby=\"okIconTitle\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" color=\"#000000\"> <title id=\"okIconTitle\">Copied!</title> <polyline points=\"4 13 9 18 20 7\"/> </svg>"
+    };
+    // alan_btn/src/textChat/fullscreen.ts
+    function openChatInFullScreen(chatHolderDiv) {
+        chatHolderDiv.classList.add("alan-btn_text-chat-full-screen");
+        chatHolderDiv.classList.remove("with-hover");
+    }
+    function toogleChatSidePanel(chatHolderDiv) {
+        var expandedClass = "alan-btn__side-bar-expanded";
+        if (chatHolderDiv.classList.contains(expandedClass)) {
+            chatHolderDiv.classList.remove(expandedClass);
+        }
+        else {
+            chatHolderDiv.classList.add(expandedClass);
+        }
+    }
+    function fillSideBarContent(chatSideBar, options2) {
+        var readyClass = "alan-btn__side-bar-ready";
+        if (!chatSideBar.classList.contains(readyClass)) {
+            chatSideBar.classList.add(readyClass);
+            var sideChatHeader = chatSideBar.querySelector(".alan-btn__side-bar-header");
+            var chatCollapseSideBarBtn = createDivWithSvg(chatIcons.toogleChatSideBar, { "class": "alan-btn__side-bar__toogle-side-bar-btn" });
+            var chatCloseSideBarBtn = createDivWithSvg(chatIcons.closeChat, { "class": "alan-btn__side-bar__close-chat-btn" });
+            var newChatSideBarBtn = createDiv({ "class": "alan-btn__side-bar__new-chat-btn" });
+            newChatSideBarBtn.innerHTML = chatIcons.plus + "New Chat";
+            sideChatHeader.appendChild(chatCloseSideBarBtn);
+            sideChatHeader.appendChild(newChatSideBarBtn);
+            sideChatHeader.appendChild(chatCollapseSideBarBtn);
+            chatCloseSideBarBtn.addEventListener("click", options2.closeTextChat);
+            chatCollapseSideBarBtn.addEventListener("click", options2.expandCollapseChatSidePanel);
+            newChatSideBarBtn.addEventListener("click", options2.onClearChatClick);
+        }
+    }
+    // alan_btn/src/helpers/mini/guid.ts
+    function guid() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 65536).toString(16).substring(1);
+        }
+        return s4() + s4() + "-" + s4() + "-" + s4() + "-" + s4() + "-" + s4() + s4() + s4();
+    }
+    // alan_btn/src/state.ts
+    var uiState = {
+        lib: {
+            version: ""
+        },
+        project: {
+            id: null
+        },
+        btn: {
+            isTopAligned: false,
+            zIndex: void 0
+        },
+        textChat: {
+            available: false,
+            expanded: false,
+            options: null,
+            defaults: {
+                minChatWidth: 250,
+                appearAnimationMs: 200,
+                chatMargin: 25,
+                textarea: {
+                    padding: {
+                        top: 12
+                    }
                 }
             }
-            return deviceId;
         }
-        function guid() {
-            function s4() {
-                return Math.floor((1 + Math.random()) * 65536).toString(16).substring(1);
+    };
+    // alan_btn/src/helpers/mini/isStorageAvailable.ts
+    var _isLocalStorageAvailable = false;
+    try {
+        localStorage.getItem("test");
+        _isLocalStorageAvailable = true;
+    }
+    catch (e) {
+        _isLocalStorageAvailable = false;
+    }
+    var _isSessionStorageAvailable = false;
+    try {
+        sessionStorage.getItem("test");
+        _isSessionStorageAvailable = true;
+    }
+    catch (e) {
+        _isSessionStorageAvailable = false;
+    }
+    var isSessionStorageAvailable = _isSessionStorageAvailable;
+    var isLocalStorageAvailable = _isLocalStorageAvailable;
+    // alan_btn/src/helpers/helpers.ts
+    function debounce(func, wait) {
+        var timeout;
+        var delay = wait || 100;
+        return function (args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(function () {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+    function throttle(func, wait) {
+        if (wait === void 0) { wait = 100; }
+        var timer = null;
+        var throttlePause;
+        return function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
             }
-            return s4() + s4() + "-" + s4() + "-" + s4() + "-" + s4() + "-" + s4() + s4() + s4();
+            if (!throttlePause) {
+                func.apply(this, args);
+                throttlePause = true;
+                if (timer === null) {
+                    timer = setTimeout(function () {
+                        timer = null;
+                        throttlePause = false;
+                    }, wait);
+                }
+            }
+        };
+    }
+    function isSafari() {
+        return /apple/i.test(navigator.vendor);
+    }
+    function isMobile() {
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            return true;
         }
+        return false;
+    }
+    function isIpadOS() {
+        return navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform);
+    }
+    function isOriginSecure() {
+        var isSecure = false;
+        var protocol2 = window.location.protocol;
+        var hostname = window.location.hostname;
+        if (protocol2 === "https:") {
+            isSecure = true;
+        }
+        if (isFileProtocol()) {
+            isSecure = true;
+        }
+        if (protocol2 === "http:" && (hostname.indexOf("localhost") > -1 || hostname.indexOf("127.0.0.1") > -1)) {
+            isSecure = true;
+        }
+        return isSecure;
+    }
+    function isFileProtocol() {
+        var protocol2 = window.location.protocol;
+        return protocol2 === "file:";
+    }
+    function isAudioSupported() {
+        var available = false, fakeGetUserMedia, fakeContext;
+        fakeGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+        fakeContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext;
+        if (fakeGetUserMedia && fakeContext) {
+            available = true;
+        }
+        return available;
+    }
+    function getProjectId() {
+        var key;
+        if (uiState.project.id) {
+            key = uiState.project.id;
+            return key.substr(0, key.indexOf("/"));
+        }
+        return "none";
+    }
+    function getDeviceId() {
+        if (!uiState.project.id)
+            return;
+        var deviceIdKey = "alan-btn-uuid-" + uiState.project.id;
+        var deviceId;
+        if (isLocalStorageAvailable) {
+            deviceId = localStorage.getItem(deviceIdKey);
+        }
+        if (!deviceId) {
+            deviceId = guid();
+            if (isLocalStorageAvailable) {
+                localStorage.setItem(deviceIdKey, deviceId);
+            }
+        }
+        return deviceId;
+    }
+    function printNavigatorFlag(flag) {
+        return flag ? "1" : "0";
+    }
+    function getDebugInfo() {
+        return "\n    Debug Info:\n    alanBtn: v.".concat(uiState.lib.version, "\n    alanSDK: v.").concat(window.alanSDKVersion, "\n    projectId: ").concat(uiState.project.id || "unknown", "\n    deviceId: ").concat(getDeviceId(), "\n    navigator: \n    getUserMedia: ").concat(printNavigatorFlag(navigator.getUserMedia), ", \n    mediaDevices: ").concat(printNavigatorFlag(navigator.mediaDevices), ", \n    mediaDevices.getUserMedia: ").concat(printNavigatorFlag(navigator.mediaDevices && navigator.mediaDevices.getUserMedia), ",\n    webkitGUM: ").concat(printNavigatorFlag(navigator.webkitGetUserMedia), ",\n    mozGUM: ").concat(printNavigatorFlag(navigator.mozGetUserMedia), ",\n    msGUM: ").concat(printNavigatorFlag(navigator.msGetUserMedia), ",\n    window:\n    AudioContext: ").concat(printNavigatorFlag(window.AudioContext), ",\n    webkitAC: ").concat(printNavigatorFlag(window.webkitAudioContext), ",\n    mozAC: ").concat(printNavigatorFlag(window.mozAudioContext), ",\n    userAgent: ").concat(navigator.userAgent, "\n    ");
+    }
+    // alan_btn/src/textChat/resize.ts
+    var resizeInProcess = false;
+    var dndInitMousePos = [0, 0];
+    var chatHeight;
+    var chatWidth;
+    var typeBorderHor;
+    var typeBorderVert;
+    var chatInitLeftPos;
+    var chatInitRightPos;
+    var chatInitTopPos;
+    var chatInitBottomPos;
+    var chatTopPosBeforeResize;
+    var chatBottomPosBeforeResize;
+    var chatRightAligned;
+    var chatLeftAligned;
+    var chatTopAligned;
+    var chatBottomAligned;
+    function getBorderType(posInfo, chatHolderDiv) {
+        if (Math.abs(chatHolderDiv.getBoundingClientRect().bottom - posInfo.clientY) < 10) {
+            typeBorderHor = "bottom";
+        }
+        else if (Math.abs(chatHolderDiv.getBoundingClientRect().top - posInfo.clientY) < 10) {
+            typeBorderHor = "top";
+        }
+        else {
+            typeBorderHor = "none";
+        }
+        if (Math.abs(chatHolderDiv.getBoundingClientRect().left - posInfo.clientX) < 10) {
+            typeBorderVert = "left";
+        }
+        else if (Math.abs(chatHolderDiv.getBoundingClientRect().right - posInfo.clientX) < 10) {
+            typeBorderVert = "right";
+        }
+        else {
+            typeBorderVert = "none";
+        }
+        return { typeBorderHor: typeBorderHor, typeBorderVert: typeBorderVert };
+    }
+    function isMouseInHeader(posInfo, chatHolderDiv) {
+        if (chatHolderDiv.getBoundingClientRect().top < posInfo.clientY && posInfo.clientY < chatHolderDiv.getBoundingClientRect().top + 60 && chatHolderDiv.getBoundingClientRect().left < posInfo.clientX && posInfo.clientX < chatHolderDiv.getBoundingClientRect().right) {
+            return true;
+        }
+        return false;
+    }
+    function onMouseHoverForResizeTextChat(e) {
+        var chatHolderDiv = e.currentTarget;
+        if (resizeInProcess)
+            return;
+        if (uiState.textChat.expanded)
+            return;
+        var posInfo = e.touches ? e.touches[0] : e;
+        if (isMouseInHeader(posInfo, chatHolderDiv)) {
+            chatHolderDiv.classList.add("with-hover");
+        }
+        else {
+            chatHolderDiv.classList.remove("with-hover");
+        }
+        typeBorderHor = getBorderType(posInfo, chatHolderDiv).typeBorderHor;
+        typeBorderVert = getBorderType(posInfo, chatHolderDiv).typeBorderVert;
+        chatHolderDiv.classList.remove("none-none");
+        chatHolderDiv.classList.remove("with-cursors");
+        chatHolderDiv.classList.remove("top-left");
+        chatHolderDiv.classList.remove("top-right");
+        chatHolderDiv.classList.remove("bottom-left");
+        chatHolderDiv.classList.remove("bottom-right");
+        chatHolderDiv.classList.remove("none-left");
+        chatHolderDiv.classList.remove("none-right");
+        chatHolderDiv.classList.remove("top-none");
+        chatHolderDiv.classList.remove("bottom-none");
+        chatHolderDiv.classList.add(typeBorderHor + "-" + typeBorderVert);
+        if (typeBorderHor !== "none" || typeBorderVert !== "none") {
+            chatHolderDiv.classList.add("with-cursors");
+        }
+    }
+    function onMouseDownForResizeTextChat(e) {
+        var chatHolderDiv = e.currentTarget;
+        if (uiState.textChat.expanded) {
+            return;
+        }
+        resizeInProcess = true;
+        var posInfo = e.touches ? e.touches[0] : e;
+        dndInitMousePos = [
+            posInfo.clientX,
+            posInfo.clientY
+        ];
+        var chatRect = chatHolderDiv.getBoundingClientRect();
+        chatHeight = chatRect.height;
+        chatWidth = chatRect.width;
+        typeBorderHor = getBorderType(posInfo, chatHolderDiv).typeBorderHor;
+        typeBorderVert = getBorderType(posInfo, chatHolderDiv).typeBorderVert;
+        chatInitLeftPos = parseInt(chatHolderDiv.style.left);
+        chatInitRightPos = parseInt(chatHolderDiv.style.right);
+        chatInitTopPos = parseInt(chatHolderDiv.style.top);
+        chatInitBottomPos = parseInt(chatHolderDiv.style.bottom);
+        chatTopPosBeforeResize = chatRect.top;
+        chatBottomPosBeforeResize = chatRect.bottom;
+        chatRightAligned = chatHolderDiv.style.right;
+        chatLeftAligned = chatHolderDiv.style.left;
+        chatTopAligned = chatHolderDiv.style.top;
+        chatBottomAligned = chatHolderDiv.style.bottom;
+    }
+    function onMouseUpForResizeTextChat() {
+        resizeInProcess = false;
+    }
+    function onMouseMoveForResizeTextChat(e) {
+        if (!resizeInProcess)
+            return;
+        var posInfo = e.touches ? e.touches[0] : e;
+        if (posInfo.clientX >= 0 && posInfo.clientY >= 0 && posInfo.clientX <= window.innerWidth && posInfo.clientY <= window.innerHeight) {
+            resizeTextChat(posInfo);
+        }
+        else {
+            resizeInProcess = false;
+        }
+    }
+    function resizeTextChat(posInfo) {
+        var tempDeltaX = posInfo.clientX - dndInitMousePos[0];
+        var tempDeltaY = posInfo.clientY - dndInitMousePos[1];
+        if (typeBorderHor === "bottom") {
+            if (canResizeByHeight(typeBorderHor, tempDeltaY)) {
+                setChatHeight(chatHeight + tempDeltaY);
+                changeBottomPosIfNeeded(tempDeltaY);
+            }
+        }
+        else if (typeBorderHor === "top") {
+            if (canResizeByHeight(typeBorderHor, tempDeltaY)) {
+                setChatHeight(chatHeight - tempDeltaY);
+                changeTopPosIfNeeded(tempDeltaY);
+            }
+        }
+        if (typeBorderVert === "right") {
+            if (canResizeByWidth(typeBorderVert, tempDeltaX)) {
+                setChatWidth(chatWidth + tempDeltaX);
+                changeRightPosIfNeeded(tempDeltaX);
+            }
+        }
+        else if (typeBorderVert === "left") {
+            if (canResizeByWidth(typeBorderVert, tempDeltaX)) {
+                setChatWidth(chatWidth - tempDeltaX);
+                changeLeftPosIfNeeded(tempDeltaX);
+            }
+        }
+    }
+    function canResizeByHeight(borderType, delta) {
+        var _a, _b;
+        var minChatHeight = ((_b = (_a = uiState.textChat.options) === null || _a === void 0 ? void 0 : _a.popup) === null || _b === void 0 ? void 0 : _b.minHeight) || uiState.textChat.defaults.minChatWidth;
+        var expanding = borderType === "bottom" && delta > 0 || borderType === "top" && delta < 0;
+        var h = borderType === "bottom" ? chatHeight + delta : chatHeight - delta;
+        var newBottomtPos = chatBottomPosBeforeResize - delta;
+        var newTopPos = chatTopPosBeforeResize + delta;
+        if (borderType === "bottom" && newBottomtPos <= 0 && h >= chatHeight) {
+            return false;
+        }
+        if (borderType === "top" && newTopPos <= 0 && h >= chatHeight) {
+            return false;
+        }
+        return expanding ? h >= minChatHeight : h > minChatHeight;
+    }
+    function canResizeByWidth(borderType, delta) {
+        var _a, _b;
+        var minChatWidth = ((_b = (_a = uiState.textChat.options) === null || _a === void 0 ? void 0 : _a.popup) === null || _b === void 0 ? void 0 : _b.minWidth) || uiState.textChat.defaults.minChatWidth;
+        var expanding = borderType === "right" && delta > 0 || borderType === "left" && delta < 0;
+        var w = borderType === "right" ? chatWidth + delta : chatWidth - delta;
+        var newRightPos = chatInitRightPos - delta;
+        var newLeftPos = chatInitLeftPos + delta;
+        if (borderType === "right" && newRightPos <= 0 && w >= chatWidth) {
+            return false;
+        }
+        if (borderType === "left" && newLeftPos <= 0 && w >= chatWidth) {
+            return false;
+        }
+        return expanding ? w >= minChatWidth : w > minChatWidth;
+    }
+    function setChatHeight(h) {
+        var chatHolderDiv = document.getElementById("alan-btn-chat-holder");
+        chatHolderDiv.style.height = h + "px";
+        saveTextChatSizeAfterResize("height", h);
+    }
+    function setChatWidth(w) {
+        var chatHolderDiv = document.getElementById("alan-btn-chat-holder");
+        chatHolderDiv.style.width = w + "px";
+        if (w < 300) {
+            chatHolderDiv.classList.add("alan-chat-small");
+        }
+        else {
+            chatHolderDiv.classList.remove("alan-chat-small");
+        }
+        saveTextChatSizeAfterResize("width", w);
+    }
+    function changeBottomPosIfNeeded(delta) {
+        if (chatBottomAligned) {
+            saveTextChatPositionAfterResize("bottom", chatInitBottomPos - delta);
+        }
+    }
+    function changeTopPosIfNeeded(delta) {
+        if (chatTopAligned) {
+            saveTextChatPositionAfterResize("top", chatInitTopPos + delta);
+        }
+    }
+    function changeRightPosIfNeeded(delta) {
+        if (chatRightAligned) {
+            saveTextChatPositionAfterResize("right", chatInitRightPos - delta);
+        }
+    }
+    function changeLeftPosIfNeeded(delta) {
+        if (chatLeftAligned) {
+            saveTextChatPositionAfterResize("left", chatInitLeftPos + delta);
+        }
+    }
+    function getKeyForSavingTextChatPositionAfterResize(prop) {
+        return "alan-btn-text-chat-pos-".concat(prop, "-").concat(getProjectId());
+    }
+    function saveTextChatPositionAfterResize(prop, val) {
+        if (val < 0)
+            return;
+        var chatHolderDiv = document.getElementById("alan-btn-chat-holder");
+        chatHolderDiv.style[prop] = val + "px";
+        if (isLocalStorageAvailable) {
+            localStorage.setItem(getKeyForSavingTextChatPositionAfterResize(prop), val);
+        }
+    }
+    function getTextChatSizeAfterResize(prop) {
+        if (isLocalStorageAvailable) {
+            return localStorage.getItem(getKeyForSavingTextChatPositionAfterResize(prop));
+        }
+        return null;
+    }
+    function saveTextChatSizeAfterResize(prop, val) {
+        if (isLocalStorageAvailable) {
+            localStorage.setItem(getKeyForSavingTextChatPositionAfterResize(prop), val);
+        }
+    }
+    function getTextChatPositionAfterResize(prop) {
+        if (isLocalStorageAvailable) {
+            return localStorage.getItem(getKeyForSavingTextChatPositionAfterResize(prop));
+        }
+        return null;
+    }
+    function fixTextChatSizeIfNeeded(width, height, doubleMargin) {
+        var defaultChatMargin = uiState.textChat.defaults.chatMargin;
+        var margin = doubleMargin ? 2 * defaultChatMargin : defaultChatMargin;
+        if (height !== null && window.innerHeight - defaultChatMargin < height) {
+            setChatHeight(window.innerHeight - margin);
+        }
+        if (width !== null && window.innerWidth - defaultChatMargin < width) {
+            setChatWidth(window.innerWidth - margin);
+        }
+    }
+    // alan_btn/src/assets/btnIcons.ts
+    var btnIcons = {
+        roundedTriangleSecondLayerSrc: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n",
+        circleSecondLayerSrc: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n",
+        popupCloseIconImgBase64: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuNzczNDUgNy4wMDAwM0wxMy44Mzk4IDAuOTMzNjA0QzE0LjA1MzQgMC43MjAwMjIgMTQuMDUzNCAwLjM3Mzc0MSAxMy44Mzk4IDAuMTYwMTg2QzEzLjYyNjMgLTAuMDUzMzY4MSAxMy4yOCAtMC4wNTMzOTU1IDEzLjA2NjQgMC4xNjAxODZMNyA2LjIyNjYxTDAuOTMzNjA0IDAuMTYwMTg2QzAuNzIwMDIyIC0wLjA1MzM5NTUgMC4zNzM3NDEgLTAuMDUzMzk1NSAwLjE2MDE4NiAwLjE2MDE4NkMtMC4wNTMzNjgxIDAuMzczNzY4IC0wLjA1MzM5NTUgMC43MjAwNDkgMC4xNjAxODYgMC45MzM2MDRMNi4yMjY1OSA3TDAuMTYwMTg2IDEzLjA2NjRDLTAuMDUzMzk1NSAxMy4yOCAtMC4wNTMzOTU1IDEzLjYyNjMgMC4xNjAxODYgMTMuODM5OEMwLjI2Njk2NCAxMy45NDY2IDAuNDA2OTM2IDE0IDAuNTQ2OTA5IDE0QzAuNjg2ODgxIDE0IDAuODI2ODI3IDEzLjk0NjYgMC45MzM2MzEgMTMuODM5OEw3IDcuNzczNDVMMTMuMDY2NCAxMy44Mzk4QzEzLjE3MzIgMTMuOTQ2NiAxMy4zMTMyIDE0IDEzLjQ1MzEgMTRDMTMuNTkzMSAxNCAxMy43MzMgMTMuOTQ2NiAxMy44Mzk4IDEzLjgzOThDMTQuMDUzNCAxMy42MjYzIDE0LjA1MzQgMTMuMjggMTMuODM5OCAxMy4wNjY0TDcuNzczNDUgNy4wMDAwM1oiIGZpbGw9IiNCQkNGRTciLz4KPC9zdmc+Cg==",
+        micIconSrc: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==",
+        alanLogoIconSrc: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2ctAAAFtElEQVR4Ae3dL4wcZRjH8WeRKJJTTRBbc4JgkK26UCSXVIHkUBgS2uBAcCQIDAGCh8VAgkG0DsFhqAEqoKI1rCCgLiGhgYA53rd932S7bXdmdmfe3/vn+0kmW45pc7179tvZm3dmzQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0ZWaNOzs723cPJ247ZxrnZ7PZ0hr1hOFlt/1oOp9Zw5oeQFe/C+7habf97rY/TOPAfR4H1qjWC3i48mtlBd+xRjU7gKF+eysfooICLRfw8BEf+9Z0mqxgkwP4iPpFd9122zSarGCrBTzc8P9uuO1f02iugs0N4Ib6Rf+57RfTaK6CLRbwsMc+PxsVTKKpAexRv0hdwVesEc0MoPum+sHrU79IWcFja0RLBbxo/eoX+Qr+ZBrzVirYxACG+l2w4XwF/zKNY/d5P2WVa6WAL9iw+q1SnaKbu+0Nq1z1Axjq97xt747pTtFdqb2CLRRwyAuPx1FV0A9f1RWsegB3OPZbp1yoUHUFay/gGPWLqOAEqh3AEesXUcEJ1FzAMesXUcGRVTmAE9Qv8hVULdeqsoK1FnCK+kXKCla3UKG6AZywfpFftKoaQl/BuVWkxgIe2fRYrjWSqgYwXGS+b9NTLtc6qqmCtRVwymO/dcoKVnMxezUDGBabpqhfxNL9EdRUwJT1izgW3FEVAzhgqf3YfAU/N40qKlhLARX1827PZrPX3OPSNIqvYPEDKKyf91V4fNU0iq9gDQVU1e97V7/f/C/c44ndv8egQtEVLHoAxfW7vvbf75pG0RUsvYDK+p2ufoAKbqfYAcysfpGygpetQEUO4BYXmY/pofpF4gp+aAUqtYBDLzIfix+86x37qF4RF3kxe3EDmGC51SaPrV8U7ni/MI3iLmYvsYDK+t3oue9Vt/1p6c2tsKX7RQ1gqN+LpnGtq36R288P30emUdTS/dIKqHrhceqGqm/9oo9NU8GiLmAqZgDFx37XbCAq2E9JBSypfhEV7FDEAJZWv4gKdiulgCXW7x73+/3ZkaWlV0QFsx9Acf0WNg7VKbrsK1hCAVX1u+nqdcdG4P6chWlO0WVfwazfL9g9e59xD9+YxqfW7wXEaRiwjcKSKcVbgfm/w3O5vidx7gPov2EHlp6//8t3A/Zf9DlWFP59/OenOke9Ubb/BIdiHJjG0Ftv9D1MUB0LZnsxe87HgJ+Yhq/f3WG/xfbcN7jzFCHLtR6W5QC6b+aRe3jWNLa98dAl93k/2WM/VQUv57h0P9cCqpaY/2DD6xf54eu8G3+o4MI0slu6n90AhvrNLT3/hjS7/tgl9wpmdwFTjgVUPUu3OfZb17eCS9O9H1xWFcxqAMX1G+t94S6FszddVAsVsqpgbgVUPTvHvOOpr2CfV8TKhQrZVDCbASz82G/dxXCzzC7NVzCnAtZQv1WdP5ymgpkMoHs2vmn11C/ap4Ld5APovgjn3MPrpjH13e77VvCqachv9ZtDAf399eaWnn/TmanqF/WqYFhNs7T05BezSwcwnCBXfQF2Wuk8wFHP/VSrVY5NSF1A1bGf/6Fzr2t8R7AXbqS0kXChgq/gFRORrQcM9fvVNL6w3c96DOGH/T03ZH9v2km8aPV8OB5NSlnAkk+5DeXPjPRdqHBi6cmW7ksK2Fj9Il+/t6ngg1QFbKl+0ZDlWieWnqSCyQsorN8/bvvadAPo9a3g3DRfo+QVVBRQVb9bph0+r+9ChaVpFq0mr2DSAgqf2f6Um7/FhnoAo7e6bvUWvlY37f5QpJS0gqkLqFxwkMvweS917RAqqFiokLSCyQoYLjK/Zen5+n1p+fmg684L4bYa/l8MRQWTXMyesoDvm8bUCw62lfNyLT/wVb0zOwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANfsfb80MpE9p2rYAAAAASUVORK5CYII=",
+        alanUserAvatarIconSrc: "data:image/svg+xml;base64,PHN2ZyBjbGFzcz0iYWxhbi1idG5fX3VzZXItYXZhdGFyIiB3aWR0aD0iMjRweCIgaGVpZ2h0PSIyNHB4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjEyIiBjeT0iNiIgcj0iNCIgc3Ryb2tlPSIjMUMyNzRDIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8cGF0aCBkPSJNMTUgMjAuNjE1MUMxNC4wOTA3IDIwLjg2MTkgMTMuMDczNiAyMSAxMiAyMUM4LjEzNDAxIDIxIDUgMTkuMjA5MSA1IDE3QzUgMTQuNzkwOSA4LjEzNDAxIDEzIDEyIDEzQzE1Ljg2NiAxMyAxOSAxNC43OTA5IDE5IDE3QzE5IDE3LjM0NTMgMTguOTIzNCAxNy42ODA0IDE4Ljc3OTUgMTgiIHN0cm9rZT0iIzFDMjc0QyIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4="
+    };
+    // alan_btn/src/getTextAreaFontSize.ts
+    function getTextAreaFontSize(mobile, value) {
+        if (mobile) {
+            return Math.max(16, value);
+        }
+        return value;
+    }
+    // alan_btn/src/const/defaultBtnColorOptions.ts
+    var defaultBtnColorOptions = {
+        "idle": {
+            "background": {
+                "color": [
+                    "rgb(34, 203, 255)",
+                    "rgb(25, 149, 255)"
+                ]
+            },
+            "hover": {
+                "color": [
+                    "rgba(0, 70, 255, 0.95)",
+                    "rgba(0, 156,  255, 0.95)"
+                ]
+            }
+        },
+        "listen": {
+            "background": {
+                "color": [
+                    "rgba(0, 70, 255, 0.95)",
+                    "rgba(0, 156,  255, 0.95)"
+                ]
+            },
+            "hover": {
+                "color": [
+                    "rgba(0, 70, 255, 0.95)",
+                    "rgb(0, 70, 255)"
+                ]
+            }
+        },
+        "process": {
+            "background": {
+                "color": [
+                    "rgba(0, 255, 205, 0.95)",
+                    "rgba(0, 115, 255, 0.95)"
+                ]
+            },
+            "hover": {
+                "color": [
+                    "rgb(0, 115, 255)",
+                    "rgba(0, 115, 255, 0.95)"
+                ]
+            }
+        },
+        "reply": {
+            "background": {
+                "color": [
+                    "rgba(122, 40, 255, 0.95)",
+                    "rgba(61, 122, 255, 0.95)"
+                ]
+            },
+            "hover": {
+                "color": [
+                    "rgba(122, 40, 255, 0.95)",
+                    "rgb(122, 40, 255)"
+                ]
+            }
+        },
+        "textChat": {
+            "background": {
+                "color": ["#1eb6e5", "#1995ff"],
+                "angle": 45
+            },
+            "hover": {
+                "color": ["#1ba3ce", "#1686e5"],
+                "angle": 45
+            },
+            "shadow": {
+                "color": ["#6693bc", "#b3c9de"]
+            }
+        },
+        "textChatAvatar": {
+            "background": {
+                "color": ["#1eb6e5", "#1995ff"],
+                "angle": 45
+            },
+            "hover": {
+                "color": ["#1ba3ce", "#1686e5"],
+                "angle": 45
+            },
+            "shadow": {
+                "color": ["#6693bc", "#b3c9de"]
+            }
+        },
+        "textChatUserAvatar": {
+            "background": {
+                "color": ["#b2d6ff", "#b2d6ff"],
+                "angle": 45
+            },
+            "hover": {
+                "color": ["#1ba3ce", "#1686e5"],
+                "angle": 45
+            },
+            "shadow": {
+                "color": ["#6693bc", "#b3c9de"]
+            }
+        }
+    };
+    // alan_btn/src/styles/common.ts
+    function getStyleSheetMarker(andFlag) {
+        return ".alan-" + getProjectId() + (andFlag ? "" : " ");
+    }
+    function generateKeyFrame(name, rule) {
+        var prefixes = ["@-webkit-keyframes", "@keyframes"];
+        var r = "";
+        for (var i = 0; i < prefixes.length; i++) {
+            r += prefixes[i] + " " + name + "{" + rule + "} ";
+        }
+        return r;
+    }
+    function mergeOptionsForStyleSheet(webOptions) {
+        var predefinedBtnColorOptions = defaultBtnColorOptions;
+        if (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) {
+            if (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions.btnLayerOptions) {
+                predefinedBtnColorOptions = defaultBtnColorOptions;
+            }
+            else {
+                predefinedBtnColorOptions = (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) ? __assign(__assign({}, defaultBtnColorOptions), webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) : defaultBtnColorOptions;
+            }
+        }
+        return predefinedBtnColorOptions;
+    }
+    // alan_btn/src/styles/chat.ts
+    function generateCssForChat(webOptions) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, _65, _66, _67, _68, _69, _70, _71, _72, _73, _74, _75, _76, _77, _78, _79, _80, _81, _82, _83, _84, _85, _86, _87, _88, _89, _90, _91, _92, _93, _94, _95, _96, _97, _98, _99, _100, _101, _102, _103, _104, _105, _106, _107, _108, _109, _110, _111, _112, _113, _114, _115, _116, _117, _118, _119, _120, _121, _122, _123, _124, _125, _126, _127, _128, _129, _130, _131, _132, _133, _134, _135, _136, _137, _138, _139, _140, _141, _142, _143, _144, _145, _146, _147, _148, _149, _150, _151, _152, _153, _154, _155, _156, _157, _158, _159, _160, _161, _162, _163, _164, _165, _166, _167, _168, _169, _170, _171, _172, _173, _174, _175;
+        var keyFrames = "";
+        var textChatOptions = uiState.textChat.options;
+        var defaultMinChatHeight = 400;
+        var defaultChatHeight = 700;
+        var chatHeaderHeight = 40;
+        var chatTextareaLineHieght = 1.25;
+        var textareaHolderHeight = 67;
+        var chatTextareaHeight = 50;
+        var chatMicBtnActiveSize = 34;
+        var textChatScrollSize = 6;
+        var defaultChatTextareaFontSize = 15;
+        var textChatAppearAnimationMs = uiState.textChat.defaults.appearAnimationMs;
+        var cssChatHeight = getTextChatSizeAfterResize("height");
+        var cssChatWidth = getTextChatSizeAfterResize("width");
+        fixTextChatSizeIfNeeded(cssChatWidth, cssChatHeight, true);
+        cssChatHeight = getTextChatSizeAfterResize("height");
+        cssChatWidth = getTextChatSizeAfterResize("width");
+        if (cssChatHeight) {
+            cssChatHeight = "".concat(cssChatHeight, "px");
+        }
+        else {
+            cssChatHeight = "".concat(migrateHeightFromPercent((_a = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _a === void 0 ? void 0 : _a.height) || defaultChatHeight, "px");
+        }
+        function migrateHeightFromPercent(val) {
+            if (val && +val <= 100) {
+                return defaultChatHeight;
+            }
+            return val;
+        }
+        if (cssChatWidth) {
+            cssChatWidth = "".concat(cssChatWidth, "px");
+        }
+        else {
+            cssChatWidth = "".concat(((_b = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _b === void 0 ? void 0 : _b.width) || "400", "px");
+        }
+        var chatBgColor1 = ((_c = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _c === void 0 ? void 0 : _c.backgroundColor) || "#DAEBFF";
+        var chatBgColor2 = ((_d = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _d === void 0 ? void 0 : _d.backgroundColor2) || "#ffffff";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder {\n        position: fixed;\n        height:  ".concat(cssChatHeight, ";\n        min-height: ").concat(((_e = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _e === void 0 ? void 0 : _e.minHeight) || defaultMinChatHeight, "px;\n        max-height: ").concat(((_f = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _f === void 0 ? void 0 : _f.maxHeight) || "1200", "px;\n        width: ").concat(cssChatWidth, ";\n        min-width: ").concat(((_g = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _g === void 0 ? void 0 : _g.minWidth) || uiState.textChat.defaults.minChatWidth, "px;\n        max-width: ").concat(((_h = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _h === void 0 ? void 0 : _h.maxWidth) || "1200", "px;\n        display: none;\n        transform: scale(0);\n        opacity: 0;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-btn_text-chat-full-screen {\n        position: fixed;\n        height:  100%!important;\n        min-height: 100%!important;\n        max-height: 100%!important;\n        width: 100%!important;\n        min-width: 100%!important;\n        max-width: 100%!important;\n        top:0!important;\n        bottom:0!important;\n        left:0!important;\n        right:0!important;\n    }";
+        var sideBarAnimaDuration = 200;
+        var sideBarWidth = 280;
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-side-bar {\n        min-height: 100%;\n        max-height: 100%;\n        height: 100%;\n        background-color: ".concat(chatBgColor1, ";\n        box-shadow: inset 1px 0px 13px 0px rgba(16, 39, 126, 0.2);\n        display:none;\n        transition: width ").concat(sideBarAnimaDuration, "ms ease-in-out, max-width ").concat(sideBarAnimaDuration, "ms ease-in-out, min-width ").concat(sideBarAnimaDuration, "ms ease-in-out;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-side-bar {\n        display: flex;\n        width: 0px;\n        min-width: 0px;\n        max-width: 0px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen.alan-btn__side-bar-expanded  .alan-btn__chat-side-bar {\n        width: ".concat(sideBarWidth, "px;\n        min-width: ").concat(sideBarWidth, "px;\n        max-width: ").concat(sideBarWidth, "px;\n        transition: width ").concat(sideBarAnimaDuration, "ms ease-in-out, max-width ").concat(sideBarAnimaDuration, "ms ease-in-out, min-width ").concat(sideBarAnimaDuration, "ms ease-in-out;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat {\n        border-radius:0!important;\n        flex-direction: row;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-messages {\n        max-width: 870px;\n        width: 100%;\n        margin: 0 auto;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-textarea-holder {\n        max-width: 900px;\n        min-width: initial;\n        margin: 0 auto;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-enter-full-screen-mode  {\n        display: block;\n        min-width: 20px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-exit-full-screen-mode  {\n        display: none;\n        min-width: 20px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-enter-full-screen-mode  {\n        display: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-exit-full-screen-mode  {\n        display: block;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__openning {\n        transform: scale(0);\n        opacity: 0;\n        animation: text-chat-appear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n    }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("text-chat-appear-anim", "\n    0%{\n        transform: scale(0);\n        opacity: 0;\n    }\n    100%{\n        transform: scale(1);\n        opacity: 1;\n    }\n    ");
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__closing {\n        transform: scale(1);\n        opacity: 1;\n        animation: text-chat-disappear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n    }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("text-chat-disappear-anim", "\n    0%{\n        transform: scale(1);\n        opacity: 1;\n    }\n    100%{\n        transform: scale(0);\n        opacity: 0;\n    }\n    ");
+        keyFrames += ".mobile" + getStyleSheetMarker() + ".alan-btn__chat-holder {\n        position: fixed; \n        height: 100%;\n        min-height: 100%;\n        max-height: 100%;\n        width: 100vw;\n        min-width: 100vw;\n        max-width: 100vw;\n        display: none;\n        top: 0;\n        bottom:0;\n        left:0;\n        right:0;\n        border-radius: 0px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.bottom-none {\n        cursor: ns-resize;\n      }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.top-none {\n        cursor: ns-resize;\n      }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.none-left {\n        cursor: ew-resize;\n      }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.none-right {\n        cursor: ew-resize;\n      }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.top-left {\n        cursor: nwse-resize;\n      }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.bottom-right {\n        cursor: nwse-resize;\n      }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.top-right {\n        cursor: nesw-resize;\n      }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.bottom-left {\n        cursor: nesw-resize;\n      }";
+        var defaulPopupBorderRadius = 20;
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat {\n        height: 100%;\n        position: relative;\n        overflow: hidden;\n        display: flex;\n        width: 100%;\n        min-width: 100%;\n        max-width: 100%;\n        flex: 2;\n        position: relative;\n        flex-direction: column;\n        box-shadow: 0px 5px 44px rgba(0, 0, 0, 0.15);\n        border-radius: ".concat(((_k = (_j = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _j === void 0 ? void 0 : _j.borderRadius) === null || _k === void 0 ? void 0 : _k.topLeft) || defaulPopupBorderRadius, "px ").concat(((_m = (_l = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _l === void 0 ? void 0 : _l.borderRadius) === null || _m === void 0 ? void 0 : _m.topRight) || defaulPopupBorderRadius, "px ").concat(((_p = (_o = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _o === void 0 ? void 0 : _o.borderRadius) === null || _p === void 0 ? void 0 : _p.bottomRight) || defaulPopupBorderRadius, "px ").concat(((_r = (_q = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _q === void 0 ? void 0 : _q.borderRadius) === null || _r === void 0 ? void 0 : _r.bottomLeft) || defaulPopupBorderRadius, "px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__popup-chat {\n        height: 100%;\n        position: relative;\n        overflow: hidden;\n        display: flex;\n        flex: 2;\n        position: relative;\n        flex-direction: column;\n        background: linear-gradient(180deg, ".concat(chatBgColor2, " 0%, ").concat(chatBgColor2, " 15%, ").concat(chatBgColor1, " 70%, ").concat(chatBgColor1, " 100%);\n        animation: chat-appear 300ms ease-in-out forwards;\n        transform: scale(1);\n        opacity: 1; \n    }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-1", "\n    0% {\n        opacity: 0; \n        transform: scale(0);\n    }\n    100% {\n        opacity: 1;  \n        transform: scale(1);   \n    }");
+        keyFrames += ".mobile" + getStyleSheetMarker() + ".alan-btn__chat {\n        border-radius: 0px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea-holder {\n        width: 100%;\n        height: ".concat(textareaHolderHeight, "px;\n        max-height: ").concat(textareaHolderHeight, "px;\n        min-height: ").concat(textareaHolderHeight, "px;\n        position: relative;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-empty-block {\n        flex: 1 1 auto;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper {\n        width: 100%;\n        height: calc(100% - ".concat(chatHeaderHeight + textareaHolderHeight, "px);\n        max-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n        min-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n        overflow-y: scroll;\n        overflow-x: hidden;\n        padding: 20px 10px;\n        display: flex;\n        flex-shrink: 0;\n        flex-direction: column-reverse;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages {\n        display: flex;\n        flex-shrink: 0;\n        flex-direction: column;\n    }";
+        var headerBg = ((_s = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.header) === null || _s === void 0 ? void 0 : _s.backgroundColor) || "#FFFFFF";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header {\n        width: 100%;\n        height: ".concat(chatHeaderHeight, "px;\n        max-height: ").concat(chatHeaderHeight, "px;\n        min-height: ").concat(chatHeaderHeight, "px;\n        color: #0f2029;\n        padding: 0px 15px;\n        padding-top: 12px;\n        background: ").concat(headerBg, ";\n        color: ").concat(((_t = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.header) === null || _t === void 0 ? void 0 : _t.color) || "#000000", ";\n        text-align: center;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        position:relative;\n        display: flex;\n        flex-direction: row;\n        justify-content: space-between;\n    }");
+        var headerFontSize = ((_u = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.header) === null || _u === void 0 ? void 0 : _u.fontSize) || 16;
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-title {\n        max-width: calc(100% - 112px);\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        display: inline-block;\n        font-weight: 600;\n        font-size: ".concat(headerFontSize, "px;\n        position: relative;\n        top: ").concat(headerFontSize >= 20 ? "-2" : "0", "px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-gradient {\n        width: 100%;\n        height: 15px;\n        max-height: 15px;\n        min-height: 15px;\n        position: absolute;\n        left:0;\n        width: 100%;\n        top: ".concat(chatHeaderHeight, "px;\n        background: linear-gradient(180deg, ").concat(headerBg, " 30%, rgba(255, 255, 255, 0) 100%);\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-left-resizer {\n        transition: 300ms opacity ease-in-out;\n        position: absolute;\n        top: 3px;\n        left: 5px;\n        transform: rotate(180deg);\n        pointer-events: none;\n        display: block;\n        opacity: 0;\n        height: 18px;\n        width: 14px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-right-resizer {\n        transition: 300ms opacity ease-in-out;\n        position: absolute;\n        top: 3px;\n        right: 5px;\n        transform: rotate(-90deg);\n        pointer-events: none;\n        display: block;\n        opacity: 0;\n        height: 18px;\n        width: 14px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".with-hover .alan-btn__chat-header-right-resizer {\n        opacity: 0.8;\n        transition: 300ms opacity ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".with-hover .alan-btn__chat-header-left-resizer {\n        opacity: 0.8;\n        transition: 300ms opacity ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".with-hover .alan-btn__chat-header::after {\n        opacity: 0.8;\n        transition: 300ms opacity ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".with-cursors .alan-btn__chat-messages {\n        pointer-events: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn {\n        display: flex;\n        align-items: center;\n        height: ".concat(chatHeaderHeight, "px;\n        font-size: 14px;\n        cursor: pointer;\n        margin-left: 6px;\n    }");
+        if (isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn {\n            display: none;\n        }";
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn svg path {\n        fill: ".concat(((_y = (_x = (_w = (_v = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _v === void 0 ? void 0 : _v.icons) === null || _w === void 0 ? void 0 : _w.mute) === null || _x === void 0 ? void 0 : _x["default"]) === null || _y === void 0 ? void 0 : _y.fill) || "#969EB0", ";\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn:hover svg path {\n            fill: ".concat(((_2 = (_1 = (_0 = (_z = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _z === void 0 ? void 0 : _z.icons) === null || _0 === void 0 ? void 0 : _0.mute) === null || _1 === void 0 ? void 0 : _1.hover) === null || _2 === void 0 ? void 0 : _2.fill) || "#0046ff", ";\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn.disabled {\n        pointer-events: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn.disabled {\n        opacity: 0.4\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn {\n        width: 17px;\n        display: flex;\n        align-items: center;\n        height: ".concat(chatHeaderHeight, "px;\n        font-size: 14px;\n        cursor: pointer;\n        margin-left: 6px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-header-clear-btn {\n        display: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn.disabled {\n        pointer-events: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn.disabled {\n        opacity: 0.4\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn svg path {\n        fill: ".concat(((_6 = (_5 = (_4 = (_3 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _3 === void 0 ? void 0 : _3.icons) === null || _4 === void 0 ? void 0 : _4.clear) === null || _5 === void 0 ? void 0 : _5["default"]) === null || _6 === void 0 ? void 0 : _6.fill) || "#969EB0", ";\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn:hover svg path {\n            fill: ".concat(((_10 = (_9 = (_8 = (_7 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _7 === void 0 ? void 0 : _7.icons) === null || _8 === void 0 ? void 0 : _8.clear) === null || _9 === void 0 ? void 0 : _9.hover) === null || _10 === void 0 ? void 0 : _10.fill) || "#ff005c", ";\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-left-icons {\n        position: relative;\n        top: -12px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: flex;\n        align-items: center;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-right-icons {\n        position: relative;\n        top: -12px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: flex;\n        align-items: center;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar-header {\n        display: flex;\n        flex-direction: row;\n        padding: 0 10px;\n        width: 100%;\n        justify-content: space-between;\n        white-space:nowrap;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar__toogle-side-bar-btn {\n        margin-right: 6px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: flex;\n        align-items: center;\n        cursor: pointer;\n        pointer-events: all;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar__toogle-side-bar-btn svg path {\n        fill: ".concat(((_14 = (_13 = (_12 = (_11 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _11 === void 0 ? void 0 : _11.icons) === null || _12 === void 0 ? void 0 : _12.sideBar) === null || _13 === void 0 ? void 0 : _13["default"]) === null || _14 === void 0 ? void 0 : _14.fill) || "#969EB0", ";\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar__toogle-side-bar-btn:hover svg path {\n            fill: ".concat(((_18 = (_17 = (_16 = (_15 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _15 === void 0 ? void 0 : _15.icons) === null || _16 === void 0 ? void 0 : _16.sideBar) === null || _17 === void 0 ? void 0 : _17.hover) === null || _18 === void 0 ? void 0 : _18.fill) || "#0046ff", ";\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar__close-chat-btn {\n        margin-right: 6px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: flex;\n        align-items: center;\n        cursor: pointer;\n        pointer-events: all;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar__close-chat-btn svg path {\n        fill: ".concat(((_22 = (_21 = (_20 = (_19 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _19 === void 0 ? void 0 : _19.icons) === null || _20 === void 0 ? void 0 : _20.close) === null || _21 === void 0 ? void 0 : _21["default"]) === null || _22 === void 0 ? void 0 : _22.fill) || "#969EB0", ";\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar__close-chat-btn:hover svg path {\n            fill: ".concat(((_26 = (_25 = (_24 = (_23 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _23 === void 0 ? void 0 : _23.icons) === null || _24 === void 0 ? void 0 : _24.close) === null || _25 === void 0 ? void 0 : _25.hover) === null || _26 === void 0 ? void 0 : _26.fill) || "#97989c", ";\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-bar__new-chat-btn {\n        margin-right: 6px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: flex;\n        align-items: center;\n        cursor: pointer;\n        pointer-events: all;\n        color: #000;\n        padding: 2px 8px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-panel-chat-btn {\n        margin-right: 6px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: flex;\n        align-items: center;\n        cursor: pointer;\n        pointer-events: all;\n        display:none;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__side-panel-chat-btn {\n        display:flex;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen.alan-btn__side-bar-expanded .alan-btn__side-panel-chat-btn {\n        display:none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-panel-chat-btn svg {\n        min-width: 22px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__side-panel-chat-btn svg path {\n        fill: ".concat(((_30 = (_29 = (_28 = (_27 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _27 === void 0 ? void 0 : _27.icons) === null || _28 === void 0 ? void 0 : _28.sideBar) === null || _29 === void 0 ? void 0 : _29["default"]) === null || _30 === void 0 ? void 0 : _30.fill) || "#969EB0", ";\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__side-panel-chat-btn:hover svg path {\n            fill: ".concat(((_34 = (_33 = (_32 = (_31 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _31 === void 0 ? void 0 : _31.icons) === null || _32 === void 0 ? void 0 : _32.sideBar) === null || _33 === void 0 ? void 0 : _33.hover) === null || _34 === void 0 ? void 0 : _34.fill) || "#0046ff", ";\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn {\n        width: 15px;\n        margin-right: 6px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: flex;\n        align-items: center;\n        cursor: pointer;\n        pointer-events: all;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen.alan-btn__side-bar-expanded .alan-btn__close-chat-btn {\n        display: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn svg path {\n        fill: ".concat(((_38 = (_37 = (_36 = (_35 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _35 === void 0 ? void 0 : _35.icons) === null || _36 === void 0 ? void 0 : _36.close) === null || _37 === void 0 ? void 0 : _37["default"]) === null || _38 === void 0 ? void 0 : _38.fill) || "#969EB0", ";\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn:hover svg path {\n            fill: ".concat(((_42 = (_41 = (_40 = (_39 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _39 === void 0 ? void 0 : _39.icons) === null || _40 === void 0 ? void 0 : _40.close) === null || _41 === void 0 ? void 0 : _41.hover) === null || _42 === void 0 ? void 0 : _42.fill) || "#97989c", ";\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__expand-collapse-chat-btn {\n        width: 15px;\n        margin-right: 6px;\n        height: ".concat(chatHeaderHeight, "px;\n        display: ").concat(((_44 = (_43 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _43 === void 0 ? void 0 : _43.fullScreenMode) === null || _44 === void 0 ? void 0 : _44.enabled) ? "flex" : "none", ";\n        align-items: center;\n        cursor: pointer;\n        pointer-events: all;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__expand-collapse-chat-btn  svg path {\n        fill: ".concat(((_48 = (_47 = (_46 = (_45 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _45 === void 0 ? void 0 : _45.icons) === null || _46 === void 0 ? void 0 : _46.fullScreen) === null || _47 === void 0 ? void 0 : _47["default"]) === null || _48 === void 0 ? void 0 : _48.fill) || "#969EB0", ";\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__expand-collapse-chat-btn:hover svg path {\n        fill: ".concat(((_52 = (_51 = (_50 = (_49 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _49 === void 0 ? void 0 : _49.icons) === null || _50 === void 0 ? void 0 : _50.fullScreen) === null || _51 === void 0 ? void 0 : _51.hover) === null || _52 === void 0 ? void 0 : _52.fill) || "#0046ff", ";\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar {\n        width: ".concat(textChatScrollSize, "px;\n        height: ").concat(textChatScrollSize, "px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-thumb {\n        border-radius: 3px;\n        background-color: rgba(224, 224, 224, 0.795);\n        transition: background-color 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-thumb:hover {\n        background-color: rgba(230, 230, 230, 0.856);\n        transition: background-color 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-track {\n        border-radius: 3px;\n        background: transparent;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea-holder-gradient {\n        background: linear-gradient(0deg, ".concat(((_53 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _53 === void 0 ? void 0 : _53.backgroundColor) || "#DAEBFF", " 30%, rgba(255, 255, 255, 0) 100%);\n        height:15px;\n        min-height:15px;\n        width: calc(100% - 10px);\n        position: absolute;\n        bottom: ").concat(textareaHolderHeight, "px;\n        left:0;\n    }");
+        keyFrames += getStyleSheetMarker() + ".show-gradient .alan-btn__chat-textarea-left-gradient {\n        position: absolute;\n        left: 26px;\n        border-radius: 16px;\n        bottom: 15px;\n        width: 15px;\n        opacity: 0;\n        transition: opacity 300ms ease-in-out;\n        height: ".concat(chatTextareaHeight, "px;\n        background: linear-gradient(90deg, ").concat(((_54 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _54 === void 0 ? void 0 : _54.backgroundColor) || "#ffffff", " 60%, rgba(255, 255, 255, 0) 100%);\n    }");
+        keyFrames += getStyleSheetMarker() + ".show-gradient .alan-btn__chat-textarea-right-gradient {\n        position: absolute;\n        right: 51px;\n        border-radius: 16px;\n        bottom: 15px;\n        width: 15px;\n        opacity: 0;\n        transition: opacity 300ms ease-in-out;\n        height: ".concat(chatTextareaHeight, "px;\n        background: linear-gradient(270deg, ").concat(((_55 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _55 === void 0 ? void 0 : _55.backgroundColor) || "#ffffff", " 60%, rgba(255, 255, 255, 0) 100%);\n    }");
+        keyFrames += getStyleSheetMarker() + ".show-gradient-left .alan-btn__chat-textarea-left-gradient {\n        opacity: 1;\n    }";
+        keyFrames += getStyleSheetMarker() + ".show-gradient-right .alan-btn__chat-textarea-right-gradient {\n        opacity: 1;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-text-chat__voice-enabled .show-gradient .alan-btn__chat-textarea-left-gradient {\n        left: 50px;\n    }";
+        var defaultTextareaBorderRadius = 20;
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea {\n        position: absolute;\n        left: 15px;\n        bottom: 15px;\n        width: calc(100% - 30px);\n        border-radius: ".concat(((_57 = (_56 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _56 === void 0 ? void 0 : _56.borderRadius) === null || _57 === void 0 ? void 0 : _57.topLeft) || defaultTextareaBorderRadius, "px ").concat(((_59 = (_58 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _58 === void 0 ? void 0 : _58.borderRadius) === null || _59 === void 0 ? void 0 : _59.topRight) || defaultTextareaBorderRadius, "px ").concat(((_61 = (_60 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _60 === void 0 ? void 0 : _60.borderRadius) === null || _61 === void 0 ? void 0 : _61.bottomRight) || defaultTextareaBorderRadius, "px ").concat(((_63 = (_62 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _62 === void 0 ? void 0 : _62.borderRadius) === null || _63 === void 0 ? void 0 : _63.bottomLeft) || defaultTextareaBorderRadius, "px;\n        border: 1px solid ").concat(((_64 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _64 === void 0 ? void 0 : _64.borderColor) || ((_65 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _65 === void 0 ? void 0 : _65.backgroundColor) || "transparent", ";\n        box-shadow: ").concat(!((_66 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _66 === void 0 ? void 0 : _66.hasShadow) ? "none" : "0px 1px 3px rgba(16, 39, 126, 0.2)", ";\n        background-color: ").concat(((_67 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _67 === void 0 ? void 0 : _67.backgroundColor) || "#ffffff", " ;\n        color: ").concat(((_68 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _68 === void 0 ? void 0 : _68.color) || "#171717", " ;\n        overflow: hidden;\n        outline: none;\n        resize: none;\n        -webkit-appearance: none;\n        font-size: ").concat(getTextAreaFontSize(isMobile(), ((_69 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _69 === void 0 ? void 0 : _69.fontSize) || defaultChatTextareaFontSize), "px;\n        line-height: ").concat(chatTextareaLineHieght, ";\n        text-align: left;\n        max-height: ").concat(chatTextareaHeight, "px;\n        height: ").concat(chatTextareaHeight, "px;\n        padding: ").concat(uiState.textChat.defaults.textarea.padding.top, "px 42px 12px 12px;\n        margin: 0px!important;\n        -webkit-user-select: text;\n        -khtml-user-select: text;\n        -moz-user-select: text;\n        -ms-user-select: text;\n        user-select: text;\n        transition: opacity 300ms ease-in-out;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::placeholder {\n        color: ".concat(((_70 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _70 === void 0 ? void 0 : _70.placeholderColor) || "#747474", " ;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar {\n        width: 6px;\n        height: 6px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-thumb {\n        border-radius: 3px;\n        background-color: rgba(224, 224, 224, 0.795);\n        transition: background-color 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-thumb:hover {\n        background-color: rgba(230, 230, 230, 0.856);\n        transition: background-color 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-track {\n        border-radius: 3px;\n        background: transparent;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-text-chat__voice-enabled .alan-btn__chat-textarea {\n        padding-left: 42px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__mic-active .alan-btn__chat-textarea {\n        opacity: 0.6;\n        transition: opacity 300ms ease-in-out;\n        pointer-events: none;\n        -webkit-touch-callout: none;\n        -webkit-user-select: none;\n        -khtml-user-select: none;\n        -moz-user-select: none;\n        -ms-user-select: none;\n        user-select: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__mic-active .alan-btn__chat-send-btn {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__inactive .alan-btn__chat-send-btn {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-textarea {\n        opacity: 0.6;\n        transition: opacity 300ms ease-in-out;\n        pointer-events: none;\n        -webkit-touch-callout: none;\n        -webkit-user-select: none;\n        -khtml-user-select: none;\n        -moz-user-select: none;\n        -ms-user-select: none;\n        user-select: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-send-btn {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-unmute-btn {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-header-clear-btn {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-send-btn svg path {\n        opacity: 1;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-mic-btn {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__inactive .alan-btn__chat-mic-btn {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_disconnected-chat-icon-rotate {\n        animation: disconnected-chat-icon-rotate-animation 1500ms linear infinite;\n    }";
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("disconnected-chat-icon-rotate-animation", "0%{  transform: rotate(0deg);  } 100%{  transform: rotate(360deg);  }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__disabled {\n        opacity: 0.2;\n        pointer-events: none;\n        transition: opacity 300ms ease-in-out;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn {\n        position: absolute;\n        transition: opacity 300ms ease-in-out;\n        right: 20px;\n        bottom: 20px;\n        min-width: 40px;\n        width: 40px;\n        max-width: 40px;\n        height: 40px;\n        max-height: 40px;\n        min-height: 40px;\n        display: flex;\n        flex-direction: row;\n        justify-content: center;\n        align-items: center;\n        border-radius: 50%;\n        -webkit-touch-callout: none; /* iOS Safari */\n        -webkit-user-select: none; /* Chrome/Safari/Opera */\n        -khtml-user-select: none; /* Konqueror */\n        -moz-user-select: none; /* Firefox */\n        -ms-user-select: none; /* IE/Edge */\n        user-select: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg {\n        position: relative;\n        left: 2px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg path {\n        fill: ".concat(((_71 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _71 === void 0 ? void 0 : _71.placeholderColor) || "#747474", ";\n        opacity: 0.5;\n    }");
+        keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn svg path {\n        fill: ".concat(((_75 = (_74 = (_73 = (_72 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _72 === void 0 ? void 0 : _72.icons) === null || _73 === void 0 ? void 0 : _73.general) === null || _74 === void 0 ? void 0 : _74["default"]) === null || _75 === void 0 ? void 0 : _75.fill) || "#171717", ";\n        opacity: 1;\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn:hover {\n            cursor: pointer;\n        }";
+            keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn:hover svg path {\n            fill: ".concat(((_79 = (_78 = (_77 = (_76 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _76 === void 0 ? void 0 : _76.icons) === null || _77 === void 0 ? void 0 : _77.general) === null || _78 === void 0 ? void 0 : _78.hover) === null || _79 === void 0 ? void 0 : _79.fill) || "#0078ff", ";\n            opacity:0.8;\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn {\n        position: absolute;\n        left: 20px;\n        bottom: 22px;\n        min-width: ".concat(chatMicBtnActiveSize, "px;\n        width: ").concat(chatMicBtnActiveSize, "px;\n        max-width: ").concat(chatMicBtnActiveSize, "px;\n        height: ").concat(chatMicBtnActiveSize, "px;\n        max-height: ").concat(chatMicBtnActiveSize, "px;\n        min-height: ").concat(chatMicBtnActiveSize, "px;\n        display: flex;\n        flex-direction: row;\n        cursor: pointer;\n        justify-content: center;\n        align-items: center;\n        border-radius: 50%;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active::before {\n        content: '';\n        position: absolute;\n        z-index: -1;\n        left: 0;\n        top: 0;\n        height: 100%;\n        width: 100%;\n        background-color:  ".concat(((_83 = (_82 = (_81 = (_80 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _80 === void 0 ? void 0 : _80.icons) === null || _81 === void 0 ? void 0 : _81.general) === null || _82 === void 0 ? void 0 : _82["default"]) === null || _83 === void 0 ? void 0 : _83.fill) || "#C8C8CC", ";\n        opacity: 0.3;\n        border-radius: 50%;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-notifications-bubble {\n        position: absolute;\n        right: 4px;\n        top: -4px;\n        height: 20px;\n        width: 20px;\n        background-color:  ".concat(((_84 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.notifications) === null || _84 === void 0 ? void 0 : _84.backgroundColor) || "#D0021B", ";\n        color:  ").concat(((_85 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.notifications) === null || _85 === void 0 ? void 0 : _85.color) || "#ffffff", ";\n        border-radius: 50%;\n        z-index: ").concat(uiState.btn.zIndex + 1, ";\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        font-size: 10px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-notifications-bubble:empty {\n        display: none;\n    }";
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active:hover::before {\n        opacity: 0.35;\n    }";
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn svg {\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn svg path {\n        fill: ".concat(((_89 = (_88 = (_87 = (_86 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _86 === void 0 ? void 0 : _86.icons) === null || _87 === void 0 ? void 0 : _87.general) === null || _88 === void 0 ? void 0 : _88["default"]) === null || _89 === void 0 ? void 0 : _89.fill) || "#171717", ";\n    }");
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn:hover svg path {\n        fill: ".concat(((_93 = (_92 = (_91 = (_90 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _90 === void 0 ? void 0 : _90.icons) === null || _91 === void 0 ? void 0 : _91.general) === null || _92 === void 0 ? void 0 : _92.hover) === null || _93 === void 0 ? void 0 : _93.fill) || "#007AFF", ";\n    }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__animated-btn-bars {\n        height:".concat(chatMicBtnActiveSize, "px;\n        width:").concat(chatMicBtnActiveSize, "px;\n        border-radius: 50%;\n        justify-content: center;\n        align-items: center;\n        background: ").concat(((_97 = (_96 = (_95 = (_94 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _94 === void 0 ? void 0 : _94.icons) === null || _95 === void 0 ? void 0 : _95.general) === null || _96 === void 0 ? void 0 : _96.hover) === null || _97 === void 0 ? void 0 : _97.fill) || "#007AFF", ";\n        display:none;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active .alan-text-chat__animated-btn-bars  {\n        display: flex;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active svg  {\n        display: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar {\n        background: #ffffff;\n        bottom: 1px;\n        height: 3px;\n        width: 2px;\n        margin: 0px 1px;\n        border-radius: 5px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-1 {\n        animation: alan-btn__sound-bar-1 0ms -1200ms linear infinite alternate;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-2 {\n        animation: alan-btn__sound-bar-2 0ms -1200ms linear infinite alternate;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-3 {\n        animation: alan-btn__sound-bar-3 0ms -1200ms linear infinite alternate;\n    }";
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-1", "\n    0% {\n\n        height: 3px; \n    }\n    100% {\n          \n        height: 10px;        \n    }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-2", "\n    0% {\n\n        height: 8px; \n    }\n    100% {\n          \n        height: 15px;        \n    }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-3", "\n    0% {\n\n        height: 12px; \n    }\n    100% {\n          \n        height: 28px;        \n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(1)  { animation-duration: 474ms; }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(2)  { animation-duration: 433ms; }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(3)  { animation-duration: 407ms; }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(4)  { animation-duration: 458ms; }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(5)  { animation-duration: 400ms; }";
+        keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(6)  { animation-duration: 427ms; }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-msg-holder {\n        display: flex;\n        flex-direction: row;\n    }";
+        var defaultBubbleBorderRadius = 20;
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request {\n        margin-bottom: 16px;\n        max-width: 90%;\n        min-height: 41px;\n        padding: 9px 20px;\n        line-height: 1.53;\n        display: block;\n        float: right;\n        clear: both;\n        border-radius: ".concat(((_100 = (_99 = (_98 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _98 === void 0 ? void 0 : _98.request) === null || _99 === void 0 ? void 0 : _99.borderRadius) === null || _100 === void 0 ? void 0 : _100.topLeft) || defaultBubbleBorderRadius, "px ").concat(((_103 = (_102 = (_101 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _101 === void 0 ? void 0 : _101.request) === null || _102 === void 0 ? void 0 : _102.borderRadius) === null || _103 === void 0 ? void 0 : _103.topRight) || defaultBubbleBorderRadius, "px ").concat(((_106 = (_105 = (_104 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _104 === void 0 ? void 0 : _104.request) === null || _105 === void 0 ? void 0 : _105.borderRadius) === null || _106 === void 0 ? void 0 : _106.bottomRight) || defaultBubbleBorderRadius, "px ").concat(((_109 = (_108 = (_107 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _107 === void 0 ? void 0 : _107.request) === null || _108 === void 0 ? void 0 : _108.borderRadius) === null || _109 === void 0 ? void 0 : _109.bottomLeft) || defaultBubbleBorderRadius, "px;\n        position: relative;\n        border: 1px solid ").concat(((_111 = (_110 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _110 === void 0 ? void 0 : _110.request) === null || _111 === void 0 ? void 0 : _111.borderColor) || ((_113 = (_112 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _112 === void 0 ? void 0 : _112.request) === null || _113 === void 0 ? void 0 : _113.backgroundColor) || "#b2d6ff", ";\n        box-shadow: ").concat(!((_115 = (_114 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _114 === void 0 ? void 0 : _114.request) === null || _115 === void 0 ? void 0 : _115.hasShadow) ? "none" : "0px 1px 3px rgba(16, 39, 126, 0.2)", ";\n        background-color: ").concat(((_117 = (_116 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _116 === void 0 ? void 0 : _116.request) === null || _117 === void 0 ? void 0 : _117.backgroundColor) || "#b2d6ff", ";\n        color: ").concat(((_119 = (_118 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _118 === void 0 ? void 0 : _118.request) === null || _119 === void 0 ? void 0 : _119.color) || "#171717", ";\n        font-size: ").concat(((_121 = (_120 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _120 === void 0 ? void 0 : _120.request) === null || _121 === void 0 ? void 0 : _121.fontSize) || "15", "px;\n        word-break: break-word;\n        text-align: left;\n        -webkit-touch-callout: text; /* iOS Safari */\n        -webkit-user-select: text; /* Chrome/Safari/Opera */\n        -khtml-user-select: text; /* Konqueror */\n        -moz-user-select: text; /* Firefox */\n        -ms-user-select: text; /* IE/Edge */\n        user-select: text;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-request {\n        margin-bottom: 16px;\n        max-width: 100%;\n        float: initial;\n        clear: initial;\n        border-radius: 4px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request * {\n        -webkit-touch-callout: text; /* iOS Safari */\n        -webkit-user-select: text; /* Chrome/Safari/Opera */\n        -khtml-user-select: text; /* Konqueror */\n        -moz-user-select: text; /* Firefox */\n        -ms-user-select: text; /* IE/Edge */\n        user-select: text;\n    }";
+        var responseBubbleFontSize = +(((_123 = (_122 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _122 === void 0 ? void 0 : _122.response) === null || _123 === void 0 ? void 0 : _123.fontSize) || 15);
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response {\n        margin-bottom: 16px;\n        max-width: 90%;\n        min-height: 41px;\n        padding: 9px 20px;\n        line-height: 1.53;\n        display: block;\n        float: left;\n        clear: both;\n        border-radius: ".concat(((_126 = (_125 = (_124 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _124 === void 0 ? void 0 : _124.response) === null || _125 === void 0 ? void 0 : _125.borderRadius) === null || _126 === void 0 ? void 0 : _126.topLeft) || defaultBubbleBorderRadius, "px ").concat(((_129 = (_128 = (_127 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _127 === void 0 ? void 0 : _127.response) === null || _128 === void 0 ? void 0 : _128.borderRadius) === null || _129 === void 0 ? void 0 : _129.topRight) || defaultBubbleBorderRadius, "px ").concat(((_132 = (_131 = (_130 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _130 === void 0 ? void 0 : _130.response) === null || _131 === void 0 ? void 0 : _131.borderRadius) === null || _132 === void 0 ? void 0 : _132.bottomRight) || defaultBubbleBorderRadius, "px ").concat(((_135 = (_134 = (_133 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _133 === void 0 ? void 0 : _133.response) === null || _134 === void 0 ? void 0 : _134.borderRadius) === null || _135 === void 0 ? void 0 : _135.bottomLeft) || defaultBubbleBorderRadius, "px;\n        position: relative;\n        background-color: ").concat(((_137 = (_136 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _136 === void 0 ? void 0 : _136.response) === null || _137 === void 0 ? void 0 : _137.backgroundColor) || "#ffffff", ";\n        border: 1px solid ").concat(((_139 = (_138 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _138 === void 0 ? void 0 : _138.response) === null || _139 === void 0 ? void 0 : _139.borderColor) || ((_141 = (_140 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _140 === void 0 ? void 0 : _140.response) === null || _141 === void 0 ? void 0 : _141.backgroundColor) || "#ffffff", ";\n        box-shadow: ").concat(!((_143 = (_142 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _142 === void 0 ? void 0 : _142.response) === null || _143 === void 0 ? void 0 : _143.hasShadow) ? "none" : "0px 1px 3px rgba(16, 39, 126, 0.2)", ";\n        color: ").concat(((_145 = (_144 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _144 === void 0 ? void 0 : _144.response) === null || _145 === void 0 ? void 0 : _145.color) || "#171717", ";\n        font-size: ").concat(responseBubbleFontSize, "px;\n        word-break: break-word;\n        text-align: left;\n        -webkit-touch-callout: text; /* iOS Safari */\n        -webkit-user-select: text; /* Chrome/Safari/Opera */\n        -khtml-user-select: text; /* Konqueror */\n        -moz-user-select: text; /* Firefox */\n        -ms-user-select: text; /* IE/Edge */\n        user-select: text;\n    }");
+        var chatResponseCssDeltaWidth = 82;
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-response {\n        margin-bottom: 16px;\n        max-width: calc(100% - ".concat(chatResponseCssDeltaWidth, "px);\n        min-width: calc(100% - ").concat(chatResponseCssDeltaWidth, "px)!important;\n        float: initial;\n        clear: initial;\n        border-radius: 4px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response.with-images {\n        min-width: 90%;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-chat-small .alan-btn__chat-request {\n        max-width: 100%;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-chat-small .alan-btn__chat-response {\n        max-width: 100%;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-chat-small .alan-btn__chat-response.with-images {\n        min-width: 100%;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request.animated {\n        opacity:0;\n        animation: chat-bubble-appear-w-opacity 300ms ease-in-out forwards;\n        animation-delay: 100ms;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response.animated {\n        opacity:0;\n        animation: chat-bubble-appear-w-opacity 300ms ease-in-out forwards;\n        animation-delay: 200ms;\n    }";
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("chat-bubble-appear-w-opacity", "\n    0% { opacity:0;}\n      \n    100% {\n        opacity:1;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response * {\n        -webkit-touch-callout: text; /* iOS Safari */\n        -webkit-user-select: text; /* Chrome/Safari/Opera */\n        -khtml-user-select: text; /* Konqueror */\n        -moz-user-select: text; /* Firefox */\n        -ms-user-select: text; /* IE/Edge */\n        user-select: text;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper {\n        display: flex;\n        flex-wrap: wrap;\n        position: relative;\n        top: -9px;\n        left: -20px;\n        width: calc(100% + 40px);\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow {\n        position: absolute;\n        top: 50%;\n        transform: translateY(-50%);\n        left: 12px;\n        opacity:0.85;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow {\n        position: absolute;\n        top: 50%;\n        transform: translateY(-50%);\n        right: 12px;\n        opacity:0.85;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow:hover {\n        opacity:1;\n        cursor: pointer;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow:hover {\n        opacity:1;\n        cursor: pointer;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow.invisible {\n        opacity:0;\n        pointer-events: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow.invisible {\n        opacity:0;\n        pointer-events: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img-block {\n        overflow: hidden;\n        border-radius: 20px 20px 0 0;\n        width: 100%;\n        display: flex;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-video {\n        width: 100%;\n        min-width: 100%;\n        min-height: 220px;\n        height: 220px;\n        max-height: 220px;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img {\n        cursor: pointer;\n        transition: transform 300ms ease-in-out;\n        width: 100%;\n        min-width: 100%;\n        min-height: 220px;\n        height: 220px;\n        max-height: 220px;\n        object-fit: cover;\n        pointer-events: initial;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img.img-none {\n        object-fit: none;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img.not-found {\n        opacity: 0.7;\n        object-fit: none;\n    }";
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper:hover .alan-btn__chat-response-img {\n            transform: scale(1.04);\n            transition: transform 300ms ease-in-out;\n        }";
+        }
+        keyFrames += ".alan-btn__image-preview-overlay {\n        position: fixed;\n        top: 0;\n        left: 0;\n        height: 100vh;\n        min-height: 100vh;\n        width: 100vw;\n        min-width: 100vw;\n        background-color: rgba(0,0,0,0.6);\n        display: flex;\n        align-items: center;\n        justify-content: center;\n    }";
+        keyFrames += ".alan-btn__image-preview-overlay img {\n        max-width: calc(100% - 100px);\n        max-height: calc(100% - 100px);\n    }";
+        keyFrames += "@media only screen and (orientation: landscape) { \n        .alan-btn__image-preview-overlay.mobile {\n            align-items: flex-start;\n            padding-top: 40px;\n        }\n        .alan-btn__image-preview-overlay img {\n            max-height: calc(100% - 120px);\n        }\n        .alan-btn__image-preview-overlay iframe {\n            max-height: calc(100% - 120px);\n        }\n    }";
+        keyFrames += ".alan-btn__image-preview-overlay iframe {\n        max-width: calc(100% - 100px);\n        max-height: calc(100% - 100px);\n        width: calc(100% - 100px);\n        height: calc(100% - 100px);\n    }";
+        keyFrames += ".alan-btn__image-preview-overlay-close-icon {\n        position: absolute;\n        top: 16px;\n        right: 16px;\n        cursor: pointer;\n        opacity: 0.7;\n    }";
+        if (!isMobile()) {
+            keyFrames += ".alan-btn__image-preview-overlay-close-icon:hover {\n            opacity: 1;\n        }";
+        }
+        keyFrames += ".alan-btn__image-preview-overlay-left-icon {\n        position: absolute;\n        top: 50%;\n        transform: translateY(-50%);\n        left: 16px;\n        cursor: pointer;\n        opacity: 0.7;\n    }";
+        keyFrames += ".alan-btn__image-preview-overlay-right-icon {\n        position: absolute;\n        top: 50%;\n        transform: translateY(-50%);\n        right: 16px;\n        cursor: pointer;\n        opacity: 0.7;\n    }";
+        keyFrames += ".alan-btn__image-preview-overlay-left-icon.invisible {\n        opacity:0;\n        pointer-events: none;\n    }";
+        keyFrames += ".alan-btn__image-preview-overlay-right-icon.invisible {\n        opacity:0;\n        pointer-events: none;\n    }";
+        if (!isMobile()) {
+            keyFrames += ".alan-btn__image-preview-overlay-left-icon:hover {\n            opacity: 1;\n        }";
+            keyFrames += ".alan-btn__image-preview-overlay-right-icon:hover {\n            opacity: 1;\n        }";
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-links-wrapper {\n        display: flex;\n        flex-wrap: wrap;\n        border-top: 1px solid #D2DAE5;\n        padding: 10px 0 0 0;\n        margin-top: 10px;\n        align-items: center;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-link {\n        background: #EAF2FC;\n        border-radius: 15px;\n        padding: 6px 8px;\n        margin-right: 10px;\n        margin-top: 4px;\n        margin-bottom: 4px;\n        display: flex;\n        align-items: center;\n        max-width: 100%;\n        font-size: ".concat(responseBubbleFontSize - 2, "px;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages a.alan-btn__chat-response-link:hover  {\n        text-decoration: none !important;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-link-title {\n        overflow: hidden;\n        max-width: calc(100% - 15px);\n        text-overflow: ellipsis;\n        white-space: nowrap;\n        display: inline-block;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-link svg {\n        flex-shrink: 0;\n        margin-right: 6px;\n    }";
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + "a.alan-btn__chat-response-link:hover svg path  {\n            fill: #0078FF;\n        }";
+        }
+        var hasLikeBtn = (_148 = (_147 = (_146 = uiState.textChat.options) === null || _146 === void 0 ? void 0 : _146.bubbles) === null || _147 === void 0 ? void 0 : _147.response) === null || _148 === void 0 ? void 0 : _148.likeBtn;
+        var hasCopyBtn = (_151 = (_150 = (_149 = uiState.textChat.options) === null || _149 === void 0 ? void 0 : _149.bubbles) === null || _150 === void 0 ? void 0 : _150.response) === null || _151 === void 0 ? void 0 : _151.copyBtn;
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-commands-wrapper  {\n        margin-top: 10px;\n        display: ".concat(hasLikeBtn || hasCopyBtn ? "block" : "none", ";\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-like-btn  {\n        cursor: pointer;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn  {\n        cursor: pointer;\n    }";
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-like-btn  {\n            opacity: 0.7;\n            cursor: pointer;\n        }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-like-btn:hover  {\n            opacity: 1;\n        }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn  {\n            opacity: 0.7;\n        }";
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn:hover  {\n            opacity: 1;\n        }";
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-incoming-msg {\n        display: flex;\n        align-items: center;\n        overflow: hidden;\n        animation:chat-bubble-appear-w-opacity 300ms ease-in-out forwards 100ms, hide-buble 300ms forwards ease 30000ms !important;\n    }";
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("hide-buble", "\n    0% { \n        height: 41px; \n        max-height:41px;    \n        min-height: 41px;\n    }\n      \n    100% {\n        height: 0px;\n        max-height: 0px;\n        min-height: 0px;\n        padding: 0px;\n        margin-bottom:0;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-incomming-msg-wrapper {\n        display: flex;\n        align-items: center;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-incomming-msg {\n        border-radius: 50%;\n        background-color: ".concat(((_153 = (_152 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _152 === void 0 ? void 0 : _152.response) === null || _153 === void 0 ? void 0 : _153.color) || "#080808", ";\n        margin: 2px;\n        height: 6px;\n        width: 6px;\n        animation: alan-dot-bounce 1.5s infinite ease;\n    }");
+        keyFrames += getStyleSheetMarker() + ".msg-2 {\n        animation-delay: .2s;\n    }";
+        keyFrames += getStyleSheetMarker() + ".msg-3 {\n        animation-delay: .3s;\n    }";
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-dot-bounce", "\n    0%, 100% { opacity:1;}\n      \n    60% {\n        transform: translateY(3px);\n        opacity:.0;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-like-btn {\n        opacity: 0.5;\n        display: ".concat(((_155 = (_154 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _154 === void 0 ? void 0 : _154.response) === null || _155 === void 0 ? void 0 : _155.likeBtn) ? "inline-block" : "none", ";\n     }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn {\n        opacity: 0.5;\n        display: ".concat(((_157 = (_156 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _156 === void 0 ? void 0 : _156.response) === null || _157 === void 0 ? void 0 : _157.likeBtn) ? "inline-block" : "none", ";\n     }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response__copy-btn {\n        opacity: 0.5;\n        display: ".concat(((_159 = (_158 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _158 === void 0 ? void 0 : _158.response) === null || _159 === void 0 ? void 0 : _159.copyBtn) ? "inline-block" : "none", ";\n     }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response__copy-btn svg {\n        width: 20px;\n     }";
+        keyFrames += "\n    @media screen and (min-width: 990px) {\n        ".concat(getStyleSheetMarker(), ".alan-btn_text-chat-full-screen .alan-btn__chat-response-commands-wrapper {\n            left: calc(100% + 5px);\n            top: -10px;\n            white-space: nowrap;\n            position: absolute;\n         }\n      }\n   ");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response__copy-btn alan-btn__copy-icon {\n        width: 22px;\n     }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response__copy-btn .alan-btn__copied-icon {\n        display: none;\n     }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response__copy-btn:hover {\n        opacity: 1;\n        cursor: pointer;\n     }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response__copy-btn.alan-copy-btn-copied .alan-btn__copy-icon {\n        display: none;\n     }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response__copy-btn.alan-copy-btn-copied .alan-btn__copied-icon {\n        display: inline-block;\n     }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-popup {\n        width: 100%;\n        margin-left: 51px;\n        margin-right: 30px;\n     }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-popup {\n       position: relative;\n       margin-bottom: 16px;\n       -webkit-touch-callout: text; /* iOS Safari */\n       -webkit-user-select: text; /* Chrome/Safari/Opera */\n       -khtml-user-select: text; /* Konqueror */\n       -moz-user-select: text; /* Firefox */\n       -ms-user-select: text; /* IE/Edge */\n       user-select: text;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-popup * {\n        -webkit-touch-callout: text; /* iOS Safari */\n        -webkit-user-select: text; /* Chrome/Safari/Opera */\n        -khtml-user-select: text; /* Konqueror */\n        -moz-user-select: text; /* Firefox */\n        -ms-user-select: text; /* IE/Edge */\n        user-select: text;\n    }";
+        keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened-immediately .alanBtn {\n        transform: scale(0);\n        opacity: 0;\n        animation: text-chat-disappear-anim 0ms ease-in-out forwards;\n    }";
+        keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened .alanBtn {\n        transform: scale(0);\n        opacity: 0;\n        animation: text-chat-disappear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n    }");
+        keyFrames += getStyleSheetMarker(true) + ".text-chat-is-closing .alanBtn {\n        transform: scale(0);\n        opacity: 0;\n        animation: text-chat-appear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n    }");
+        keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened .alanBtn-recognised-text-holder {\n        display: none;\n    }";
+        keyFrames += getStyleSheetMarker() + " mjx-container svg {\n        max-width: 100%;\n    }";
+        var avatarSize = 41;
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-avatar {\n        border-radius: 4px;\n        margin-right: 10px;\n        width: ".concat(avatarSize, "px;\n        min-width: ").concat(avatarSize, "px;\n        max-width: ").concat(avatarSize, "px;\n        min-height: ").concat(avatarSize, "px;\n        max-height: ").concat(avatarSize, "px;\n        height: ").concat(avatarSize, "px;\n        overflow: hidden;\n        display: none;\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request-avatar {\n        width: ".concat(avatarSize, "px;\n        min-width: ").concat(avatarSize, "px;\n        max-width: ").concat(avatarSize, "px;\n        min-height: ").concat(avatarSize, "px;\n        max-height: ").concat(avatarSize, "px;\n        height: ").concat(avatarSize, "px;\n        background-position: center center;\n        background-repeat: no-repeat;\n        background-size: 100% 100%;\n        background-image: url(").concat((webOptions === null || webOptions === void 0 ? void 0 : webOptions.logoTextChatUserAvatar) || btnIcons.alanUserAvatarIconSrc, ");\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-avatar {\n        width: ".concat(avatarSize, "px;\n        min-width: ").concat(avatarSize, "px;\n        max-width: ").concat(avatarSize, "px;\n        min-height: ").concat(avatarSize, "px;\n        max-height: ").concat(avatarSize, "px;\n        height: ").concat(avatarSize, "px;\n        background-position: center center;\n        background-repeat: no-repeat;\n        background-size: 100% 100%;\n        background-image: url(").concat((webOptions === null || webOptions === void 0 ? void 0 : webOptions.logoTextChatAvatar) || btnIcons.alanLogoIconSrc, ");\n    }");
+        var predefinedBtnColorOptions = mergeOptionsForStyleSheet(webOptions);
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-avatar.request {\n        background-image:  linear-gradient(122deg, ".concat(predefinedBtnColorOptions["textChatUserAvatar"].background.color[0], ", ").concat(predefinedBtnColorOptions["textChatUserAvatar"].background.color[1], ");\n        box-shadow: ").concat(!((_161 = (_160 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _160 === void 0 ? void 0 : _160.request) === null || _161 === void 0 ? void 0 : _161.hasShadow) ? "none" : "0px 1px 3px rgba(16, 39, 126, 0.2)", ";\n        ").concat(((_163 = (_162 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _162 === void 0 ? void 0 : _162.request) === null || _163 === void 0 ? void 0 : _163.borderColor) ? "border: 1px solid ".concat((_165 = (_164 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _164 === void 0 ? void 0 : _164.request) === null || _165 === void 0 ? void 0 : _165.borderColor, ";") : "", "\n      \n    }");
+        if (uiState.textChat.available) {
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-avatar.response {\n            background-image:  linear-gradient(122deg, ".concat(predefinedBtnColorOptions["textChatAvatar"].background.color[0], ", ").concat(predefinedBtnColorOptions["textChatAvatar"].background.color[1], ");\n            box-shadow: ").concat(!((_167 = (_166 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _166 === void 0 ? void 0 : _166.response) === null || _167 === void 0 ? void 0 : _167.hasShadow) ? "none" : "0px 1px 3px rgba(16, 39, 126, 0.2)", ";\n            ").concat(((_169 = (_168 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _168 === void 0 ? void 0 : _168.response) === null || _169 === void 0 ? void 0 : _169.borderColor) ? "border: 1px solid ".concat((_171 = (_170 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _170 === void 0 ? void 0 : _170.response) === null || _171 === void 0 ? void 0 : _171.borderColor, ";") : "", "\n        }");
+        }
+        keyFrames += getStyleSheetMarker() + ".alan-btn_text-chat-full-screen .alan-btn__chat-avatar {\n        display: flex;\n        align-items: center;\n        justify-content: center;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-avatar svg {\n        width: 90%;\n        height: 90%;\n    }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-avatar svg path {\n        stroke: ".concat(((_173 = (_172 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _172 === void 0 ? void 0 : _172.request) === null || _173 === void 0 ? void 0 : _173.color) || "#171717", ";\n    }");
+        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-avatar svg circle {\n        stroke: ".concat(((_175 = (_174 = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.bubbles) === null || _174 === void 0 ? void 0 : _174.request) === null || _175 === void 0 ? void 0 : _175.color) || "#171717", ";\n    }");
+        return keyFrames;
+    }
+    // alan_btn/src/styles/markdown.ts
+    function generateCssForMarkdawn() {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        var keyFrames = "";
+        var responseBubbleFontSize = +(((_c = (_b = (_a = uiState.textChat.options) === null || _a === void 0 ? void 0 : _a.bubbles) === null || _b === void 0 ? void 0 : _b.response) === null || _c === void 0 ? void 0 : _c.fontSize) || 15);
+        var responseBubbleBg = +(((_f = (_e = (_d = uiState.textChat.options) === null || _d === void 0 ? void 0 : _d.bubbles) === null || _e === void 0 ? void 0 : _e.response) === null || _f === void 0 ? void 0 : _f.backgroundColor) || "#ffffff");
+        var responseBubbleFontColor = +(((_j = (_h = (_g = uiState.textChat.options) === null || _g === void 0 ? void 0 : _g.bubbles) === null || _h === void 0 ? void 0 : _h.response) === null || _j === void 0 ? void 0 : _j.color) || "#171717");
+        var cssRules = [
+            "a {\n        color: #4183c4!important;\n        text-decoration: none!important;\n    }",
+            "a:hover {\n        text-decoration: underline!important;\n    }",
+            "p {\n        margin: 0!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "blockquote {\n        margin: 0!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "dl {\n        margin: 0!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "table {\n        margin: 0!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n        word-break: initial!important;\n    }"),
+            "ul {\n        padding-left: 30px!important; \n        margin: 0!important; \n        list-style-type: disc!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "ul li {\n       list-style-type: disc!important;\n       font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "ol {\n        padding-left: 30px!important;\n        margin: 0!important; \n        list-style-type: decimal!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "ol li {\n        list-style-type: decimal!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "h1 { font-size: 2.13em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
+            "h2 { font-size: 1.86em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
+            "h3 { font-size: 1.6em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
+            "h4 { font-size: 1.46em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
+            "h5 { font-size: 1.33em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
+            "h6 { font-size: 1.2em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
+            "h1:after { display: none!important;}",
+            "h2:after { display: none!important;}",
+            "h3:after { display: none!important;}",
+            "h4:after { display: none!important;}",
+            "h5:after { display: none!important;}",
+            "h6:after { display: none!important;}",
+            "h1:before { display: none!important;}",
+            "h2:before { display: none!important;}",
+            "h3:before { display: none!important;}",
+            "h4:before { display: none!important;}",
+            "h5:before { display: none!important;}",
+            "h6:before { display: none!important;}",
+            "h1 + p {\n        margin-top: 10px!important;\n    }",
+            "h2 + p {\n        margin-top: 10px!important;\n    }",
+            "h3 + p {\n        margin-top: 10px!important;\n    }",
+            "h4 + p {\n        margin-top: 10px!important;\n    }",
+            "h5 + p {\n        margin-top: 10px!important;\n    }",
+            "h6 + p {\n        margin-top: 10px!important;\n    }",
+            "p + p {\n        margin-top: 10px!important;\n    }",
+            "* + pre {\n        margin-top: 8px!important;\n    }",
+            "pre + * {\n        margin-top: 16px!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "* + ul {\n        margin-top: 8px!important;\n    }",
+            "ul + * {\n        margin-top: 16px!important;\n    }",
+            "* + ol {\n        margin-top: 8px!important;\n    }",
+            "ol + * {\n        margin-top: 16px!important;\n    }",
+            "* + blockquote {\n        margin-top: 8px!important;\n    }",
+            "blockquote + * {\n        margin-top: 16px!important;\n    }",
+            "audio {\n        max-width: 100%!important;\n        max-height: 100%!important;\n    }",
+            "video {\n        max-width: 100%!important;\n        max-height: 100%!important;\n    }",
+            "img {\n        max-width: 100%!important;\n        pointer-events: auto!important;\n        cursor: pointer;\n        max-height: 500px;\n    }",
+            "code {\n        background-color: #F8F8F8!important;\n        border-radius: 3px!important;\n        border: 1px solid #DDD!important;\n        font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n        margin: 0 2px!important;\n        padding: 0 5px!important;\n        white-space: pre-line!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "pre {\n        background-color: #F8F8F8!important;\n        border-radius: 3px!important;\n        border: 1px solid #DDD!important;\n        font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n        padding: 0 5px!important;\n        white-space: pre-line!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "pre code {\n        border: none!important;\n        margin: 0!important;\n        padding: 0!important;\n        white-space: pre-wrap!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "hr {\n        display: block!important;\n        unicode-bidi: isolate!important;\n        margin-block-start: 0.5em!important;\n        margin-block-end: 0.5em!important;\n        margin-inline-start: auto!important;\n        margin-inline-end: auto!important;\n        overflow: hidden!important;\n        border-style: inset!important;\n        border-width: 1px!important;\n    }",
+            "blockquote {\n        padding: 5px 20px 0!important;\n        border-left: 5px solid #beb7b7!important;\n        font-size: ".concat(responseBubbleFontSize, "px!important;\n    }"),
+            "table > tbody > tr > td {\n        background-color: ".concat(responseBubbleBg, "!important;\n        color: ").concat(responseBubbleFontColor, "!important;\n    }"),
+            "table > tbody > tr > th {\n        color: ".concat(responseBubbleFontColor, "!important;\n        background-color: ").concat(responseBubbleBg, "!important;\n    }"),
+            "table > thead > tr > th {\n        padding: 4px!important;\n        border-top: 1px solid #b7b5b5!important;\n    }",
+            "table > tbody > tr > th {\n        padding: 4px!important;\n        border-top: 1px solid #b7b5b5!important;\n    }",
+            "table > thead > tr > td {\n        padding: 4px!important;\n        border-top: 1px solid #b7b5b5!important;\n    }",
+            "table > tbody > tr > td {\n        padding: 4px;\n        border-top: 1px solid #b7b5b5!important;\n    }",
+            "strong {\n        font-weight: bold!important;\n    }"
+        ];
+        for (var i = 0; i < cssRules.length; i++) {
+            var curRule = cssRules[i];
+            keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages ".concat(curRule);
+        }
+        return keyFrames;
+    }
+    // alan_btn/src/styles/styles.ts
+    function createAlanStyleSheet(options2, webOptions) {
+        var _a;
+        var _b, _c, _d;
+        var style;
+        var keyFrames = "";
+        var projectId = getProjectId();
+        var transitionCss = "transform 0.4s ease-in-out, opacity 0.4s ease-in-out";
+        var existingStyleSheet;
+        if (options2.shadowDOM) {
+            existingStyleSheet = options2.shadowDOM.getElementById("alan-stylesheet-" + projectId);
+        }
+        else {
+            existingStyleSheet = document.getElementById("alan-stylesheet-" + projectId);
+        }
+        style = document.createElement("style");
+        style.setAttribute("id", "alan-stylesheet-" + projectId);
+        style.type = "text/css";
+        keyFrames += ".alanBtn-root * {  box-sizing: border-box; font-family: ".concat(((_d = (_c = (_b = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _b === void 0 ? void 0 : _b.textChat) === null || _c === void 0 ? void 0 : _c.popup) === null || _d === void 0 ? void 0 : _d.fontFamily) || "Poppins", "; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}");
+        var hoverSelector = !isMobile() ? ":hover" : ":active";
+        if (!isMobile()) {
+            keyFrames += getStyleSheetMarker() + ".alanBtn{transform: scale(1); transition: " + transitionCss + ";} .alanBtn" + hoverSelector + "{transform: scale(1.11111);transition:" + transitionCss + ";}.alanBtn:focus {transform: scale(1);" + transitionCss + ";  border: solid 3px #50e3c2;  outline: none;  }";
+            keyFrames += getStyleSheetMarker(true) + ".alan-btn-disconnected  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
+            keyFrames += getStyleSheetMarker(true) + ".alan-btn-offline  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
+            keyFrames += getStyleSheetMarker(true) + ".alan-btn-no-voice-support  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
+        }
+        keyFrames += getStyleSheetMarker(true) + ".alan-btn__page-scrolled .alanBtn {\n        transform: scale(0.4);\n        opacity: 0.5;\n        pointer-events: none;\n        transition: ".concat(transitionCss, ";\n    }");
+        keyFrames += getStyleSheetMarker() + ".alanBtn-recognised-text-holder { position:fixed; transform: translateY(" + (uiState.btn.isTopAligned ? "-" : "") + "50%); max-width:236px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}";
+        keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__left-side { text-align: left;}";
+        keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__right-side { text-align: right;}";
+        keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder .alanBtn-recognised-text-content:not(:empty) {padding: 10px;}";
+        keyFrames += getStyleSheetMarker(true) + ".alanBtn-recognised-text-holder-long  { font-size: 12px!important;line-height: 1.4!important;}  ";
+        keyFrames += getStyleSheetMarker(true) + ".alanBtn-recognised-text-holder-super-long  { font-size: 11px!important;line-height: 1.4!important;}  ";
+        keyFrames += getStyleSheetMarker() + ".alanBtn-text-appearing {  animation: text-holder-appear 800ms ease-in-out forwards;  }";
+        keyFrames += getStyleSheetMarker() + ".alanBtn-text-disappearing {  animation: text-holder-disappear 800ms ease-in-out forwards;    }";
+        keyFrames += getStyleSheetMarker() + ".alanBtn-text-disappearing-immediately {  animation: none; opactity: 0;   }";
+        keyFrames += getStyleSheetMarker() + ".alan-btn-disabled {  pointer-events: none;  opacity: .5;  transition: all .2s ease-in-out;  }";
+        keyFrames += getStyleSheetMarker() + ".shadow-appear {  opacity: 1 !important;  }\n";
+        keyFrames += getStyleSheetMarker() + ".shadow-disappear {  opacity: 0 !important;  transition: all .1s linear !important;  }";
+        keyFrames += getStyleSheetMarker(true) + ".alan-btn-offline .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}";
+        keyFrames += getStyleSheetMarker(true) + ".alan-btn-offline .alanBtn" + hoverSelector + " .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}";
+        keyFrames += getStyleSheetMarker(true) + ".alan-btn-no-voice-support .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}";
+        keyFrames += getStyleSheetMarker(true) + ".alan-btn-no-voice-support .alanBtn" + hoverSelector + " .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}";
+        keyFrames += getStyleSheetMarker(true) + ".alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}";
+        keyFrames += getStyleSheetMarker(true) + ".alan-btn-permission-denied .alanBtn" + hoverSelector + " .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}";
+        keyFrames += getStyleSheetMarker() + ".triangleMicIconBg {background-image:url(" + btnIcons.roundedTriangleSecondLayerSrc + "); pointer-events: none;}";
+        keyFrames += getStyleSheetMarker() + ".circleMicIconBg {background-image:url(" + btnIcons.circleSecondLayerSrc + "); pointer-events: none;}";
+        keyFrames += getStyleSheetMarker() + " img {pointer-events: none;}";
+        keyFrames += getStyleSheetMarker() + "" + hoverSelector + " .triangleMicIconBg-default {opacity:0!important;}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-for-alert {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}";
+        keyFrames += getStyleSheetMarker() + ".alan-alert-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:12px;padding-right:24px;text-align: center;width: 220px;background: rgb(255 255 255);position: fixed;left: 50%;transform: translateX(-50%);top: 10%;    color: #000;font-size: 14px;line-height: 18px;}";
+        keyFrames += getStyleSheetMarker() + '.alan-alert-popup__close-btn {background:url("' + btnIcons.popupCloseIconImgBase64 + '") no-repeat center;cursor:pointer; background-size:100% 100%;position: absolute;top: 12px;right: 12px;width: 14px;height: 14px;}';
+        keyFrames += getStyleSheetMarker() + ".alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__default-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__right {border-top-right-radius: 0!important;}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__left {border-top-left-radius: 0!important;}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__bottom.alan-btn-lib__left {border-bottom-left-radius: 0!important;}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__bottom.alan-btn-lib__right {border-bottom-right-radius: 0!important;}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup {position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup__body {position:relative;color: #0D1940;font-size: 16px;line-height: 20px;}";
+        keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {background:url("' + btnIcons.popupCloseIconImgBase64 + '") no-repeat center; background-size:100% 100%;min-height:14px;height:14px;max-height:14px;min-width:14px;width:14px;max-width:14px;opacity:0;transition:opacity 300ms ease-in-out;position:absolute;top:8px;right:8px;cursor: pointer;pointer-events: auto!important;}';
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup__ok:hover {opacity:0.9}";
+        keyFrames += getStyleSheetMarker() + ".alan-overlay-popup:hover .alan-overlay-popup__ok{opacity:1;transition:opacity 300ms ease-in-out;}";
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-gradient", "0%{backgroundPosition: 0 0;}50%{backgroundPosition: -100% 0;}100%{backgroundPosition: 0 0;}");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-pulsating", "0%{transform: scale(1.11111);}50%{transform: scale(1.0);}100%{transform: scale(1.11111);}");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-text-chat-pulsating", "0%{transform: scale(1.09);}50%{transform: scale(1.0);}100%{transform: scale(1.09);}");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-mic-pulsating", "0%{transform: scale(0.91);}50%{transform: scale(1.0);}100%{transform: scale(0.91);}");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-triangle-mic-pulsating", "0%{transform: scale(0.94);}50%{transform: scale(1.0);}100%{transform: scale(0.94);}");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-fade-in", "0%{opacity: 0;}100%{opacity:1;}");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-fade-out", "0%{opacity: 1;}100%{opacity:0;}");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("text-holder-appear", "0%{\n            opacity:0;\n            color:transparent;\n            background-color:rgba(245, 252, 252, 0.0);\n            border: solid 1px transparent;\n        }\n        100%{\n            opacity:1;\n            color:#000;\n            background-color:rgba(245, 252, 252, 0.8);\n        }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("text-holder-disappear", "0%{\n            opacity:1; \n            color:#000;\n            background-color:rgba(245, 252, 252, 0.8);  \n        }\n        100%{\n            opacity:0; \n            color:transparent;\n            background-color:rgba(245, 252, 252, 0.0);\n            border: solid 1px transparent;\n        }");
+        function generateLogoPartAnimation(partName, partIndex) {
+            var animSteps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+            var keyFrameContent = "";
+            for (var i = 0; i < animSteps.length; i++) {
+                var curOpacity = 0;
+                if (partIndex === 0) {
+                    curOpacity = i === 0 || i === 10 ? 1 : 0;
+                }
+                else {
+                    curOpacity = i === partIndex ? 1 : 0;
+                }
+                keyFrameContent += "".concat(animSteps[i], "% {  opacity: ").concat(curOpacity, ";  } ");
+            }
+            return getStyleSheetMarker() + generateKeyFrame(partName, keyFrameContent);
+        }
+        for (var i = 0; i < 10; i++) {
+            keyFrames += generateLogoPartAnimation("logo-state-".concat(i + 1, "-animation"), i);
+        }
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("disconnected-loader-animation", "0%{  transform: rotate(0deg);  } 100%{  transform: rotate(360deg);  }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("oval1-animation", "0%{  transform: rotate(-315deg);  } 50%{  transform: rotate(-495deg);  } 100%{  transform: rotate(-315deg);  }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("oval2-animation", "0%{  transform: rotate(-45deg);  } 50%{  transform: rotate(-215deg);  } 100%{  transform: rotate(-45deg);  }");
+        keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-text-fade-in", "0%{  opacity: 0;  } 100%{   opacity: 1;  }");
+        keyFrames += getStyleSheetMarker() + ".alanBtn-bg-default.super-hidden{opacity:0!important;display:none;}";
+        keyFrames += ".no-scroll-for-popup { overflow:hidden!important; position:fixed; }";
+        keyFrames += ".no-scroll-for-popup video { visibility: hidden }";
+        keyFrames += ".no-scroll-for-popup audio { visibility: hidden }";
+        keyFrames += ".no-scroll-for-popup .alan-btn__chat-holder video { visibility: initial }";
+        keyFrames += ".no-scroll-for-popup .alan-btn__chat-holder audio { visibility: initial }";
+        var predefinedBtnColorOptions = mergeOptionsForStyleSheet(webOptions);
+        var tempLayer;
+        var stateName;
+        var stateMapping = (_a = {},
+            _a[uiState.textChat.available ? "textChat" : "idle"] = ["default"],
+            _a.listen = ["listening"],
+            _a.process = ["intermediate", "understood"],
+            _a.reply = ["speaking"],
+            _a);
+        var stateNameClasses, stateNameClass;
+        var states = Object.keys(stateMapping);
+        for (var i = 0; i < states.length; i++) {
+            stateName = states[i];
+            stateNameClasses = stateMapping[stateName];
+            tempLayer = predefinedBtnColorOptions[stateName];
+            for (var j = 0; j < stateNameClasses.length; j++) {
+                stateNameClass = stateNameClasses[j];
+                if (tempLayer.background) {
+                    keyFrames += getStyleSheetMarker() + ".alanBtn-bg-" + stateNameClass + " {";
+                    keyFrames += "background-image: linear-gradient(122deg," + tempLayer.background.color[0] + "," + tempLayer.background.color[1] + ");";
+                    keyFrames += "}";
+                    keyFrames += getStyleSheetMarker() + ".alanBtn-oval-bg-" + stateNameClass + " {";
+                    keyFrames += "background-image: linear-gradient(122deg," + tempLayer.background.color[0] + "," + tempLayer.background.color[1] + ");";
+                    keyFrames += "}";
+                }
+                if (tempLayer.hover) {
+                    keyFrames += getStyleSheetMarker() + ".alanBtn" + hoverSelector + " .alanBtn-bg-" + stateNameClass + ":not(.super-hidden) {";
+                    keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
+                    keyFrames += "}";
+                    keyFrames += getStyleSheetMarker() + ".alanBtn:active .alanBtn-bg-" + stateNameClass + ":not(.super-hidden) {";
+                    keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
+                    keyFrames += "}";
+                    keyFrames += getStyleSheetMarker() + ".alanBtn" + hoverSelector + " .alanBtn-oval-bg-" + stateNameClass + ":not(.super-hidden) {";
+                    keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
+                    keyFrames += "}";
+                    keyFrames += getStyleSheetMarker() + ".alanBtn:active .alanBtn-oval-bg-" + stateNameClass + ":not(.super-hidden) {";
+                    keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
+                    keyFrames += "}";
+                }
+            }
+        }
+        keyFrames += generateCssForMarkdawn();
+        keyFrames += generateCssForChat(webOptions);
+        style.innerHTML = keyFrames;
+        if (options2.shadowDOM) {
+            options2.shadowDOM.prepend(style);
+        }
+        else {
+            document.getElementsByTagName("head")[0].appendChild(style);
+        }
+        if (existingStyleSheet) {
+            existingStyleSheet.disabled = true;
+            existingStyleSheet.parentNode.removeChild(existingStyleSheet);
+        }
+    }
+    // alan_btn/src/textChat/maxjax.ts
+    function loadMathJax(msgCount, msgGetter) {
+        window.MathJax = {
+            startup: {
+                pageReady: function () {
+                    return window.MathJax.startup.defaultPageReady();
+                }
+            },
+            tex: {
+                inlineMath: [["$", "$"], ["\\(", "\\)"]],
+                processEscapes: true
+            }
+        };
+        var script = document.createElement("script");
+        script.src = "https://studio.alan.app/js/mathjax/tex-svg.js?v=1";
+        script.async = true;
+        script.setAttribute("id", "MathJax-script");
+        script.onload = function () {
+            for (var i = 0; i < msgCount; i++) {
+                processFormulas(msgGetter(i));
+            }
+        };
+        document.head.appendChild(script);
+    }
+    function processFormulas(el) {
+        var MathJax = window.MathJax;
+        if (MathJax) {
+            setTimeout(function () {
+                if (el && MathJax.texReset) {
+                    MathJax.texReset();
+                    MathJax.typesetClear();
+                    MathJax.typesetPromise([el])["catch"](function (err) {
+                        console.error(err);
+                    });
+                }
+            });
+        }
+    }
+    // alan_btn/src/textChat/highlightJs.ts
+    function loadHighlightJs(msgsHolderGetter) {
+        var script = document.createElement("script");
+        script.src = "https://studio.alan.app/js/hljs/highlight.min.js?v=1";
+        script.async = true;
+        script.onload = function () {
+            highlightCode(msgsHolderGetter());
+        };
+        document.head.appendChild(script);
+        var link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://studio.alan.app/js/hljs/github.min.css?v=1";
+        document.getElementsByTagName("head")[0].appendChild(link);
+    }
+    function highlightCode(msgsHolder) {
+        if (window.hljs) {
+            setTimeout(function () {
+                if (msgsHolder) {
+                    msgsHolder.querySelectorAll("pre code:not(.alan-btn__hljs-processed)").forEach(function (el) {
+                        window.hljs.highlightElement(el);
+                        el.classList.add("alan-btn__hljs-processed");
+                    });
+                }
+            });
+        }
+    }
+    // alan_btn/alan_btn.ts
+    (function (ns) {
+        uiState.lib.version = "alan-version.1.8.54".replace("alan-version.", "");
+        if (window.alanBtn) {
+            console.warn("Alan: the Alan Button source code has already added (v." + uiState.lib.version + ")");
+        }
+        var alanAltPrefix = "Alan voice assistant";
+        var firstClick = null;
+        var btnInstance;
         var AlanButtonTextMessageType;
         (function (AlanButtonTextMessageType2) {
             AlanButtonTextMessageType2["Request"] = "request";
@@ -3440,26 +4629,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             var dragAndDropEnabled = true;
             var curDialogId = null;
             var textChatIsHidden = true;
-            var textChatIsAvailable = false;
             var voiceEnabledInTextChat = true;
             var textChatMessages = [];
-            var textChatOptions = null;
-            var clearChatIsInProcess = false;
             var textChatScrollPosition = null;
             var sentMessageInd = null;
             var sentMessages = [];
-            var defaultMinChatHeight = 400;
-            var defaultChatHeight = 700;
-            var defaultMinChatWidth = 250;
-            var chatHeaderHeight = 40;
-            var chatTextareaLineHieght = 1.25;
-            var textareaHolderHeight = 67;
-            var chatTextareaHeight = 50;
-            var chatMicBtnActiveSize = 34;
-            var textChatScrollSize = 6;
-            var textChatAppearAnimationMs = 200;
-            var defaultChatMargin = 25;
-            var defaultChatTextareaFontSize = 15;
             var textToSpeachVoiceEnabled = getVoiceEnabledFlag();
             var mode;
             if (options2.mode === "tutor") {
@@ -3472,16 +4646,16 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             else {
                 mode = "component";
             }
-            console.log("Alan: v." + alanButtonVersion);
+            console.log("Alan: v." + uiState.lib.version);
             if (window.tutorProject && !isTutorMode() && btnInstance) {
-                if (currentProjectId === options2.key) {
+                if (uiState.project.id === options2.key) {
                     return btnInstance;
                 }
                 throw new Error("The Alan Button instance has already been created. There cannot be two Alan Button instances created at the same time connected to the different projects.");
             }
             btnInstance = {
                 // Common public API
-                version: alanButtonVersion,
+                version: uiState.lib.version,
                 setVisualState: function (visualStateData) {
                     if (btnDisabled) {
                         return;
@@ -3670,13 +4844,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             var isAlanActive = false;
             var isLeftAligned = false;
             var isRightAligned = true;
-            var isTopAligned = false;
             var isBottomAligned = false;
             var recognisedTextVisible = false;
             var playReadyToListenSound = true;
             var turnOffTimeout = 3e4;
             var turnOffVoiceFn;
-            var dndInitMousePos = [0, 0];
+            var dndInitMousePos2 = [0, 0];
             var dndIsDown = false;
             var btnWasMoved = false;
             var afterMouseMove = false;
@@ -3701,7 +4874,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }, turnOffTimeout);
             }
             setTurnOffVoiceTimeout();
-            var switchToLowVolumeStateTimer = null;
             var pulsatingAnimation = "";
             var pulsatingMicAnimation = "";
             var pulsatingTriangleMicAnimation = "";
@@ -3717,21 +4889,23 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             var rootEl = options2.rootEl || document.createElement("div");
             var body = document.getElementsByTagName("body")[0];
             var btn = document.createElement("div");
-            var noWiFiChatIcon = "<svg width=\"35\" height=\"35\" viewBox=\"0 0 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path d=\"M7.90233 10.4566C7.52988 9.72656 6.63602 9.42857 5.90602 9.78613C4.95254 10.2629 4.02887 11.0525 3.32866 11.708C2.71784 12.2593 2.68803 13.2127 3.23926 13.8086C3.53722 14.1215 3.93946 14.2854 4.34171 14.2854C4.69926 14.2854 5.05681 14.1513 5.35477 13.898C5.65273 13.6298 6.54661 12.7956 7.24682 12.4529C7.97682 12.0805 8.27478 11.1866 7.91723 10.4566H7.90233Z\" />\n        <path d=\"M32.1414 11.4398C28.1636 7.92391 23.0983 5.9872 17.884 5.9872C15.4258 5.9872 13.0273 6.40437 10.733 7.22376C10.6883 7.23866 10.6436 7.28335 10.5989 7.31315L8.40888 4.97415C7.84276 4.37823 6.9042 4.33355 6.30828 4.89967C5.71236 5.4658 5.68256 6.40434 6.23379 7.00026L27.091 29.3472C27.3889 29.6601 27.7763 29.824 28.1785 29.824C28.5361 29.824 28.9085 29.6899 29.1916 29.4217C29.7875 28.8556 29.8173 27.917 29.2661 27.3211L18.2714 15.5368C21.5638 15.6411 24.6328 17.0266 26.9718 19.4848C27.2698 19.7976 27.6571 19.9466 28.0444 19.9466C28.4169 19.9466 28.7893 19.8127 29.0724 19.5296C29.6683 18.9635 29.6981 18.0248 29.132 17.4288C26.1375 14.2705 22.1299 12.5424 17.884 12.5424C17.1391 12.5424 16.3942 12.6019 15.6642 12.7062C15.6642 12.7062 15.6493 12.7062 15.6344 12.7062L12.8187 9.68189C14.4575 9.20515 16.1558 8.9519 17.884 8.9519C22.3683 8.9519 26.7334 10.6205 30.1749 13.6597C30.4579 13.913 30.8155 14.0322 31.1581 14.0322C31.5753 14.0322 31.9775 13.8682 32.2755 13.5256C32.8267 12.9148 32.7671 11.9613 32.1414 11.425V11.4398Z\" />\n        <path d=\"M12.2079 15.1643C11.7908 14.4492 10.882 14.2109 10.1669 14.628C8.94526 15.3282 7.8279 16.2072 6.82973 17.2203C6.24871 17.8013 6.26361 18.7548 6.82973 19.3209C7.12769 19.6039 7.50014 19.7529 7.87259 19.7529C8.24504 19.7529 8.64731 19.6039 8.93037 19.306C9.74976 18.4717 10.6585 17.7715 11.6418 17.1905C12.3569 16.7733 12.5953 15.8645 12.1781 15.1494L12.2079 15.1643Z\" />\n        <path d=\"M16.7666 20.3637C16.5282 19.5741 15.694 19.1421 14.9044 19.3805C13.355 19.8572 11.8354 21.2874 11.0756 22.0919C10.5094 22.6878 10.5243 23.6263 11.1352 24.1924C11.4182 24.4605 11.7907 24.6097 12.1631 24.6097C12.5505 24.6097 12.9527 24.4607 13.2358 24.1478C14.1595 23.1795 15.1576 22.4346 15.7833 22.2409C16.5729 22.0025 17.005 21.1682 16.7666 20.3786V20.3637Z\" />\n        <path d=\"M17.7499 29.7644C18.7785 29.7644 19.6122 28.9307 19.6122 27.9021C19.6122 26.8737 18.7785 26.0399 17.7499 26.0399C16.7214 26.0399 15.8877 26.8737 15.8877 27.9021C15.8877 28.9307 16.7214 29.7644 17.7499 29.7644Z\"/>\n        </svg>\n        ";
-            var disconnectedChatIcon = "\n        <svg class=\"alan-btn_disconnected-chat-icon-rotate\" width=\"35\" height=\"35\" viewBox=\"0 0 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path opacity=\"0.8\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M24.0579 3.47502C18.5874 0.922942 12.1534 1.67973 7.4383 5.76748C2.7232 9.85523 1.24337 15.2725 2.34798 20.767C3.45259 26.2615 7.87342 31.0097 13.2994 32.4594C19.715 34.174 26.6107 31.7302 30.2577 26.2615C26.9893 30.6213 20.7089 33.242 15.1228 32.2771C9.62181 31.3275 4.71002 26.606 3.45259 21.1573C2.11284 15.3541 3.59462 10.949 8.37598 6.57398C13.1573 2.19898 22.9638 1.8344 28.2519 8.2146C29.2614 9.43264 30.6224 11.6781 30.9871 14.4125C31.1694 15.5063 31.1694 15.6886 31.3518 16.6C31.3518 16.9646 31.7165 17.3292 32.0812 17.3292C32.6282 17.3292 33.0612 16.918 32.9929 16.2354C32.4459 10.7667 29.0622 5.80967 24.0579 3.47502Z\" fill=\"#B8B6B6\"/>\n        </svg>";
-            var sendChatIcon = "\n        <svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path d=\"M28.0134 15.9238L8.98646 6.40981C7.82892 5.83162 6.75249 5.99963 6.17778 6.77248C5.89042 7.15832 5.61697 7.85122 5.94952 8.96241L8.09542 16.1092C8.39668 17.1138 8.39668 18.8797 8.09542 19.8843L5.94952 27.0311C5.61697 28.1423 5.88926 28.8363 6.17662 29.2222C6.51959 29.681 7.04564 29.9348 7.65743 29.9348C8.07109 29.9348 8.51834 29.8166 8.9853 29.5837L28.0134 20.0697C28.9635 19.5946 29.5093 18.838 29.5093 17.9968C29.5093 17.1555 28.9647 16.3989 28.0134 15.9238ZM8.27386 27.3486L10.3155 20.5494C10.4383 20.1403 10.5217 19.6606 10.575 19.1554H16.6868C17.3276 19.1554 17.8455 18.6375 17.8455 17.9968C17.8455 17.356 17.3276 16.8381 16.6868 16.8381H10.575C10.5217 16.3329 10.4395 15.8532 10.3155 15.4441L8.27386 8.64493L26.9775 17.9968L8.27386 27.3486Z\" fill=\"#B8B6B6\"/>\n        </svg>";
-            var chatMicIcon = "\n        <svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <path d=\"M18.2623 24.0476C16.7915 24.0458 15.3814 23.4608 14.3414 22.4208C13.3014 21.3808 12.7164 19.9707 12.7147 18.5V10.7333C12.7147 9.26204 13.2992 7.85099 14.3395 6.81061C15.3799 5.77024 16.791 5.18576 18.2623 5.18576C19.7336 5.18576 21.1446 5.77024 22.185 6.81061C23.2254 7.85099 23.8099 9.26204 23.8099 10.7333V18.5C23.8081 19.9707 23.2231 21.3808 22.1831 22.4208C21.1431 23.4608 19.733 24.0458 18.2623 24.0476ZM18.2623 7.4048C17.3798 7.40576 16.5337 7.75676 15.9097 8.38078C15.2857 9.00479 14.9347 9.85086 14.9337 10.7333V18.5C14.9337 19.3828 15.2844 20.2294 15.9086 20.8536C16.5329 21.4778 17.3795 21.8285 18.2623 21.8285C19.1451 21.8285 19.9917 21.4778 20.6159 20.8536C21.2401 20.2294 21.5908 19.3828 21.5908 18.5V10.7333C21.5899 9.85086 21.2389 9.00479 20.6148 8.38078C19.9908 7.75676 19.1448 7.40576 18.2623 7.4048ZM28.2479 18.5C28.2479 18.2057 28.131 17.9235 27.923 17.7154C27.7149 17.5073 27.4327 17.3905 27.1384 17.3905C26.8441 17.3905 26.5619 17.5073 26.3539 17.7154C26.1458 17.9235 26.0289 18.2057 26.0289 18.5C26.0289 20.5598 25.2106 22.5353 23.7541 23.9918C22.2976 25.4483 20.3221 26.2666 18.2623 26.2666C16.2024 26.2666 14.227 25.4483 12.7704 23.9918C11.3139 22.5353 10.4956 20.5598 10.4956 18.5C10.4956 18.2057 10.3788 17.9235 10.1707 17.7154C9.9626 17.5073 9.68039 17.3905 9.38613 17.3905C9.09187 17.3905 8.80966 17.5073 8.60158 17.7154C8.39351 17.9235 8.27661 18.2057 8.27661 18.5C8.27661 21.1483 9.32867 23.6882 11.2013 25.5609C13.074 27.4336 15.6139 28.4856 18.2623 28.4856C20.9106 28.4856 23.4505 27.4336 25.3232 25.5609C27.1959 23.6882 28.2479 21.1483 28.2479 18.5ZM19.3718 30.7047V27.3761C19.3718 27.0818 19.2549 26.7996 19.0468 26.5916C18.8387 26.3835 18.5565 26.2666 18.2623 26.2666C17.968 26.2666 17.6858 26.3835 17.4777 26.5916C17.2696 26.7996 17.1528 27.0818 17.1528 27.3761V30.7047C17.1528 30.9989 17.2696 31.2811 17.4777 31.4892C17.6858 31.6973 17.968 31.8142 18.2623 31.8142C18.5565 31.8142 18.8387 31.6973 19.0468 31.4892C19.2549 31.2811 19.3718 30.9989 19.3718 30.7047Z\" fill=\"#171717\"/>\n        </svg>\n        <div class=\"alan-text-chat__animated-btn-bars\">\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-3\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-2\"></div>\n            <div class=\"alan-text-chat__bar alan-text-chat__bar-1\"></div>\n        </div>";
-            var chatNoMicIcon = "<svg width=\"36\" height=\"36\" viewBox=\"0 0 36 36\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.9675 16.3602V18.6166C12.9692 20.0539 13.541 21.432 14.5574 22.4483C15.5738 23.4647 16.9518 24.0365 18.3892 24.0382C19.2643 24.0371 20.1175 23.8248 20.8804 23.4294L19.0569 21.8003C18.8389 21.846 18.6153 21.8695 18.3892 21.8695C17.5264 21.8695 16.699 21.5268 16.089 20.9168C15.4789 20.3067 15.1362 19.4793 15.1362 18.6166V18.2976L12.9675 16.3602ZM21.6421 16.7466V11.0263C21.6412 10.1638 21.2982 9.33696 20.6883 8.72712C20.0785 8.11727 19.2516 7.77424 18.3892 7.7733C17.5267 7.77424 16.6999 8.11727 16.09 8.72712C15.5048 9.31233 15.1653 10.0974 15.138 10.9219L13.2678 9.24713C13.5339 8.48102 13.9711 7.77698 14.5555 7.1926C15.5723 6.17585 16.9513 5.60464 18.3892 5.60464C19.8271 5.60464 21.2061 6.17585 22.2228 7.1926C23.2396 8.20935 23.8108 9.58837 23.8108 11.0263V18.6166C23.8108 18.6404 23.8106 18.6643 23.8102 18.6882L21.6421 16.7466ZM22.5782 24.9462C21.345 25.7623 19.89 26.2068 18.3892 26.2068C16.3761 26.2068 14.4455 25.4071 13.022 23.9837C11.5986 22.5602 10.7989 20.6296 10.7989 18.6166C10.7989 18.329 10.6847 18.0532 10.4813 17.8498C10.2779 17.6465 10.0021 17.5322 9.71457 17.5322C9.42699 17.5322 9.15118 17.6465 8.94783 17.8498C8.74448 18.0532 8.63024 18.329 8.63024 18.6166C8.63024 21.2048 9.65841 23.687 11.4886 25.5172C13.0613 27.0899 15.1156 28.0704 17.3048 28.3151V30.5441C17.3048 30.8317 17.4191 31.1075 17.6224 31.3109C17.8258 31.5142 18.1016 31.6285 18.3892 31.6285C18.6768 31.6285 18.9526 31.5142 19.1559 31.3109C19.3593 31.1075 19.4735 30.8317 19.4735 30.5441V28.3151C21.2027 28.1218 22.8477 27.4695 24.2378 26.4288L22.5782 24.9462ZM27.5342 22.0231L25.7589 20.4332C25.9042 19.8436 25.9794 19.2339 25.9794 18.6166C25.9794 18.329 26.0937 18.0532 26.297 17.8498C26.5004 17.6465 26.7762 17.5322 27.0638 17.5322C27.3514 17.5322 27.6272 17.6465 27.8305 17.8498C28.0339 18.0532 28.1481 18.329 28.1481 18.6166C28.1481 19.7909 27.9364 20.9434 27.5342 22.0231Z\" fill=\"#B8B6B6\"/>\n        <path d=\"M8.18825 6.56812L31.2883 27.1759C31.8123 27.6433 31.8581 28.4471 31.3906 28.9711C30.9232 29.4951 30.1194 29.5409 29.5954 29.0735L6.49538 8.46573C5.97137 7.99826 5.92553 7.1945 6.39301 6.67049C6.86048 6.14648 7.66424 6.10065 8.18825 6.56812Z\" fill=\"#B8B6B6\"/>\n        </svg>\n        ";
-            var micIconSrc = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH9SURBVHgB7dvvUcIwGMfxByfADdjAEdQN3EA2YATcAJ2AEXADdALcgG4AGzwm13DQkNKWQBvK93OXF4W0Z36mf5IUEQAAAAAAAAAAgPOo6ocpS91bmfIuOM2ENHJhlVnbOoIwF1CVleCYCWas9U0kEQ+SjibXuDdJxEASYbtVg+rbwWDwKAm41QDFBJjE357SKXyTCDASAUYiwEgEGIkAIxFgJAKMRICRWgvQTRZs3IzLxef2rn38zmlxqmoT+L6Rpse/ltbGk36j/bFsKJRTqvZva6zc2TXQtHfofbSV+rYVx2pNmwFm3vbI2/6R+r4rjvUnLWkzQL9Rz972l9T3WXGsTPrGTsN794FloM5Uq00D+/kLUb28Cw8DYbwE6k1LgrOPKJNA/dBaykj6SItrvdZaAzcAzZc3bTBzVyYl9YZ6vJK3kL6yPS7QW+ZyJhvW3fS+HdPAWaDRiyYNdz1vecl/xs0oOe12p3Plxd+d2mX7t/482MnKlutt9i48CnydSf5M+Cv7xxFb78mUsSnDkn1ezeAjk3uh+Y0i1JOaWuu9vi/jTueZns/u29kwLhma98Z5g+CWpjwLirT4/Oezn01S63HJvNrhs4kdbqfyKoePKf1IBBiJACMRYCQCjESAkVIO8HDhKBM0o/tZFzsTzY9sAAAAAAAAAABAjH+9EqX09fBHaQAAAABJRU5ErkJggg==";
-            var alanLogoIconSrc = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2ctAAAFtElEQVR4Ae3dL4wcZRjH8WeRKJJTTRBbc4JgkK26UCSXVIHkUBgS2uBAcCQIDAGCh8VAgkG0DsFhqAEqoKI1rCCgLiGhgYA53rd932S7bXdmdmfe3/vn+0kmW45pc7179tvZm3dmzQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0ZWaNOzs723cPJ247ZxrnZ7PZ0hr1hOFlt/1oOp9Zw5oeQFe/C+7habf97rY/TOPAfR4H1qjWC3i48mtlBd+xRjU7gKF+eysfooICLRfw8BEf+9Z0mqxgkwP4iPpFd9122zSarGCrBTzc8P9uuO1f02iugs0N4Ib6Rf+57RfTaK6CLRbwsMc+PxsVTKKpAexRv0hdwVesEc0MoPum+sHrU79IWcFja0RLBbxo/eoX+Qr+ZBrzVirYxACG+l2w4XwF/zKNY/d5P2WVa6WAL9iw+q1SnaKbu+0Nq1z1Axjq97xt747pTtFdqb2CLRRwyAuPx1FV0A9f1RWsegB3OPZbp1yoUHUFay/gGPWLqOAEqh3AEesXUcEJ1FzAMesXUcGRVTmAE9Qv8hVULdeqsoK1FnCK+kXKCla3UKG6AZywfpFftKoaQl/BuVWkxgIe2fRYrjWSqgYwXGS+b9NTLtc6qqmCtRVwymO/dcoKVnMxezUDGBabpqhfxNL9EdRUwJT1izgW3FEVAzhgqf3YfAU/N40qKlhLARX1827PZrPX3OPSNIqvYPEDKKyf91V4fNU0iq9gDQVU1e97V7/f/C/c44ndv8egQtEVLHoAxfW7vvbf75pG0RUsvYDK+p2ufoAKbqfYAcysfpGygpetQEUO4BYXmY/pofpF4gp+aAUqtYBDLzIfix+86x37qF4RF3kxe3EDmGC51SaPrV8U7ni/MI3iLmYvsYDK+t3oue9Vt/1p6c2tsKX7RQ1gqN+LpnGtq36R288P30emUdTS/dIKqHrhceqGqm/9oo9NU8GiLmAqZgDFx37XbCAq2E9JBSypfhEV7FDEAJZWv4gKdiulgCXW7x73+/3ZkaWlV0QFsx9Acf0WNg7VKbrsK1hCAVX1u+nqdcdG4P6chWlO0WVfwazfL9g9e59xD9+YxqfW7wXEaRiwjcKSKcVbgfm/w3O5vidx7gPov2EHlp6//8t3A/Zf9DlWFP59/OenOke9Ubb/BIdiHJjG0Ftv9D1MUB0LZnsxe87HgJ+Yhq/f3WG/xfbcN7jzFCHLtR6W5QC6b+aRe3jWNLa98dAl93k/2WM/VQUv57h0P9cCqpaY/2DD6xf54eu8G3+o4MI0slu6n90AhvrNLT3/hjS7/tgl9wpmdwFTjgVUPUu3OfZb17eCS9O9H1xWFcxqAMX1G+t94S6FszddVAsVsqpgbgVUPTvHvOOpr2CfV8TKhQrZVDCbASz82G/dxXCzzC7NVzCnAtZQv1WdP5ymgpkMoHs2vmn11C/ap4Ld5APovgjn3MPrpjH13e77VvCqachv9ZtDAf399eaWnn/TmanqF/WqYFhNs7T05BezSwcwnCBXfQF2Wuk8wFHP/VSrVY5NSF1A1bGf/6Fzr2t8R7AXbqS0kXChgq/gFRORrQcM9fvVNL6w3c96DOGH/T03ZH9v2km8aPV8OB5NSlnAkk+5DeXPjPRdqHBi6cmW7ksK2Fj9Il+/t6ngg1QFbKl+0ZDlWieWnqSCyQsorN8/bvvadAPo9a3g3DRfo+QVVBRQVb9bph0+r+9ChaVpFq0mr2DSAgqf2f6Um7/FhnoAo7e6bvUWvlY37f5QpJS0gqkLqFxwkMvweS917RAqqFiokLSCyQoYLjK/Zen5+n1p+fmg684L4bYa/l8MRQWTXMyesoDvm8bUCw62lfNyLT/wVb0zOwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANfsfb80MpE9p2rYAAAAASUVORK5CYII=";
-            var roundedTriangleSecondLayerSrc = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZTwvdGl0bGU+CiAgICA8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCB4MT0iMTAwJSIgeTE9IjMuNzQ5Mzk5NDZlLTMxJSIgeDI9IjIuODYwODIwMDklIiB5Mj0iOTcuMTM5MTc5OSUiIGlkPSJsaW5lYXJHcmFkaWVudC0xIj4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjEyIiBvZmZzZXQ9IjAlIj48L3N0b3A+CiAgICAgICAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMwMDAwMDAiIHN0b3Atb3BhY2l0eT0iMC4wNCIgb2Zmc2V0PSIxMDAlIj48L3N0b3A+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJBbGFuLUJ1dHRvbi0vLUFuaW1hdGlvbi0vLWJ1dHRvbi1pbm5lci1zaGFwZSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPHBhdGggZD0iTTQwLjEwMDU0MjIsOSBMNDAuMTAwNTQyMiw5IEM1MC4wNzA0NzUxLDkgNTkuMTUxNjIzNSwxNC43MzM3OTM4IDYzLjQzODA5OCwyMy43MzUyMjE0IEw3MC40MjIwMjY3LDM4LjQwMTE5NyBDNzUuMTcxMDE0NSw0OC4zNzM4ODQ0IDcwLjkzNjM2OTMsNjAuMzA4MTYwMSA2MC45NjM2ODE5LDY1LjA1NzE0NzggQzU4LjI3NzU5NDksNjYuMzM2MjYwOCA1NS4zMzk5NzQ0LDY3IDUyLjM2NDg3ODksNjcgTDI3LjgzNjIwNTQsNjcgQzE2Ljc5MDUxMDQsNjcgNy44MzYyMDU0Myw1OC4wNDU2OTUgNy44MzYyMDU0Myw0NyBDNy44MzYyMDU0Myw0NC4wMjQ5MDQ1IDguNDk5OTQ0NTksNDEuMDg3Mjg0IDkuNzc5MDU3NiwzOC40MDExOTcgTDE2Ljc2Mjk4NjQsMjMuNzM1MjIxNCBDMjEuMDQ5NDYwOCwxNC43MzM3OTM4IDMwLjEzMDYwOTIsOSA0MC4xMDA1NDIyLDkgWiIgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIj48L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPg==\n";
-            var circleSecondLayerSrc = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1pbm5lci1zaGFwZS1zcGVha2luZyBiYWNrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IHgxPSIxMDAlIiB5MT0iMy43NDkzOTk0NmUtMzElIiB4Mj0iMi44NjA4MjAwOSUiIHkyPSI5Ny4xMzkxNzk5JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPgogICAgICAgICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMTIiIG9mZnNldD0iMCUiPjwvc3RvcD4KICAgICAgICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgc3RvcC1vcGFjaXR5PSIwLjA0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLWlubmVyLXNoYXBlLXNwZWFraW5nLWJhY2siIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxjaXJjbGUgaWQ9ImlubmVyLWJnIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTEpIiBjeD0iNDAiIGN5PSI0MCIgcj0iMzIiPjwvY2lyY2xlPgogICAgPC9nPgo8L3N2Zz4=\n";
             var micIconDiv = document.createElement("div");
             var unreadChatMsgCount = 0;
-            var chatHolderDiv = document.createElement("div");
+            var chatHolderDiv = createDiv({ id: "alan-btn-chat-holder" });
+            var chatDivWrapper = document.createElement("div");
+            chatDivWrapper.id = "alan-text-chat-wrapper";
+            var chatSideBar = document.createElement("div");
+            chatSideBar.id = "alan-text-chat-side-bar";
+            chatSideBar.classList.add("alan-btn__chat-side-bar");
+            var chatSideBarHeader = document.createElement("div");
+            chatSideBarHeader.classList.add("alan-btn__side-bar-header");
+            chatSideBar.appendChild(chatSideBarHeader);
+            chatDivWrapper.appendChild(chatSideBar);
+            chatHolderDiv.appendChild(chatDivWrapper);
             var chatDiv = document.createElement("div");
             chatDiv.id = "alan-text-chat";
-            chatHolderDiv.appendChild(chatDiv);
+            chatDiv.classList.add("alan-btn__popup-chat");
+            chatDivWrapper.appendChild(chatDiv);
             var chatNotificationsBubble = document.createElement("div");
             chatNotificationsBubble.id = "chat-notifications-bubble";
             chatNotificationsBubble.classList.add("alan-btn__chat-notifications-bubble");
@@ -3797,7 +4971,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             var bottomBtnPos;
             var topBtnPos;
             var initRightPos;
-            var btnZIndex;
             var btnIconsZIndex;
             var btnTextPanelsZIndex;
             var btnBgLayerZIndex;
@@ -3867,23 +5040,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 return value;
             }
-            function findHighestZIndex() {
-                var elements = document.getElementsByTagName("*");
-                var defaultZIndex = 4;
-                for (var i2 = 0; i2 < elements.length; i2++) {
-                    var zindex = Number.parseInt(document.defaultView.getComputedStyle(elements[i2], null).getPropertyValue("z-index"), 10);
-                    if (zindex > defaultZIndex) {
-                        defaultZIndex = zindex;
-                    }
-                }
-                return defaultZIndex;
-            }
-            btnZIndex = options2.zIndex || findHighestZIndex() + 1;
-            btnIconsZIndex = btnZIndex - 2;
-            btnTextPanelsZIndex = btnZIndex - 1;
-            btnBgLayerZIndex = btnZIndex - 3;
-            if (btnZIndex) {
-                rootEl.style.zIndex = btnZIndex;
+            uiState.btn.zIndex = options2.zIndex || findHighestZIndex() + 1;
+            btnIconsZIndex = uiState.btn.zIndex - 2;
+            btnTextPanelsZIndex = uiState.btn.zIndex - 1;
+            btnBgLayerZIndex = uiState.btn.zIndex - 3;
+            if (uiState.btn.zIndex) {
+                rootEl.style.zIndex = uiState.btn.zIndex;
             }
             rootEl.style.position = options2.position ? options2.position : "fixed";
             setButtonPosition();
@@ -3908,7 +5070,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     isRightAligned = false;
                 }
                 if (options2.top !== void 0) {
-                    isTopAligned = true;
+                    uiState.btn.isTopAligned = true;
                     isBottomAligned = false;
                 }
                 if (isLeftAligned) {
@@ -3922,13 +5084,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 setDefaultBtnHorizontalPosition();
             }
             function setDefaultBtnHorizontalPosition() {
-                if (isTopAligned) {
+                if (uiState.btn.isTopAligned) {
                     topBtnPos = setDefautlPositionProps(options2.top !== void 0 ? options2.top : btnModes[mode].topPos);
                 }
                 else {
                     bottomBtnPos = setDefautlPositionProps(options2.bottom !== void 0 ? options2.bottom : btnModes[mode].bottomPos);
                 }
-                if (isTopAligned) {
+                if (uiState.btn.isTopAligned) {
                     rootEl.style.top = topBtnPos;
                     rootEl.style.setProperty("bottom", "");
                 }
@@ -3941,13 +5103,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 if (textChatIsHidden) {
                     return;
                 }
-                el.style.zIndex = btnZIndex + 2;
+                el.style.zIndex = uiState.btn.zIndex + 2;
                 if (isMobile()) {
                     return;
                 }
                 setTimeout(function () {
                     var _a, _b;
-                    var defaultMargin = defaultChatMargin;
+                    var defaultMargin = uiState.textChat.defaults.chatMargin;
                     var chatHeight2 = el.clientHeight;
                     var canPutTextChatInSavedPos = false;
                     var savedPosTop = +getTextChatPositionAfterResize("top");
@@ -4051,7 +5213,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     el.style.right = (absolutePosition ? 0 : parseInt(rootEl.style.right, 10)) + _btnSize + 10 + "px";
                 }
                 if (!topPos) {
-                    if (isTopAligned) {
+                    if (uiState.btn.isTopAligned) {
                         el.style.bottom = "";
                         el.style.top = (absolutePosition ? 0 : parseInt(rootEl.style.top, 10)) + _btnSize / 2 + "px";
                     }
@@ -4115,7 +5277,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             btn.style.position = "absolute";
             var transitionCss = "transform 0.4s ease-in-out, opacity 0.4s ease-in-out";
             applyBtnSizeOptions(btnSize);
-            if (isTopAligned) {
+            if (uiState.btn.isTopAligned) {
                 btn.style.top = "0";
             }
             else {
@@ -4125,7 +5287,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             btn.style.borderRadius = "50%";
             btn.style.textAlign = "center";
             btn.style.transition = transitionCss;
-            btn.style.zIndex = btnZIndex;
+            btn.style.zIndex = uiState.btn.zIndex;
             if (options2 && options2.tabIndex) {
                 btn.tabIndex = options2.tabIndex;
             }
@@ -4197,7 +5359,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 processStateBtnIconImg,
                 replyStateBtnIconImg
             ];
-            defaultStateBtnIconImg.src = micIconSrc;
+            defaultStateBtnIconImg.src = btnIcons.micIconSrc;
             for (var i = 0; i < logoImgs.length; i++) {
                 var logoImgEl = logoImgs[i];
                 logoImgEl.style.minHeight = "100%";
@@ -4271,77 +5433,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             setStylesForBtnImage(lowVolumeMicIconImg, { height: "100%", top: "0%", altText: " low volume icon", src: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1taWM8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iQWxhbi1CdXR0b24tLy1BbmltYXRpb24tLy1idXR0b24tbm8tbWljIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8ZyBpZD0iaWNvbiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjIuMDAwMDAwLCAxOS4wMDAwMDApIiBmaWxsPSIjRkZGRkZGIiBmaWxsLXJ1bGU9Im5vbnplcm8iPgogICAgICAgICAgICA8cGF0aCBkPSJNMzIsMTguNDczNjg0MiBDMzIsMjUuNzE5NDczNyAyNi43OCwzMS42OTI2MzE2IDIwLDMyLjY5ODQyMTEgTDIwLDQwIEMyMCw0MS4xMDQ1Njk1IDE5LjEwNDU2OTUsNDIgMTgsNDIgQzE2Ljg5NTQzMDUsNDIgMTYsNDEuMTA0NTY5NSAxNiw0MCBMMTYsMzIuNjk4NDIxMSBDOS4yMiwzMS42OTI2MzE2IDQsMjUuNzE5NDczNyA0LDE4LjQ3MzY4NDIgTDQsMTggQzQsMTYuODk1NDMwNSA0Ljg5NTQzMDUsMTYgNiwxNiBDNy4xMDQ1Njk1LDE2IDgsMTYuODk1NDMwNSA4LDE4IEw4LDE4LjQ3MzY4NDIgQzgsMjQuMTQxODY5OCAxMi40NzcxNTI1LDI4LjczNjg0MjEgMTgsMjguNzM2ODQyMSBDMjMuNTIyODQ3NSwyOC43MzY4NDIxIDI4LDI0LjE0MTg2OTggMjgsMTguNDczNjg0MiBMMjgsMTggQzI4LDE2Ljg5NTQzMDUgMjguODk1NDMwNSwxNiAzMCwxNiBDMzEuMTA0NTY5NSwxNiAzMiwxNi44OTU0MzA1IDMyLDE4IEwzMiwxOC40NzM2ODQyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjgiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTE4LC00LjUyNzM3MjYzZS0xNCBDMjEuMzEzNzA4NSwtNC42MTg1Mjc3OGUtMTQgMjQsMi43NTY5ODMzOCAyNCw2LjE1Nzg5NDc0IEwyNCwxOC40NzM2ODQyIEMyNCwyMS44NzQ1OTU2IDIxLjMxMzcwODUsMjQuNjMxNTc4OSAxOCwyNC42MzE1Nzg5IEMxNC42ODYyOTE1LDI0LjYzMTU3ODkgMTIsMjEuODc0NTk1NiAxMiwxOC40NzM2ODQyIEwxMiw2LjE1Nzg5NDc0IEMxMiwyLjc1Njk4MzM4IDE0LjY4NjI5MTUsLTQuNTI3MzcyNjNlLTE0IDE4LC00LjYxODUyNzc4ZS0xNCBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC42Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLjgxLDMuMjcgTDM0LjczLDM0LjE5IEMzNS40MzE0MDE2LDM0Ljg5MTQwMTYgMzUuNDMxNDAxNiwzNi4wMjg1OTg0IDM0LjczLDM2LjczIEMzNC4wMjg1OTg0LDM3LjQzMTQwMTYgMzIuODkxNDAxNiwzNy40MzE0MDE2IDMyLjE5LDM2LjczIEwxLjI3LDUuODEgQzAuNTY4NTk4MzY4LDUuMTA4NTk4MzcgMC41Njg1OTgzNjgsMy45NzE0MDE2MyAxLjI3LDMuMjcgQzEuOTcxNDAxNjMsMi41Njg1OTgzNyAzLjEwODU5ODM3LDIuNTY4NTk4MzcgMy44MSwzLjI3IFoiIGlkPSJQYXRoIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n" });
             setStylesForBtnImage(noVoiceSupportMicIconImg, { height: "100%", top: "0%", altText: " no voice support icon", src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAIuSURBVHgB7dvxUYMwFAbwpxMwAhvoBtVJygZ1A92gI1Qn6AjoBO0GsEG7wfPlgCtNA7xASzX5fnf5oyThLp+BQDiJAAAAAAAAAAAAAAAAxmHmDyk5n+ykLAn6SUhpHVaXwrQhcBsIr5FTLGSwb1IOmpkj9RnrxXE5+1x+fH7Pwyw0+PKSLLpCrGeq1oFiwNWiUGhCZE8UC22I7IliogmRPVFshkJkTxSjvhDZE8WqJ0QEqNURIgL0MTVEgmkhElTGhkix4WqzoNlYWFp1k1fhvvMHgc9n2cFRPzXAou/8t/JAM7EH/SD66ocM9bfrb+WR7kTGm1iHjqR3HDjXbOYMsLR+p9bvPentr3iuSeYM0B7Uwvr9RXqfA+cqKTRyma2sdSB3tMlZJ7X62Ru3Qa7CiSOIF6uN9pmw4NMuTjYUcDAcM8wEkTjaZdasytm9AfHsOL6lUJkZx5c2yr7a2ZlSyGSAa8egt5qBK0JU/TH+Na7uha4QzLHBm7+0ee8Iz/Sf/XlwtjeRtnq2mVU4dVSXUr6l/NDpccS0e5KSSekKybR9lReQkmLAV9hU7ZiFKcWCq8t5zeOtWfndOWhczcYN6+VSFq2+RfQhGnUYWUeY5ph5m0k6+iHENjs9RXuE2OYbYN3HFeKOYjQmwLrfRYgUo7EB1n2bEM03khXd0F0epDXs0Obaovd1ty39UCDAif5ygO0PRyWBH64eqJuFAP9kAwAAAAAAAAAAAAAAU/wC52820szaQtwAAAAASUVORK5CYII=" });
             setStylesForBtnImage(offlineIconImg, { height: "100%", top: "0%", altText: " offline icon", src: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iODBweCIgaGVpZ2h0PSI4MHB4IiB2aWV3Qm94PSIwIDAgODAgODAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDUyLjEgKDY3MDQ4KSAtIGh0dHA6Ly93d3cuYm9oZW1pYW5jb2RpbmcuY29tL3NrZXRjaCAtLT4KICAgIDx0aXRsZT5BbGFuIEJ1dHRvbiAvIEFuaW1hdGlvbiAvIGJ1dHRvbi1uby1uZXR3b3JrPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGcgaWQ9IkFsYW4tQnV0dG9uLS8tQW5pbWF0aW9uLS8tYnV0dG9uLW5vLW5ldHdvcmsiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPgogICAgICAgIDxnIGlkPSJpY29uIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMS4wMDAwMDAsIDIyLjAwMDAwMCkiIGZpbGw9IiNGRkZGRkYiPgogICAgICAgICAgICA8cGF0aCBkPSJNMzMsMiBDMzQuNjU2ODU0MiwyIDM2LDMuMzQzMTQ1NzUgMzYsNSBMMzYsMjkgQzM2LDMwLjY1Njg1NDIgMzQuNjU2ODU0MiwzMiAzMywzMiBDMzEuMzQzMTQ1OCwzMiAzMCwzMC42NTY4NTQyIDMwLDI5IEwzMCw1IEMzMCwzLjM0MzE0NTc1IDMxLjM0MzE0NTgsMiAzMywyIFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjQiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTIzLDggQzI0LjY1Njg1NDIsOCAyNiw5LjM0MzE0NTc1IDI2LDExIEwyNiwyOSBDMjYsMzAuNjU2ODU0MiAyNC42NTY4NTQyLDMyIDIzLDMyIEMyMS4zNDMxNDU4LDMyIDIwLDMwLjY1Njg1NDIgMjAsMjkgTDIwLDExIEMyMCw5LjM0MzE0NTc1IDIxLjM0MzE0NTgsOCAyMyw4IFoiIGlkPSJTaGFwZSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD4KICAgICAgICAgICAgPHBhdGggZD0iTTEzLDE2IEMxNC42NTY4NTQyLDE2IDE2LDE3LjM0MzE0NTggMTYsMTkgTDE2LDI5IEMxNiwzMC42NTY4NTQyIDE0LjY1Njg1NDIsMzIgMTMsMzIgQzExLjM0MzE0NTgsMzIgMTAsMzAuNjU2ODU0MiAxMCwyOSBMMTAsMTkgQzEwLDE3LjM0MzE0NTggMTEuMzQzMTQ1OCwxNiAxMywxNiBaIiBpZD0iU2hhcGUiIGZpbGwtb3BhY2l0eT0iMC44Ij48L3BhdGg+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0zLDIyIEM0LjY1Njg1NDI1LDIyIDYsMjMuMzQzMTQ1OCA2LDI1IEw2LDI5IEM2LDMwLjY1Njg1NDIgNC42NTY4NTQyNSwzMiAzLDMyIEMxLjM0MzE0NTc1LDMyIDIuMDI5MDYxMjVlLTE2LDMwLjY1Njg1NDIgMCwyOSBMMCwyNSBDLTIuMDI5MDYxMjVlLTE2LDIzLjM0MzE0NTggMS4zNDMxNDU3NSwyMiAzLDIyIFoiIGlkPSJTaGFwZSI+PC9wYXRoPgogICAgICAgICAgICA8cGF0aCBkPSJNNS44MSwxLjI3IEwzNi43MywzMi4xOSBDMzcuNDMxNDAxNiwzMi44OTE0MDE2IDM3LjQzMTQwMTYsMzQuMDI4NTk4NCAzNi43MywzNC43MyBDMzYuMDI4NTk4NCwzNS40MzE0MDE2IDM0Ljg5MTQwMTYsMzUuNDMxNDAxNiAzNC4xOSwzNC43MyBMMy4yNywzLjgxIEMyLjU2ODU5ODM3LDMuMTA4NTk4MzcgMi41Njg1OTgzNywxLjk3MTQwMTYzIDMuMjcsMS4yNyBDMy45NzE0MDE2MywwLjU2ODU5ODM2OCA1LjEwODU5ODM3LDAuNTY4NTk4MzY4IDUuODEsMS4yNyBaIiBpZD0iUGF0aCIgZmlsbC1ydWxlPSJub256ZXJvIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=\n" });
-            var defaultBtnColorOptions = {
-                "idle": {
-                    "background": {
-                        "color": [
-                            "rgb(34, 203, 255)",
-                            "rgb(25, 149, 255)"
-                        ]
-                    },
-                    "hover": {
-                        "color": [
-                            "rgba(0, 70, 255, 0.95)",
-                            "rgba(0, 156,  255, 0.95)"
-                        ]
-                    }
-                },
-                "listen": {
-                    "background": {
-                        "color": [
-                            "rgba(0, 70, 255, 0.95)",
-                            "rgba(0, 156,  255, 0.95)"
-                        ]
-                    },
-                    "hover": {
-                        "color": [
-                            "rgba(0, 70, 255, 0.95)",
-                            "rgb(0, 70, 255)"
-                        ]
-                    }
-                },
-                "process": {
-                    "background": {
-                        "color": [
-                            "rgba(0, 255, 205, 0.95)",
-                            "rgba(0, 115, 255, 0.95)"
-                        ]
-                    },
-                    "hover": {
-                        "color": [
-                            "rgb(0, 115, 255)",
-                            "rgba(0, 115, 255, 0.95)"
-                        ]
-                    }
-                },
-                "reply": {
-                    "background": {
-                        "color": [
-                            "rgba(122, 40, 255, 0.95)",
-                            "rgba(61, 122, 255, 0.95)"
-                        ]
-                    },
-                    "hover": {
-                        "color": [
-                            "rgba(122, 40, 255, 0.95)",
-                            "rgb(122, 40, 255)"
-                        ]
-                    }
-                },
-                "textChat": {
-                    "background": {
-                        "color": ["#1eb6e5", "#1995ff"],
-                        "angle": 45
-                    },
-                    "hover": {
-                        "color": ["#1ba3ce", "#1686e5"],
-                        "angle": 45
-                    },
-                    "shadow": {
-                        "color": ["#6693bc", "#b3c9de"]
-                    }
-                }
-            };
             btnOval1.style.transform = "rotate(-315deg)";
             btnOval2.style.transform = "rotate(-45deg)";
             applySizeSettingsToBlurLayers([btnOval1, btnOval2]);
@@ -4365,7 +5456,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     el.classList.add("alanBtn-oval-bg-default");
                 }
             }
-            var popupCloseIconImgBase64 = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuNzczNDUgNy4wMDAwM0wxMy44Mzk4IDAuOTMzNjA0QzE0LjA1MzQgMC43MjAwMjIgMTQuMDUzNCAwLjM3Mzc0MSAxMy44Mzk4IDAuMTYwMTg2QzEzLjYyNjMgLTAuMDUzMzY4MSAxMy4yOCAtMC4wNTMzOTU1IDEzLjA2NjQgMC4xNjAxODZMNyA2LjIyNjYxTDAuOTMzNjA0IDAuMTYwMTg2QzAuNzIwMDIyIC0wLjA1MzM5NTUgMC4zNzM3NDEgLTAuMDUzMzk1NSAwLjE2MDE4NiAwLjE2MDE4NkMtMC4wNTMzNjgxIDAuMzczNzY4IC0wLjA1MzM5NTUgMC43MjAwNDkgMC4xNjAxODYgMC45MzM2MDRMNi4yMjY1OSA3TDAuMTYwMTg2IDEzLjA2NjRDLTAuMDUzMzk1NSAxMy4yOCAtMC4wNTMzOTU1IDEzLjYyNjMgMC4xNjAxODYgMTMuODM5OEMwLjI2Njk2NCAxMy45NDY2IDAuNDA2OTM2IDE0IDAuNTQ2OTA5IDE0QzAuNjg2ODgxIDE0IDAuODI2ODI3IDEzLjk0NjYgMC45MzM2MzEgMTMuODM5OEw3IDcuNzczNDVMMTMuMDY2NCAxMy44Mzk4QzEzLjE3MzIgMTMuOTQ2NiAxMy4zMTMyIDE0IDEzLjQ1MzEgMTRDMTMuNTkzMSAxNCAxMy43MzMgMTMuOTQ2NiAxMy44Mzk4IDEzLjgzOThDMTQuMDUzNCAxMy42MjYzIDE0LjA1MzQgMTMuMjggMTMuODM5OCAxMy4wNjY0TDcuNzczNDUgNy4wMDAwM1oiIGZpbGw9IiNCQkNGRTciLz4KPC9zdmc+Cg==";
             btnBgDefault.classList.add("alanBtn-bg-default");
             btnBgListening.classList.add("alanBtn-bg-listening");
             btnBgSpeaking.classList.add("alanBtn-bg-speaking");
@@ -4424,475 +5514,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             if (isMobile()) {
                 rootEl.classList.add("mobile");
             }
-            var fixTextChatSizeIfNeeded = function (width, height, doubleMargin) {
-                var margin = doubleMargin ? 2 * defaultChatMargin : defaultChatMargin;
-                if (height !== null && window.innerHeight - defaultChatMargin < height) {
-                    setChatHeight(window.innerHeight - margin);
-                }
-                if (width !== null && window.innerWidth - defaultChatMargin < width) {
-                    setChatWidth(window.innerWidth - margin);
-                }
-            };
-            createAlanStyleSheet();
-            function getStyleSheetMarker(andFlag) {
-                return ".alan-" + getProjectId() + (andFlag ? "" : " ");
-            }
-            function createAlanStyleSheet(webOptions) {
-                var _a;
-                var _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, _65, _66, _67, _68, _69, _70, _71, _72, _73, _74, _75, _76, _77, _78, _79, _80, _81, _82, _83, _84, _85, _86, _87, _88, _89, _90, _91, _92, _93, _94, _95, _96, _97, _98, _99, _100, _101, _102, _103, _104, _105, _106, _107, _108, _109, _110, _111, _112, _113, _114, _115, _116, _117, _118, _119, _120, _121, _122, _123, _124, _125, _126, _127, _128, _129, _130, _131, _132, _133, _134, _135, _136, _137, _138, _139;
-                var style;
-                var keyFrames = "";
-                var projectId = getProjectId();
-                var existingStyleSheet;
-                if (options2.shadowDOM) {
-                    existingStyleSheet = options2.shadowDOM.getElementById("alan-stylesheet-" + projectId);
-                }
-                else {
-                    existingStyleSheet = document.getElementById("alan-stylesheet-" + projectId);
-                }
-                style = document.createElement("style");
-                style.setAttribute("id", "alan-stylesheet-" + projectId);
-                style.type = "text/css";
-                keyFrames += ".alanBtn-root * {  box-sizing: border-box; font-family: ".concat(((_d = (_c = (_b = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _b === void 0 ? void 0 : _b.textChat) === null || _c === void 0 ? void 0 : _c.popup) === null || _d === void 0 ? void 0 : _d.fontFamily) || "Poppins", "; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}");
-                var hoverSelector = !isMobile() ? ":hover" : ":active";
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alanBtn{transform: scale(1); transition: " + transitionCss + ";} .alanBtn" + hoverSelector + "{transform: scale(1.11111);transition:" + transitionCss + ";}.alanBtn:focus {transform: scale(1);" + transitionCss + ";  border: solid 3px #50e3c2;  outline: none;  }";
-                    keyFrames += getStyleSheetMarker(true) + ".alan-btn-disconnected  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
-                    keyFrames += getStyleSheetMarker(true) + ".alan-btn-offline  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
-                    keyFrames += getStyleSheetMarker(true) + ".alan-btn-no-voice-support  .alanBtn" + hoverSelector + "{transform: scale(1);transition:" + transitionCss + ";}";
-                }
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn__page-scrolled .alanBtn {\n                transform: scale(0.4);\n                opacity: 0.5;\n                pointer-events: none;\n                transition: ".concat(transitionCss, ";\n            }");
-                keyFrames += getStyleSheetMarker() + ".alanBtn-recognised-text-holder { position:fixed; transform: translateY(" + (isTopAligned ? "-" : "") + "50%); max-width:236px; font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 18px;  min-height: 40px;  color: #000; font-weight: normal; background-color: #fff; border-radius:10px; box-shadow: 0px 1px 14px rgba(0, 0, 0, 0.35); display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-ms-flex-direction:row;flex-direction:row;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack: activate;-ms-flex-pack: start;justify-content: start;}";
-                keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__left-side { text-align: left;}";
-                keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder.alan-btn-lib__with-text.alan-btn-lib__right-side { text-align: right;}";
-                keyFrames += getStyleSheetMarker() + " .alanBtn-recognised-text-holder .alanBtn-recognised-text-content:not(:empty) {padding: 10px;}";
-                keyFrames += getStyleSheetMarker(true) + ".alanBtn-recognised-text-holder-long  { font-size: 12px!important;line-height: 1.4!important;}  ";
-                keyFrames += getStyleSheetMarker(true) + ".alanBtn-recognised-text-holder-super-long  { font-size: 11px!important;line-height: 1.4!important;}  ";
-                keyFrames += getStyleSheetMarker() + ".alanBtn-text-appearing {  animation: text-holder-appear 800ms ease-in-out forwards;  }";
-                keyFrames += getStyleSheetMarker() + ".alanBtn-text-disappearing {  animation: text-holder-disappear 800ms ease-in-out forwards;    }";
-                keyFrames += getStyleSheetMarker() + ".alanBtn-text-disappearing-immediately {  animation: none; opactity: 0;   }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn-disabled {  pointer-events: none;  opacity: .5;  transition: all .2s ease-in-out;  }";
-                keyFrames += getStyleSheetMarker() + ".shadow-appear {  opacity: 1 !important;  }\n";
-                keyFrames += getStyleSheetMarker() + ".shadow-disappear {  opacity: 0 !important;  transition: all .1s linear !important;  }";
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn-offline .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}";
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn-offline .alanBtn" + hoverSelector + " .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}";
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn-no-voice-support .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}";
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn-no-voice-support .alanBtn" + hoverSelector + " .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}";
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn-permission-denied .alanBtn .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145));}";
-                keyFrames += getStyleSheetMarker(true) + ".alan-btn-permission-denied .alanBtn" + hoverSelector + " .alanBtn-bg-default {  background-image: linear-gradient(122deg,rgb(78,98,126),rgb(91,116,145))!important;}";
-                keyFrames += getStyleSheetMarker() + ".triangleMicIconBg {background-image:url(" + roundedTriangleSecondLayerSrc + "); pointer-events: none;}";
-                keyFrames += getStyleSheetMarker() + ".circleMicIconBg {background-image:url(" + circleSecondLayerSrc + "); pointer-events: none;}";
-                keyFrames += getStyleSheetMarker() + " img {pointer-events: none;}";
-                keyFrames += getStyleSheetMarker() + "" + hoverSelector + " .triangleMicIconBg-default {opacity:0!important;}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-for-alert {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}";
-                keyFrames += getStyleSheetMarker() + ".alan-alert-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:12px;padding-right:24px;text-align: center;width: 220px;background: rgb(255 255 255);position: fixed;left: 50%;transform: translateX(-50%);top: 10%;    color: #000;font-size: 14px;line-height: 18px;}";
-                keyFrames += getStyleSheetMarker() + '.alan-alert-popup__close-btn {background:url("' + popupCloseIconImgBase64 + '") no-repeat center;cursor:pointer; background-size:100% 100%;position: absolute;top: 12px;right: 12px;width: 14px;height: 14px;}';
-                var cssChatHeight = getTextChatSizeAfterResize("height");
-                var cssChatWidth = getTextChatSizeAfterResize("width");
-                fixTextChatSizeIfNeeded(cssChatWidth, cssChatHeight, true);
-                cssChatHeight = getTextChatSizeAfterResize("height");
-                cssChatWidth = getTextChatSizeAfterResize("width");
-                if (cssChatHeight) {
-                    cssChatHeight = "".concat(cssChatHeight, "px");
-                }
-                else {
-                    cssChatHeight = "".concat(migrateHeightFromPercent((_g = (_f = (_e = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _e === void 0 ? void 0 : _e.textChat) === null || _f === void 0 ? void 0 : _f.popup) === null || _g === void 0 ? void 0 : _g.height) || defaultChatHeight, "px");
-                }
-                function migrateHeightFromPercent(val) {
-                    if (val && +val <= 100) {
-                        return defaultChatHeight;
-                    }
-                    return val;
-                }
-                if (cssChatWidth) {
-                    cssChatWidth = "".concat(cssChatWidth, "px");
-                }
-                else {
-                    cssChatWidth = "".concat(((_k = (_j = (_h = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _h === void 0 ? void 0 : _h.textChat) === null || _j === void 0 ? void 0 : _j.popup) === null || _k === void 0 ? void 0 : _k.width) || "400", "px");
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder {\n                position: fixed;\n                height:  ".concat(cssChatHeight, ";\n                min-height: ").concat(((_o = (_m = (_l = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _l === void 0 ? void 0 : _l.textChat) === null || _m === void 0 ? void 0 : _m.popup) === null || _o === void 0 ? void 0 : _o.minHeight) || defaultMinChatHeight, "px;\n                max-height: ").concat(((_r = (_q = (_p = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _p === void 0 ? void 0 : _p.textChat) === null || _q === void 0 ? void 0 : _q.popup) === null || _r === void 0 ? void 0 : _r.maxHeight) || "1200", "px;\n                width: ").concat(cssChatWidth, ";\n                min-width: ").concat(((_u = (_t = (_s = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _s === void 0 ? void 0 : _s.textChat) === null || _t === void 0 ? void 0 : _t.popup) === null || _u === void 0 ? void 0 : _u.minWidth) || defaultMinChatWidth, "px;\n                max-width: ").concat(((_x = (_w = (_v = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _v === void 0 ? void 0 : _v.textChat) === null || _w === void 0 ? void 0 : _w.popup) === null || _x === void 0 ? void 0 : _x.maxWidth) || "1200", "px;\n                display: none;\n                transform: scale(0);\n                opacity: 0;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__openning {\n                transform: scale(0);\n                opacity: 0;\n                animation: text-chat-appear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n            }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("text-chat-appear-anim", "\n            0%{\n                transform: scale(0);\n                opacity: 0;\n            }\n            100%{\n                transform: scale(1);\n                opacity: 1;\n            }\n            ");
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__closing {\n                transform: scale(1);\n                opacity: 1;\n                animation: text-chat-disappear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n            }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("text-chat-disappear-anim", "\n            0%{\n                transform: scale(1);\n                opacity: 1;\n            }\n            100%{\n                transform: scale(0);\n                opacity: 0;\n            }\n            ");
-                keyFrames += ".mobile" + getStyleSheetMarker() + ".alan-btn__chat-holder {\n                position: fixed; \n                height: 100%;\n                min-height: 100%;\n                max-height: 100%;\n                width: 100vw;\n                min-width: 100vw;\n                max-width: 100vw;\n                display: none;\n                top: 0;\n                bottom:0;\n                left:0;\n                right:0;\n                border-radius: 0px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.bottom-none {\n                cursor: ns-resize;\n              }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.top-none {\n                cursor: ns-resize;\n              }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.none-left {\n                cursor: ew-resize;\n              }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.none-right {\n                cursor: ew-resize;\n              }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.top-left {\n                cursor: nwse-resize;\n              }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.bottom-right {\n                cursor: nwse-resize;\n              }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.top-right {\n                cursor: nesw-resize;\n              }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.bottom-left {\n                cursor: nesw-resize;\n              }";
-                var chatBgColor1 = ((_0 = (_z = (_y = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _y === void 0 ? void 0 : _y.textChat) === null || _z === void 0 ? void 0 : _z.popup) === null || _0 === void 0 ? void 0 : _0.backgroundColor) || "rgba(218, 235, 255, 1)";
-                var chatBgColor2 = ((_3 = (_2 = (_1 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _1 === void 0 ? void 0 : _1.textChat) === null || _2 === void 0 ? void 0 : _2.popup) === null || _3 === void 0 ? void 0 : _3.backgroundColor2) || "rgba(255, 255, 255, 1)";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat {\n                height: 100%;\n                position: relative;\n                overflow: hidden;\n                display: flex;\n                width: 100%;\n                min-width: 100%;\n                max-width: 100%;\n                flex: 2;\n                position: relative;\n                flex-direction: column;\n                background: linear-gradient(180deg, ".concat(chatBgColor2, " 0%, ").concat(chatBgColor2, " 15%, ").concat(chatBgColor1, " 70%, ").concat(chatBgColor1, " 100%);\n                box-shadow: 0px 5px 44px rgba(0, 0, 0, 0.15);\n                border-radius: 20px;\n                animation: chat-appear 300ms ease-in-out forwards;\n                transform: scale(1);\n                opacity: 1; \n            }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-1", "\n            0% {\n                opacity: 0; \n                transform: scale(0);\n            }\n            100% {\n                opacity: 1;  \n                transform: scale(1);   \n            }");
-                keyFrames += ".mobile" + getStyleSheetMarker() + ".alan-btn__chat {\n                border-radius: 0px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea-holder {\n                width: 100%;\n                height: ".concat(textareaHolderHeight, "px;\n                max-height: ").concat(textareaHolderHeight, "px;\n                min-height: ").concat(textareaHolderHeight, "px;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-empty-block {\n                flex: 1 1 auto;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper {\n                width: 100%;\n                height: calc(100% - ".concat(chatHeaderHeight + textareaHolderHeight, "px);\n                max-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n                min-height: calc(100% - ").concat(chatHeaderHeight + textareaHolderHeight, "px);\n                overflow-y: scroll;\n                overflow-x: hidden;\n                padding: 20px 10px;\n                display: flex;\n                flex-shrink: 0;\n                flex-direction: column-reverse;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages {\n                display: flex;\n                flex-shrink: 0;\n                flex-direction: column;\n            }";
-                var headerBg = ((_6 = (_5 = (_4 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _4 === void 0 ? void 0 : _4.textChat) === null || _5 === void 0 ? void 0 : _5.header) === null || _6 === void 0 ? void 0 : _6.backgroundColor) || "#FFFFFF";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header {\n                width: 100%;\n                height: ".concat(chatHeaderHeight, "px;\n                max-height: ").concat(chatHeaderHeight, "px;\n                min-height: ").concat(chatHeaderHeight, "px;\n                color: #0f2029;\n                padding: 0px 15px;\n                padding-top: 12px;\n                background: ").concat(headerBg, ";\n                color: ").concat(((_9 = (_8 = (_7 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _7 === void 0 ? void 0 : _7.textChat) === null || _8 === void 0 ? void 0 : _8.header) === null || _9 === void 0 ? void 0 : _9.color) || "#000000", ";\n                text-align: center;\n                text-overflow: ellipsis;\n                white-space: nowrap;\n                position:relative;\n            }");
-                var headerFontSize = ((_12 = (_11 = (_10 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _10 === void 0 ? void 0 : _10.textChat) === null || _11 === void 0 ? void 0 : _11.header) === null || _12 === void 0 ? void 0 : _12.fontSize) || 16;
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-title {\n                max-width: calc(100% - 112px);\n                overflow: hidden;\n                text-overflow: ellipsis;\n                white-space: nowrap;\n                display: inline-block;\n                font-weight: 600;\n                font-size: ".concat(headerFontSize, "px;\n                position: relative;\n                top: ").concat(headerFontSize >= 20 ? "-2" : "0", "px;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-gradient {\n                width: 100%;\n                height: 15px;\n                max-height: 15px;\n                min-height: 15px;\n                position: absolute;\n                left:0;\n                width: 100%;\n                top: ".concat(chatHeaderHeight, "px;\n                background: linear-gradient(180deg, ").concat(headerBg, " 30%, rgba(255, 255, 255, 0) 100%);\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-left-resizer {\n                transition: 300ms opacity ease-in-out;\n                position: absolute;\n                top: 3px;\n                left: 5px;\n                transform: rotate(180deg);\n                pointer-events: none;\n                display: block;\n                opacity: 0;\n                height: 18px;\n                width: 14px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-right-resizer {\n                transition: 300ms opacity ease-in-out;\n                position: absolute;\n                top: 3px;\n                right: 5px;\n                transform: rotate(-90deg);\n                pointer-events: none;\n                display: block;\n                opacity: 0;\n                height: 18px;\n                width: 14px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".with-hover .alan-btn__chat-header-right-resizer {\n                opacity: 0.8;\n                transition: 300ms opacity ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".with-hover .alan-btn__chat-header-left-resizer {\n                opacity: 0.8;\n                transition: 300ms opacity ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".with-hover .alan-btn__chat-header::after {\n                opacity: 0.8;\n                transition: 300ms opacity ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".with-cursors .alan-btn__chat-messages {\n                pointer-events: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn {\n                position: absolute;\n                right: 15px;\n                top: 3px;\n                display: flex;\n                align-items: center;\n                height: ".concat(chatHeaderHeight, "px;\n                font-size: 14px;\n                cursor: pointer;\n            }");
-                if (isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn {\n                    display: none;\n                }";
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn svg path {\n                fill: ".concat(((_18 = (_17 = (_16 = (_15 = (_14 = (_13 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _13 === void 0 ? void 0 : _13.textChat) === null || _14 === void 0 ? void 0 : _14.popup) === null || _15 === void 0 ? void 0 : _15.icons) === null || _16 === void 0 ? void 0 : _16.mute) === null || _17 === void 0 ? void 0 : _17["default"]) === null || _18 === void 0 ? void 0 : _18.fill) || "rgba(8, 8, 8, 1)", ";\n            }");
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn:hover svg path {\n                    fill: ".concat(((_24 = (_23 = (_22 = (_21 = (_20 = (_19 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _19 === void 0 ? void 0 : _19.textChat) === null || _20 === void 0 ? void 0 : _20.popup) === null || _21 === void 0 ? void 0 : _21.icons) === null || _22 === void 0 ? void 0 : _22.mute) === null || _23 === void 0 ? void 0 : _23.hover) === null || _24 === void 0 ? void 0 : _24.fill) || "rgba(0, 70, 255, 1)", ";\n                }");
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn.disabled {\n                pointer-events: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-unmute-btn.disabled {\n                opacity: 0.4\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn {\n                position: absolute;\n                right: ".concat(isMobile() ? 15 : 50, "px;\n                top: 3px;\n                width: 17px;\n                display: flex;\n                align-items: center;\n                height: ").concat(chatHeaderHeight, "px;\n                font-size: 14px;\n                cursor: pointer;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn.disabled {\n                pointer-events: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn.disabled {\n                opacity: 0.4\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn svg path {\n                fill: ".concat(((_30 = (_29 = (_28 = (_27 = (_26 = (_25 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _25 === void 0 ? void 0 : _25.textChat) === null || _26 === void 0 ? void 0 : _26.popup) === null || _27 === void 0 ? void 0 : _27.icons) === null || _28 === void 0 ? void 0 : _28.clear) === null || _29 === void 0 ? void 0 : _29["default"]) === null || _30 === void 0 ? void 0 : _30.fill) || "rgba(8, 8, 8, 1)", ";\n            }");
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-header-clear-btn:hover svg path {\n                    fill: ".concat(((_36 = (_35 = (_34 = (_33 = (_32 = (_31 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _31 === void 0 ? void 0 : _31.textChat) === null || _32 === void 0 ? void 0 : _32.popup) === null || _33 === void 0 ? void 0 : _33.icons) === null || _34 === void 0 ? void 0 : _34.clear) === null || _35 === void 0 ? void 0 : _35.hover) === null || _36 === void 0 ? void 0 : _36.fill) || "rgba(255, 0, 92, 1)", ";\n                }");
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn {\n                position: absolute;\n                left: 15px;\n                top: 3px;\n                width: 15px;\n                height: ".concat(chatHeaderHeight, "px;\n                display: flex;\n                align-items: center;\n                cursor: pointer;\n                pointer-events: all;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn svg path {\n                fill: ".concat(((_42 = (_41 = (_40 = (_39 = (_38 = (_37 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _37 === void 0 ? void 0 : _37.textChat) === null || _38 === void 0 ? void 0 : _38.popup) === null || _39 === void 0 ? void 0 : _39.icons) === null || _40 === void 0 ? void 0 : _40.close) === null || _41 === void 0 ? void 0 : _41["default"]) === null || _42 === void 0 ? void 0 : _42.fill) || "rgba(8, 8, 8, 1)", ";\n            }");
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__close-chat-btn:hover svg path {\n                    fill: ".concat(((_48 = (_47 = (_46 = (_45 = (_44 = (_43 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _43 === void 0 ? void 0 : _43.textChat) === null || _44 === void 0 ? void 0 : _44.popup) === null || _45 === void 0 ? void 0 : _45.icons) === null || _46 === void 0 ? void 0 : _46.close) === null || _47 === void 0 ? void 0 : _47.hover) === null || _48 === void 0 ? void 0 : _48.fill) || "rgba(151, 152, 156, 1)", ";\n                }");
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar {\n                width: ".concat(textChatScrollSize, "px;\n                height: ").concat(textChatScrollSize, "px;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-thumb {\n                border-radius: 3px;\n                background-color: rgba(224, 224, 224, 0.795);\n                transition: background-color 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-thumb:hover {\n                background-color: rgba(230, 230, 230, 0.856);\n                transition: background-color 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages-wrapper::-webkit-scrollbar-track {\n                border-radius: 3px;\n                background: transparent;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea-holder-gradient {\n                background: linear-gradient(0deg, ".concat(((_51 = (_50 = (_49 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _49 === void 0 ? void 0 : _49.textChat) === null || _50 === void 0 ? void 0 : _50.popup) === null || _51 === void 0 ? void 0 : _51.backgroundColor) || "rgba(218, 235, 255, 1)", " 30%, rgba(255, 255, 255, 0) 100%);\n                height:15px;\n                min-height:15px;\n                width: calc(100% - 10px);\n                position: absolute;\n                bottom: ").concat(textareaHolderHeight, "px;\n                left:0;\n            }");
-                keyFrames += getStyleSheetMarker() + ".show-gradient .alan-btn__chat-textarea-gradient {\n                position: absolute;\n                left: 26px;\n                border-radius: 16px;\n                bottom: 15px;\n                width: 15px;\n                opacity: 0;\n                transition: opacity 300ms ease-in-out;\n                height: ".concat(chatTextareaHeight, "px;\n                background: linear-gradient(90deg, ").concat(((_54 = (_53 = (_52 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _52 === void 0 ? void 0 : _52.textChat) === null || _53 === void 0 ? void 0 : _53.textarea) === null || _54 === void 0 ? void 0 : _54.backgroundColor) || "rgb(255, 255, 255)", " 60%, rgba(255, 255, 255, 0) 100%);\n            }");
-                keyFrames += getStyleSheetMarker() + ".show-gradient .alan-btn__chat-textarea-gradient {\n                opacity: 1;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-text-chat__voice-enabled .show-gradient .alan-btn__chat-textarea-gradient {\n                left: 50px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea {\n                position: absolute;\n                left: 15px;\n                bottom: 15px;\n                width: calc(100% - 30px);\n                border-radius: 20px;\n                box-shadow: 0px 1px 3px rgba(16, 39, 126, 0.2);\n                background-color: ".concat(((_57 = (_56 = (_55 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _55 === void 0 ? void 0 : _55.textChat) === null || _56 === void 0 ? void 0 : _56.textarea) === null || _57 === void 0 ? void 0 : _57.backgroundColor) || "rgb(255, 255, 255)", " ;\n                color: ").concat(((_60 = (_59 = (_58 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _58 === void 0 ? void 0 : _58.textChat) === null || _59 === void 0 ? void 0 : _59.textarea) === null || _60 === void 0 ? void 0 : _60.color) || "rgba(23, 23, 23, 1)", " ;\n                overflow: hidden;\n                outline: none;\n                resize: none;\n                border: 1px solid transparent;\n                -webkit-appearance: none;\n                font-size: ").concat(getTextAreaFontSize(isMobile(), ((_63 = (_62 = (_61 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _61 === void 0 ? void 0 : _61.textChat) === null || _62 === void 0 ? void 0 : _62.textarea) === null || _63 === void 0 ? void 0 : _63.fontSize) || defaultChatTextareaFontSize), "px;\n                line-height: ").concat(chatTextareaLineHieght, ";\n                text-align: left;\n                max-height: ").concat(chatTextareaHeight, "px;\n                height: ").concat(chatTextareaHeight, "px;\n                padding: ").concat(calculateTextareaTopPadding(), "px 42px 12px 12px;\n                margin: 0px!important;\n                -webkit-user-select: text;\n                -khtml-user-select: text;\n                -moz-user-select: text;\n                -ms-user-select: text;\n                user-select: text;\n                transition: opacity 300ms ease-in-out;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::placeholder {\n                color: ".concat(((_66 = (_65 = (_64 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _64 === void 0 ? void 0 : _64.textChat) === null || _65 === void 0 ? void 0 : _65.textarea) === null || _66 === void 0 ? void 0 : _66.placeholderColor) || "rgba(116, 116, 116, 1)", " ;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar {\n                width: 6px;\n                height: 6px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-thumb {\n                border-radius: 3px;\n                background-color: rgba(224, 224, 224, 0.795);\n                transition: background-color 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-thumb:hover {\n                background-color: rgba(230, 230, 230, 0.856);\n                transition: background-color 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-textarea::-webkit-scrollbar-track {\n                border-radius: 3px;\n                background: transparent;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-holder.alan-text-chat__voice-enabled .alan-btn__chat-textarea {\n                padding-left: 42px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__mic-active .alan-btn__chat-textarea {\n                opacity: 0.6;\n                transition: opacity 300ms ease-in-out;\n                pointer-events: none;\n                -webkit-touch-callout: none;\n                -webkit-user-select: none;\n                -khtml-user-select: none;\n                -moz-user-select: none;\n                -ms-user-select: none;\n                user-select: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__mic-active .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__inactive .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-textarea {\n                opacity: 0.6;\n                transition: opacity 300ms ease-in-out;\n                pointer-events: none;\n                -webkit-touch-callout: none;\n                -webkit-user-select: none;\n                -khtml-user-select: none;\n                -moz-user-select: none;\n                -ms-user-select: none;\n                user-select: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-send-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-unmute-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-header-clear-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-send-btn svg path {\n                opacity: 1;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat.alan-btn__disconnected .alan-btn__chat-mic-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__inactive .alan-btn__chat-mic-btn {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn_disconnected-chat-icon-rotate {\n                animation: disconnected-chat-icon-rotate-animation 1500ms linear infinite;\n            }";
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("disconnected-chat-icon-rotate-animation", "0%{  transform: rotate(0deg);  } 100%{  transform: rotate(360deg);  }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__disabled {\n                opacity: 0.2;\n                pointer-events: none;\n                transition: opacity 300ms ease-in-out;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn {\n                position: absolute;\n                transition: opacity 300ms ease-in-out;\n                right: 20px;\n                bottom: 20px;\n                min-width: 40px;\n                width: 40px;\n                max-width: 40px;\n                height: 40px;\n                max-height: 40px;\n                min-height: 40px;\n                display: flex;\n                flex-direction: row;\n                justify-content: center;\n                align-items: center;\n                border-radius: 50%;\n                -webkit-touch-callout: none; /* iOS Safari */\n                -webkit-user-select: none; /* Chrome/Safari/Opera */\n                -khtml-user-select: none; /* Konqueror */\n                -moz-user-select: none; /* Firefox */\n                -ms-user-select: none; /* IE/Edge */\n                user-select: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg {\n                position: relative;\n                left: 2px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-send-btn svg path {\n                fill: ".concat(((_69 = (_68 = (_67 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _67 === void 0 ? void 0 : _67.textChat) === null || _68 === void 0 ? void 0 : _68.textarea) === null || _69 === void 0 ? void 0 : _69.placeholderColor) || "rgba(116, 116, 116, 1)", ";\n                opacity: 0.5;\n            }");
-                keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn svg path {\n                fill: ".concat(((_75 = (_74 = (_73 = (_72 = (_71 = (_70 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _70 === void 0 ? void 0 : _70.textChat) === null || _71 === void 0 ? void 0 : _71.popup) === null || _72 === void 0 ? void 0 : _72.icons) === null || _73 === void 0 ? void 0 : _73.general) === null || _74 === void 0 ? void 0 : _74["default"]) === null || _75 === void 0 ? void 0 : _75.fill) || "rgba(23, 23, 23, 1)", ";\n                opacity: 1;\n            }");
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn:hover {\n                    cursor: pointer;\n                }";
-                    keyFrames += getStyleSheetMarker() + ".ready-to-send:not(.alan-btn__inactive) .alan-btn__chat-send-btn:hover svg path {\n                    fill: ".concat(((_81 = (_80 = (_79 = (_78 = (_77 = (_76 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _76 === void 0 ? void 0 : _76.textChat) === null || _77 === void 0 ? void 0 : _77.popup) === null || _78 === void 0 ? void 0 : _78.icons) === null || _79 === void 0 ? void 0 : _79.general) === null || _80 === void 0 ? void 0 : _80.hover) === null || _81 === void 0 ? void 0 : _81.fill) || "rgba(0, 120, 255, 1)", ";\n                    opacity:0.8;\n                }");
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn {\n                position: absolute;\n                left: 20px;\n                bottom: 22px;\n                min-width: ".concat(chatMicBtnActiveSize, "px;\n                width: ").concat(chatMicBtnActiveSize, "px;\n                max-width: ").concat(chatMicBtnActiveSize, "px;\n                height: ").concat(chatMicBtnActiveSize, "px;\n                max-height: ").concat(chatMicBtnActiveSize, "px;\n                min-height: ").concat(chatMicBtnActiveSize, "px;\n                display: flex;\n                flex-direction: row;\n                cursor: pointer;\n                justify-content: center;\n                align-items: center;\n                border-radius: 50%;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active::before {\n                content: '';\n                position: absolute;\n                z-index: -1;\n                left: 0;\n                top: 0;\n                height: 100%;\n                width: 100%;\n                background-color:  ".concat(((_87 = (_86 = (_85 = (_84 = (_83 = (_82 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _82 === void 0 ? void 0 : _82.textChat) === null || _83 === void 0 ? void 0 : _83.popup) === null || _84 === void 0 ? void 0 : _84.icons) === null || _85 === void 0 ? void 0 : _85.general) === null || _86 === void 0 ? void 0 : _86["default"]) === null || _87 === void 0 ? void 0 : _87.fill) || "#C8C8CC", ";\n                opacity: 0.3;\n                border-radius: 50%;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-notifications-bubble {\n                position: absolute;\n                right: 4px;\n                top: -4px;\n                height: 20px;\n                width: 20px;\n                background-color:  ".concat(((_90 = (_89 = (_88 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _88 === void 0 ? void 0 : _88.textChat) === null || _89 === void 0 ? void 0 : _89.notifications) === null || _90 === void 0 ? void 0 : _90.backgroundColor) || "rgba(208, 2, 27, 1)", ";\n                color:  ").concat(((_93 = (_92 = (_91 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _91 === void 0 ? void 0 : _91.textChat) === null || _92 === void 0 ? void 0 : _92.notifications) === null || _93 === void 0 ? void 0 : _93.color) || "rgba(255, 255, 255, 1)", ";\n                border-radius: 50%;\n                z-index: ").concat(btnZIndex + 1, ";\n                display: flex;\n                flex-direction: column;\n                align-items: center;\n                justify-content: center;\n                font-size: 10px;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-notifications-bubble:empty {\n                display: none;\n            }";
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active:hover::before {\n                opacity: 0.35;\n            }";
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn svg {\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn svg path {\n                fill: ".concat(((_99 = (_98 = (_97 = (_96 = (_95 = (_94 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _94 === void 0 ? void 0 : _94.textChat) === null || _95 === void 0 ? void 0 : _95.popup) === null || _96 === void 0 ? void 0 : _96.icons) === null || _97 === void 0 ? void 0 : _97.general) === null || _98 === void 0 ? void 0 : _98["default"]) === null || _99 === void 0 ? void 0 : _99.fill) || "rgba(23, 23, 23, 1)", ";\n            }");
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn:hover svg path {\n                fill: ".concat(((_105 = (_104 = (_103 = (_102 = (_101 = (_100 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _100 === void 0 ? void 0 : _100.textChat) === null || _101 === void 0 ? void 0 : _101.popup) === null || _102 === void 0 ? void 0 : _102.icons) === null || _103 === void 0 ? void 0 : _103.general) === null || _104 === void 0 ? void 0 : _104.hover) === null || _105 === void 0 ? void 0 : _105.fill) || "#007AFF", ";\n            }");
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__animated-btn-bars {\n                height:".concat(chatMicBtnActiveSize, "px;\n                width:").concat(chatMicBtnActiveSize, "px;\n                border-radius: 50%;\n                justify-content: center;\n                align-items: center;\n                background: ").concat(((_111 = (_110 = (_109 = (_108 = (_107 = (_106 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _106 === void 0 ? void 0 : _106.textChat) === null || _107 === void 0 ? void 0 : _107.popup) === null || _108 === void 0 ? void 0 : _108.icons) === null || _109 === void 0 ? void 0 : _109.general) === null || _110 === void 0 ? void 0 : _110.hover) === null || _111 === void 0 ? void 0 : _111.fill) || "#007AFF", ";\n                display:none;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active .alan-text-chat__animated-btn-bars  {\n                display: flex;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-mic-btn.active svg  {\n                display: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar {\n                background: #ffffff;\n                bottom: 1px;\n                height: 3px;\n                width: 2px;\n                margin: 0px 1px;\n                border-radius: 5px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-1 {\n                animation: alan-btn__sound-bar-1 0ms -1200ms linear infinite alternate;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-2 {\n                animation: alan-btn__sound-bar-2 0ms -1200ms linear infinite alternate;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar-3 {\n                animation: alan-btn__sound-bar-3 0ms -1200ms linear infinite alternate;\n            }";
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-1", "\n            0% {\n      \n                height: 3px; \n            }\n            100% {\n                  \n                height: 10px;        \n            }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-2", "\n            0% {\n      \n                height: 8px; \n            }\n            100% {\n                  \n                height: 15px;        \n            }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-btn__sound-bar-3", "\n            0% {\n      \n                height: 12px; \n            }\n            100% {\n                  \n                height: 28px;        \n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(1)  { animation-duration: 474ms; }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(2)  { animation-duration: 433ms; }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(3)  { animation-duration: 407ms; }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(4)  { animation-duration: 458ms; }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(5)  { animation-duration: 400ms; }";
-                keyFrames += getStyleSheetMarker() + ".alan-text-chat__bar:nth-child(6)  { animation-duration: 427ms; }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request {\n                margin-bottom: 16px;\n                max-width: 90%;\n                min-height: 41px;\n                padding: 9px 20px;\n                line-height: 1.53;\n                display: block;\n                float: right;\n                clear: both;\n                border-radius: 20px;\n                position: relative;\n                box-shadow: 0px 1px 3px rgba(16, 39, 126, 0.2);\n                background-color: ".concat(((_115 = (_114 = (_113 = (_112 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _112 === void 0 ? void 0 : _112.textChat) === null || _113 === void 0 ? void 0 : _113.bubbles) === null || _114 === void 0 ? void 0 : _114.request) === null || _115 === void 0 ? void 0 : _115.backgroundColor) || "rgba(178, 214, 255, 1)", ";\n                color: ").concat(((_119 = (_118 = (_117 = (_116 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _116 === void 0 ? void 0 : _116.textChat) === null || _117 === void 0 ? void 0 : _117.bubbles) === null || _118 === void 0 ? void 0 : _118.request) === null || _119 === void 0 ? void 0 : _119.color) || "rgba(23, 23, 23, 1)", ";\n                font-size: ").concat(((_123 = (_122 = (_121 = (_120 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _120 === void 0 ? void 0 : _120.textChat) === null || _121 === void 0 ? void 0 : _121.bubbles) === null || _122 === void 0 ? void 0 : _122.request) === null || _123 === void 0 ? void 0 : _123.fontSize) || "15", "px;\n                word-break: break-word;\n                text-align: left;\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request * {\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }";
-                var responseBubbleFontSize = +(((_127 = (_126 = (_125 = (_124 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _124 === void 0 ? void 0 : _124.textChat) === null || _125 === void 0 ? void 0 : _125.bubbles) === null || _126 === void 0 ? void 0 : _126.response) === null || _127 === void 0 ? void 0 : _127.fontSize) || 15);
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response {\n                margin-bottom: 16px;\n                max-width: 90%;\n                min-height: 41px;\n                padding: 9px 20px;\n                line-height: 1.53;\n                display: block;\n                float: left;\n                clear: both;\n                border-radius: 20px;\n                position: relative;\n                background-color: ".concat(((_131 = (_130 = (_129 = (_128 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _128 === void 0 ? void 0 : _128.textChat) === null || _129 === void 0 ? void 0 : _129.bubbles) === null || _130 === void 0 ? void 0 : _130.response) === null || _131 === void 0 ? void 0 : _131.backgroundColor) || "rgba(255, 255, 255, 1)", ";\n                box-shadow: 0px 1px 3px rgba(16, 39, 126, 0.2);\n                color: ").concat(((_135 = (_134 = (_133 = (_132 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _132 === void 0 ? void 0 : _132.textChat) === null || _133 === void 0 ? void 0 : _133.bubbles) === null || _134 === void 0 ? void 0 : _134.response) === null || _135 === void 0 ? void 0 : _135.color) || "rgba(23, 23, 23, 1)", ";\n                font-size: ").concat(responseBubbleFontSize, "px;\n                word-break: break-word;\n                text-align: left;\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response.with-images {\n                min-width: 90%;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-chat-small .alan-btn__chat-request {\n                max-width: 100%;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-chat-small .alan-btn__chat-response {\n                max-width: 100%;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-chat-small .alan-btn__chat-response.with-images {\n                min-width: 100%;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-request.animated {\n                opacity:0;\n                animation: chat-bubble-appear-w-opacity 300ms ease-in-out forwards;\n                animation-delay: 100ms;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response.animated {\n                opacity:0;\n                animation: chat-bubble-appear-w-opacity 300ms ease-in-out forwards;\n                animation-delay: 200ms;\n            }";
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("chat-bubble-appear-w-opacity", "\n            0% { opacity:0;}\n              \n            100% {\n                opacity:1;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response * {\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper {\n                display: flex;\n                flex-wrap: wrap;\n                position: relative;\n                top: -9px;\n                left: -20px;\n                width: calc(100% + 40px);\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow {\n                position: absolute;\n                top: 50%;\n                transform: translateY(-50%);\n                left: 12px;\n                opacity:0.85;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow {\n                position: absolute;\n                top: 50%;\n                transform: translateY(-50%);\n                right: 12px;\n                opacity:0.85;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow:hover {\n                opacity:1;\n                cursor: pointer;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow:hover {\n                opacity:1;\n                cursor: pointer;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-left-arrow.invisible {\n                opacity:0;\n                pointer-events: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper-right-arrow.invisible {\n                opacity:0;\n                pointer-events: none;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img-block {\n                overflow: hidden;\n                border-radius: 20px 20px 0 0;\n                width: 100%;\n                display: flex;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-video {\n                width: 100%;\n                min-width: 100%;\n                min-height: 220px;\n                height: 220px;\n                max-height: 220px;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img {\n                cursor: pointer;\n                transition: transform 300ms ease-in-out;\n                width: 100%;\n                min-width: 100%;\n                min-height: 220px;\n                height: 220px;\n                max-height: 220px;\n                object-fit: contain;\n                pointer-events: initial;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img.img-vertical {\n                object-fit: cover;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-img.not-found {\n                opacity: 0.7;\n            }";
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-imgs-wrapper:hover .alan-btn__chat-response-img {\n                    transform: scale(1.04);\n                    transition: transform 300ms ease-in-out;\n                }";
-                }
-                keyFrames += ".alan-btn__image-preview-overlay {\n                position: fixed;\n                top: 0;\n                left: 0;\n                height: 100vh;\n                min-height: 100vh;\n                width: 100vw;\n                min-width: 100vw;\n                background-color: rgba(0,0,0,0.6);\n                display: flex;\n                align-items: center;\n                justify-content: center;\n            }";
-                keyFrames += ".alan-btn__image-preview-overlay img {\n                max-width: calc(100% - 100px);\n                max-height: calc(100% - 100px);\n            }";
-                keyFrames += "@media (orientation: landscape) { \n                .alan-btn__image-preview-overlay {\n                    align-items: flex-start;\n                    padding-top: 40px;\n                }\n                .alan-btn__image-preview-overlay img {\n                    max-height: calc(100% - 120px);\n                }\n                .alan-btn__image-preview-overlay iframe {\n                    max-height: calc(100% - 120px);\n                }\n            }";
-                keyFrames += ".alan-btn__image-preview-overlay iframe {\n                max-width: calc(100% - 100px);\n                max-height: calc(100% - 100px);\n                width: calc(100% - 100px);\n                height: calc(100% - 100px);\n            }";
-                keyFrames += ".alan-btn__image-preview-overlay-close-icon {\n                position: absolute;\n                top: 16px;\n                right: 16px;\n                cursor: pointer;\n                opacity: 0.7;\n            }";
-                if (!isMobile()) {
-                    keyFrames += ".alan-btn__image-preview-overlay-close-icon:hover {\n                    opacity: 1;\n                }";
-                }
-                keyFrames += ".alan-btn__image-preview-overlay-left-icon {\n                position: absolute;\n                top: 50%;\n                transform: translateY(-50%);\n                left: 16px;\n                cursor: pointer;\n                opacity: 0.7;\n            }";
-                keyFrames += ".alan-btn__image-preview-overlay-right-icon {\n                position: absolute;\n                top: 50%;\n                transform: translateY(-50%);\n                right: 16px;\n                cursor: pointer;\n                opacity: 0.7;\n            }";
-                keyFrames += ".alan-btn__image-preview-overlay-left-icon.invisible {\n                opacity:0;\n                pointer-events: none;\n            }";
-                keyFrames += ".alan-btn__image-preview-overlay-right-icon.invisible {\n                opacity:0;\n                pointer-events: none;\n            }";
-                if (!isMobile()) {
-                    keyFrames += ".alan-btn__image-preview-overlay-left-icon:hover {\n                    opacity: 1;\n                }";
-                    keyFrames += ".alan-btn__image-preview-overlay-right-icon:hover {\n                    opacity: 1;\n                }";
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-links-wrapper {\n                display: flex;\n                flex-wrap: wrap;\n                border-top: 1px solid #D2DAE5;\n                padding: 10px 0 0 0;\n                margin-top: 10px;\n                align-items: center;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-link {\n                background: #EAF2FC;\n                border-radius: 15px;\n                padding: 6px 8px;\n                margin-right: 10px;\n                margin-top: 4px;\n                margin-bottom: 4px;\n                display: flex;\n                align-items: center;\n                max-width: 100%;\n                font-size: ".concat(responseBubbleFontSize - 2, "px;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages a.alan-btn__chat-response-link:hover  {\n                text-decoration: none !important;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-link-title {\n                overflow: hidden;\n                max-width: calc(100% - 15px);\n                text-overflow: ellipsis;\n                white-space: nowrap;\n                display: inline-block;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-link svg {\n                flex-shrink: 0;\n                margin-right: 6px;\n            }";
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + "a.alan-btn__chat-response-link:hover svg path  {\n                    fill: #0078FF;\n                }";
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-likes-wrapper  {\n                font-size: ".concat(responseBubbleFontSize + 5, "px;\n                margin-top: 10px;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-like-btn  {\n                cursor: pointer;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn  {\n                cursor: pointer;\n            }";
-                if (!isMobile()) {
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-like-btn  {\n                    opacity: 0.7;\n                    cursor: pointer;\n                }";
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-like-btn:hover  {\n                    opacity: 1;\n                }";
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn  {\n                    opacity: 0.7;\n                }";
-                    keyFrames += getStyleSheetMarker() + ".alan-btn__chat-response-dislike-btn:hover  {\n                    opacity: 1;\n                }";
-                }
-                keyFrames += getStyleSheetMarker() + ".alan-incoming-msg {\n                display: flex;\n                align-items: center;\n                overflow: hidden;\n                animation:chat-bubble-appear-w-opacity 300ms ease-in-out forwards 100ms, hide-buble 300ms forwards ease 30000ms !important;\n            }";
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("hide-buble", "\n            0% { \n                height: 41px; \n                max-height:41px;    \n                min-height: 41px;\n            }\n              \n            100% {\n                height: 0px;\n                max-height: 0px;\n                min-height: 0px;\n                padding: 0px;\n                margin-bottom:0;\n            }");
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-incomming-msg-wrapper {\n                display: flex;\n                align-items: center;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-incomming-msg {\n                border-radius: 50%;\n                background-color: ".concat(((_139 = (_138 = (_137 = (_136 = webOptions === null || webOptions === void 0 ? void 0 : webOptions.chatOptions) === null || _136 === void 0 ? void 0 : _136.textChat) === null || _137 === void 0 ? void 0 : _137.bubbles) === null || _138 === void 0 ? void 0 : _138.response) === null || _139 === void 0 ? void 0 : _139.color) || "rgba(8, 8, 8, 1)", ";\n                margin: 2px;\n                height: 6px;\n                width: 6px;\n                animation: alan-dot-bounce 1.5s infinite ease;\n            }");
-                keyFrames += getStyleSheetMarker() + ".msg-2 {\n                animation-delay: .2s;\n            }";
-                keyFrames += getStyleSheetMarker() + ".msg-3 {\n                animation-delay: .3s;\n            }";
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-dot-bounce", "\n            0%, 100% { opacity:1;}\n              \n            60% {\n                transform: translateY(3px);\n                opacity:.0;\n            }");
-                function addCssForMarkdown(cssRules) {
-                    for (var i2 = 0; i2 < cssRules.length; i2++) {
-                        var curRule = cssRules[i2];
-                        keyFrames += getStyleSheetMarker() + ".alan-btn__chat-messages ".concat(curRule);
-                    }
-                }
-                addCssForMarkdown([
-                    "a {\n                    color: #4183c4!important;\n                    text-decoration: none!important;\n                }",
-                    "a:hover {\n                    text-decoration: underline!important;\n                }",
-                    "p {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "blockquote {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "dl {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "table {\n                    margin: 0!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                    word-break: initial!important;\n                }"),
-                    "ul {\n                    padding-left: 30px!important; \n                    margin: 0!important; \n                    list-style-type: disc!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "ul li {\n                   list-style-type: disc!important;\n                   font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "ol {\n                    padding-left: 30px!important;\n                    margin: 0!important; \n                    list-style-type: decimal!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "ol li {\n                    list-style-type: decimal!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "h1 { font-size: 2.13em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
-                    "h2 { font-size: 1.86em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
-                    "h3 { font-size: 1.6em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
-                    "h4 { font-size: 1.46em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
-                    "h5 { font-size: 1.33em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
-                    "h6 { font-size: 1.2em!important;  line-height: 1.7!important; margin: 0 0 10px 0!important; font-weight: normal!important;  text-transform: none!important;}",
-                    "h1:after { display: none!important;}",
-                    "h2:after { display: none!important;}",
-                    "h3:after { display: none!important;}",
-                    "h4:after { display: none!important;}",
-                    "h5:after { display: none!important;}",
-                    "h6:after { display: none!important;}",
-                    "h1:before { display: none!important;}",
-                    "h2:before { display: none!important;}",
-                    "h3:before { display: none!important;}",
-                    "h4:before { display: none!important;}",
-                    "h5:before { display: none!important;}",
-                    "h6:before { display: none!important;}",
-                    "h1 + p {\n                    margin-top: 10px!important;\n                }",
-                    "h2 + p {\n                    margin-top: 10px!important;\n                }",
-                    "h3 + p {\n                    margin-top: 10px!important;\n                }",
-                    "h4 + p {\n                    margin-top: 10px!important;\n                }",
-                    "h5 + p {\n                    margin-top: 10px!important;\n                }",
-                    "h6 + p {\n                    margin-top: 10px!important;\n                }",
-                    "p + p {\n                    margin-top: 10px!important;\n                }",
-                    "* + pre {\n                    margin-top: 8px!important;\n                }",
-                    "pre + * {\n                    margin-top: 16px!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "* + ul {\n                    margin-top: 8px!important;\n                }",
-                    "ul + * {\n                    margin-top: 16px!important;\n                }",
-                    "* + ol {\n                    margin-top: 8px!important;\n                }",
-                    "ol + * {\n                    margin-top: 16px!important;\n                }",
-                    "* + blockquote {\n                    margin-top: 8px!important;\n                }",
-                    "blockquote + * {\n                    margin-top: 16px!important;\n                }",
-                    "audio {\n                    max-width: 100%!important;\n                    max-height: 100%!important;\n                }",
-                    "video {\n                    max-width: 100%!important;\n                    max-height: 100%!important;\n                }",
-                    "img {\n                    max-width: 100%!important;\n                    pointer-events: auto!important;\n                    cursor: pointer;\n                    max-height: 500px;\n                }",
-                    //;iuytfd
-                    "code {\n                    background-color: #F8F8F8!important;\n                    border-radius: 3px!important;\n                    border: 1px solid #DDD!important;\n                    font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n                    margin: 0 2px!important;\n                    padding: 0 5px!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "pre {\n                    background-color: #F8F8F8!important;\n                    border-radius: 3px!important;\n                    border: 1px solid #DDD!important;\n                    font-family: Consolas, \"Liberation Mono\", Courier, monospace!important;\n                    padding: 0 5px!important;\n                    white-space: pre-line!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "pre code {\n                    border: none!important;\n                    margin: 0!important;\n                    padding: 0!important;\n                    white-space: pre-wrap!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "hr {\n                    display: block!important;\n                    unicode-bidi: isolate!important;\n                    margin-block-start: 0.5em!important;\n                    margin-block-end: 0.5em!important;\n                    margin-inline-start: auto!important;\n                    margin-inline-end: auto!important;\n                    overflow: hidden!important;\n                    border-style: inset!important;\n                    border-width: 1px!important;\n                }",
-                    "blockquote {\n                    padding: 5px 20px 0!important;\n                    border-left: 5px solid #beb7b7!important;\n                    font-size: ".concat(responseBubbleFontSize, "px!important;\n                }"),
-                    "table > tbody > tr > td {\n                    background-color: #fff!important;\n                    color: #000!important;\n                }",
-                    "table > tbody > tr > th {\n                    color: #000!important;\n                    background-color: #fff!important;\n                }",
-                    "table > thead > tr > th {\n                    padding: 4px!important;\n                    border-top: 1px solid #b7b5b5!important;\n                }",
-                    "table > tbody > tr > th {\n                    padding: 4px!important;\n                    border-top: 1px solid #b7b5b5!important;\n                }",
-                    "table > thead > tr > td {\n                    padding: 4px!important;\n                    border-top: 1px solid #b7b5b5!important;\n                }",
-                    "table > tbody > tr > td {\n                    padding: 4px;\n                    border-top: 1px solid #b7b5b5!important;\n                }",
-                    "strong {\n                    font-weight: bold!important;\n                }"
-                ]);
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-popup {\n               position: relative;\n               margin-bottom: 16px;\n               -webkit-touch-callout: text; /* iOS Safari */\n               -webkit-user-select: text; /* Chrome/Safari/Opera */\n               -khtml-user-select: text; /* Konqueror */\n               -moz-user-select: text; /* Firefox */\n               -ms-user-select: text; /* IE/Edge */\n               user-select: text;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-btn__chat-popup * {\n                -webkit-touch-callout: text; /* iOS Safari */\n                -webkit-user-select: text; /* Chrome/Safari/Opera */\n                -khtml-user-select: text; /* Konqueror */\n                -moz-user-select: text; /* Firefox */\n                -ms-user-select: text; /* IE/Edge */\n                user-select: text;\n            }";
-                keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened-immediately .alanBtn {\n                transform: scale(0);\n                opacity: 0;\n                animation: text-chat-disappear-anim 0ms ease-in-out forwards;\n            }";
-                keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened .alanBtn {\n                transform: scale(0);\n                opacity: 0;\n                animation: text-chat-disappear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n            }");
-                keyFrames += getStyleSheetMarker(true) + ".text-chat-is-closing .alanBtn {\n                transform: scale(0);\n                opacity: 0;\n                animation: text-chat-appear-anim ".concat(textChatAppearAnimationMs, "ms ease-in-out forwards;\n            }");
-                keyFrames += getStyleSheetMarker(true) + ".hide-alan-btn-when-text-chat-is-opened .alanBtn-recognised-text-holder {\n                display: none;\n            }";
-                keyFrames += getStyleSheetMarker() + " mjx-container svg {\n                max-width: 100%;\n            }";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay {position: fixed;top: 0;left: 0;right: 0;bottom: 0;z-index: 99;background: rgba(0, 0, 0, 0.57);opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__default-popup {border-radius:10px; box-shadow: 0px 5px 14px rgba(3, 3, 3, 0.25);padding:6px 30px 6px 12px;text-align: left;width: 220px;background: rgb(255 255 255);}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__right {border-top-right-radius: 0!important;}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__top.alan-btn-lib__left {border-top-left-radius: 0!important;}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__bottom.alan-btn-lib__left {border-bottom-left-radius: 0!important;}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup.alan-btn-lib__bottom.alan-btn-lib__right {border-bottom-right-radius: 0!important;}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup {position: fixed;opacity: 0;-webkit-animation: alan-fade-in 0.5s 0.2s forwards;-moz-animation: alan-fade-in 0.5s 0.2s forwards;-o-animation: alan-fade-in 0.5s 0.2s forwards;animation: alan-fade-in 0.5s 0.2s forwards;}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup__body {position:relative;color: #0D1940;font-size: 16px;line-height: 20px;}";
-                keyFrames += getStyleSheetMarker() + '.alan-overlay-popup__ok {background:url("' + popupCloseIconImgBase64 + '") no-repeat center; background-size:100% 100%;min-height:14px;height:14px;max-height:14px;min-width:14px;width:14px;max-width:14px;opacity:0;transition:opacity 300ms ease-in-out;position:absolute;top:8px;right:8px;cursor: pointer;pointer-events: auto!important;}';
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup__ok:hover {opacity:0.9}";
-                keyFrames += getStyleSheetMarker() + ".alan-overlay-popup:hover .alan-overlay-popup__ok{opacity:1;transition:opacity 300ms ease-in-out;}";
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-gradient", "0%{backgroundPosition: 0 0;}50%{backgroundPosition: -100% 0;}100%{backgroundPosition: 0 0;}");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-pulsating", "0%{transform: scale(1.11111);}50%{transform: scale(1.0);}100%{transform: scale(1.11111);}");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-text-chat-pulsating", "0%{transform: scale(1.09);}50%{transform: scale(1.0);}100%{transform: scale(1.09);}");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-mic-pulsating", "0%{transform: scale(0.91);}50%{transform: scale(1.0);}100%{transform: scale(0.91);}");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-triangle-mic-pulsating", "0%{transform: scale(0.94);}50%{transform: scale(1.0);}100%{transform: scale(0.94);}");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-fade-in", "0%{opacity: 0;}100%{opacity:1;}");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-fade-out", "0%{opacity: 1;}100%{opacity:0;}");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("text-holder-appear", "0%{\n                    opacity:0;\n                    color:transparent;\n                    background-color:rgba(245, 252, 252, 0.0);\n                    border: solid 1px transparent;\n                }\n                100%{\n                    opacity:1;\n                    color:#000;\n                    background-color:rgba(245, 252, 252, 0.8);\n                }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("text-holder-disappear", "0%{\n                    opacity:1; \n                    color:#000;\n                    background-color:rgba(245, 252, 252, 0.8);  \n                }\n                100%{\n                    opacity:0; \n                    color:transparent;\n                    background-color:rgba(245, 252, 252, 0.0);\n                    border: solid 1px transparent;\n                }");
-                function generateLogoPartAnimation(partName, partIndex) {
-                    var animSteps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-                    var keyFrameContent = "";
-                    for (var i2 = 0; i2 < animSteps.length; i2++) {
-                        var curOpacity = 0;
-                        if (partIndex === 0) {
-                            curOpacity = i2 === 0 || i2 === 10 ? 1 : 0;
-                        }
-                        else {
-                            curOpacity = i2 === partIndex ? 1 : 0;
-                        }
-                        keyFrameContent += "".concat(animSteps[i2], "% {  opacity: ").concat(curOpacity, ";  } ");
-                    }
-                    return getStyleSheetMarker() + generateKeyFrame(partName, keyFrameContent);
-                }
-                for (var i2 = 0; i2 < 10; i2++) {
-                    keyFrames += generateLogoPartAnimation("logo-state-".concat(i2 + 1, "-animation"), i2);
-                }
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("disconnected-loader-animation", "0%{  transform: rotate(0deg);  } 100%{  transform: rotate(360deg);  }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("oval1-animation", "0%{  transform: rotate(-315deg);  } 50%{  transform: rotate(-495deg);  } 100%{  transform: rotate(-315deg);  }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("oval2-animation", "0%{  transform: rotate(-45deg);  } 50%{  transform: rotate(-215deg);  } 100%{  transform: rotate(-45deg);  }");
-                keyFrames += getStyleSheetMarker() + generateKeyFrame("alan-text-fade-in", "0%{  opacity: 0;  } 100%{   opacity: 1;  }");
-                keyFrames += getStyleSheetMarker() + ".alanBtn-bg-default.super-hidden{opacity:0!important;display:none;}";
-                keyFrames += ".no-scroll-for-popup { overflow:hidden!important; position:fixed; }";
-                keyFrames += ".no-scroll-for-popup video { visibility: hidden }";
-                keyFrames += ".no-scroll-for-popup audio { visibility: hidden }";
-                keyFrames += ".no-scroll-for-popup .alan-btn__chat-holder video { visibility: initial }";
-                keyFrames += ".no-scroll-for-popup .alan-btn__chat-holder audio { visibility: initial }";
-                var predefinedBtnColorOptions = defaultBtnColorOptions;
-                if (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) {
-                    if (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions.btnLayerOptions) {
-                        predefinedBtnColorOptions = defaultBtnColorOptions;
-                    }
-                    else {
-                        predefinedBtnColorOptions = (webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) ? __assign(__assign({}, defaultBtnColorOptions), webOptions === null || webOptions === void 0 ? void 0 : webOptions.btnOptions) : defaultBtnColorOptions;
-                    }
-                }
-                var tempLayer;
-                var stateName;
-                var stateMapping = (_a = {},
-                    _a[textChatIsAvailable ? "textChat" : "idle"] = ["default"],
-                    _a.listen = ["listening"],
-                    _a.process = ["intermediate", "understood"],
-                    _a.reply = ["speaking"],
-                    _a);
-                var stateNameClasses, stateNameClass;
-                var states = Object.keys(stateMapping);
-                for (i = 0; i < states.length; i++) {
-                    stateName = states[i];
-                    stateNameClasses = stateMapping[stateName];
-                    tempLayer = predefinedBtnColorOptions[stateName];
-                    for (var j = 0; j < stateNameClasses.length; j++) {
-                        stateNameClass = stateNameClasses[j];
-                        if (tempLayer.background) {
-                            keyFrames += getStyleSheetMarker() + ".alanBtn-bg-" + stateNameClass + " {";
-                            keyFrames += "background-image: linear-gradient(122deg," + tempLayer.background.color[0] + "," + tempLayer.background.color[1] + ");";
-                            keyFrames += "}";
-                            keyFrames += getStyleSheetMarker() + ".alanBtn-oval-bg-" + stateNameClass + " {";
-                            keyFrames += "background-image: linear-gradient(122deg," + tempLayer.background.color[0] + "," + tempLayer.background.color[1] + ");";
-                            keyFrames += "}";
-                        }
-                        if (tempLayer.hover) {
-                            keyFrames += getStyleSheetMarker() + ".alanBtn" + hoverSelector + " .alanBtn-bg-" + stateNameClass + ":not(.super-hidden) {";
-                            keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
-                            keyFrames += "}";
-                            keyFrames += getStyleSheetMarker() + ".alanBtn:active .alanBtn-bg-" + stateNameClass + ":not(.super-hidden) {";
-                            keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
-                            keyFrames += "}";
-                            keyFrames += getStyleSheetMarker() + ".alanBtn" + hoverSelector + " .alanBtn-oval-bg-" + stateNameClass + ":not(.super-hidden) {";
-                            keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
-                            keyFrames += "}";
-                            keyFrames += getStyleSheetMarker() + ".alanBtn:active .alanBtn-oval-bg-" + stateNameClass + ":not(.super-hidden) {";
-                            keyFrames += "background-image: linear-gradient(122deg," + tempLayer.hover.color[0] + "," + tempLayer.hover.color[1] + ");";
-                            keyFrames += "}";
-                        }
-                    }
-                }
-                style.innerHTML = keyFrames;
-                if (options2.shadowDOM) {
-                    options2.shadowDOM.prepend(style);
-                }
-                else {
-                    document.getElementsByTagName("head")[0].appendChild(style);
-                }
-                if (existingStyleSheet) {
-                    existingStyleSheet.disabled = true;
-                    existingStyleSheet.parentNode.removeChild(existingStyleSheet);
-                }
-            }
-            function generateKeyFrame(name, rule) {
-                var prefixes = ["@-webkit-keyframes", "@keyframes"];
-                var r = "";
-                for (var i2 = 0; i2 < prefixes.length; i2++) {
-                    r += prefixes[i2] + " " + name + "{" + rule + "} ";
-                }
-                return r;
-            }
-            function calculateTextareaTopPadding() {
-                return "12";
-            }
+            createAlanStyleSheet(options2);
             function connectProject() {
-                currentProjectId = options2.key;
+                uiState.project.id = options2.key;
                 tryReadSettingsFromLocalStorage();
                 switchState(getDefaultBtnState(DISCONNECTED));
                 window.tutorProject = window.alan.project(options2.key, getAuthData(options2.authData), options2.host, null, {
@@ -4929,53 +5553,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 console.info("Alan: connect to dialog: ", options2.keepDialogSession !== false ? getSavedDialogId() : null);
                 return __assign(__assign({}, authData), { dialogId: options2.keepDialogSession !== false ? getSavedDialogId() : null, capabilities: { textFormats: ["text", "html", "markdown"] } });
             }
-            function getProjectId() {
-                var key;
-                if (options2.key) {
-                    key = options2.key;
-                    return key.substr(0, key.indexOf("/"));
-                }
-                return mode;
-            }
-            function throttle(func, wait) {
-                if (wait === void 0) { wait = 100; }
-                var timer = null;
-                var throttlePause;
-                return function () {
-                    var args = [];
-                    for (var _i = 0; _i < arguments.length; _i++) {
-                        args[_i] = arguments[_i];
-                    }
-                    if (!throttlePause) {
-                        func.apply(this, args);
-                        throttlePause = true;
-                        if (timer === null) {
-                            timer = setTimeout(function () {
-                                timer = null;
-                                throttlePause = false;
-                            }, wait);
-                        }
-                    }
-                };
-            }
-            function debounce(func, wait) {
-                var timeout;
-                var delay = wait || 100;
-                return function (args) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(function () {
-                        func.apply(this, args);
-                    }, delay);
-                };
-            }
             var onresizeDebounced = debounce(function () {
                 togglePopupVisibility(true, true);
             }, 400);
             var windowPrevInnerHeight = window.innerHeight;
             var windowPrevOrientation = window.orientation;
-            function isSafari() {
-                return /apple/i.test(navigator.vendor);
-            }
             window.onresize = function () {
                 if (isTutorMode())
                     return;
@@ -5006,8 +5588,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 togglePopupVisibility(false);
                 onresizeDebounced({});
-                var chatHolderRect = chatHolderDiv.getBoundingClientRect();
-                fixTextChatSizeIfNeeded(chatHolderRect.width, chatHolderRect.height, false);
+                if (!uiState.textChat.expanded) {
+                    var chatHolderRect = chatHolderDiv.getBoundingClientRect();
+                    fixTextChatSizeIfNeeded(chatHolderRect.width, chatHolderRect.height, false);
+                }
             };
             var initialPermissionWasAsked = false;
             function checkPerrmissions() {
@@ -5068,7 +5652,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     return;
                 if (!dndBackAnimFinished)
                     return;
-                if (textChatIsAvailable && textChatIsHidden) {
+                if (uiState.textChat.available && textChatIsHidden) {
                     activateAlanButton();
                 }
                 else {
@@ -5129,7 +5713,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     coldPlayForSoundNext();
                 }
                 var continueWithAudio = true;
-                if (textChatIsAvailable) {
+                if (uiState.textChat.available) {
                     continueWithAudio = false;
                     if (textChatIsHidden) {
                         sendClientEvent({ buttonClicked: true });
@@ -5331,8 +5915,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 else {
                     popup.style.position = "absolute";
                     popup.style[isLeftAligned ? "left" : "right"] = (-buttonMarginInPopup || 0) + "px";
-                    popup.style[isTopAligned ? "top" : "bottom"] = (buttonMarginInPopup ? -buttonMarginInPopup : _btnSize + popup2BtnMargin) + "px";
-                    popup.classList.add(isTopAligned ? "alan-btn-lib__top" : "alan-btn-lib__bottom");
+                    popup.style[uiState.btn.isTopAligned ? "top" : "bottom"] = (buttonMarginInPopup ? -buttonMarginInPopup : _btnSize + popup2BtnMargin) + "px";
+                    popup.classList.add(uiState.btn.isTopAligned ? "alan-btn-lib__top" : "alan-btn-lib__bottom");
                 }
                 if (!popupOptions.html) {
                     if (message) {
@@ -5399,7 +5983,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     popup.remove();
                 }
                 document.removeEventListener("keyup", hidePopupByEsc);
-                btn.style.zIndex = btnZIndex;
+                btn.style.zIndex = uiState.btn.zIndex;
                 btn.style.pointerEvents = "auto";
                 popupIsVisible = false;
             }
@@ -5526,9 +6110,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 if (!isTutorMode()) {
                     if (data && data.web && ((_e = (_d = data.web.chatOptions) === null || _d === void 0 ? void 0 : _d.textChat) === null || _e === void 0 ? void 0 : _e.enabled) === true) {
-                        textChatIsAvailable = true;
+                        uiState.textChat.available = true;
                         voiceEnabledInTextChat = (_h = (_g = (_f = data.web.chatOptions) === null || _f === void 0 ? void 0 : _f.textChat) === null || _g === void 0 ? void 0 : _g.voice) === null || _h === void 0 ? void 0 : _h.enabled;
-                        textChatOptions = (_j = data.web.chatOptions) === null || _j === void 0 ? void 0 : _j.textChat;
+                        uiState.textChat.options = (_j = data.web.chatOptions) === null || _j === void 0 ? void 0 : _j.textChat;
                         if (getVoiceEnabledFlag() === null) {
                             if ((_m = (_l = (_k = data.web.chatOptions) === null || _k === void 0 ? void 0 : _k.textChat) === null || _l === void 0 ? void 0 : _l.audio) === null || _m === void 0 ? void 0 : _m.enabled) {
                                 enableAudio(false);
@@ -5543,7 +6127,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         }
                     }
                     else {
-                        textChatIsAvailable = false;
+                        uiState.textChat.available = false;
                         hideTextChat();
                     }
                 }
@@ -5722,7 +6306,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 if (alertPopup) {
                     alertPopup.remove();
                 }
-                btn.style.zIndex = btnZIndex;
+                btn.style.zIndex = uiState.btn.zIndex;
                 btn.style.pointerEvents = "auto";
                 document.removeEventListener("keyup", hideAlertByEsc);
             }
@@ -5800,7 +6384,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     switchState(INTERMEDIATE);
                 }
                 showRecognisedText(event);
-                if (textChatIsAvailable && voiceEnabledInTextChat && !textChatIsHidden && (event === null || event === void 0 ? void 0 : event.final) === true) {
+                if (uiState.textChat.available && voiceEnabledInTextChat && !textChatIsHidden && (event === null || event === void 0 ? void 0 : event.final) === true) {
                     renderMessageInTextChat({
                         type: "response",
                         name: "loading",
@@ -5917,7 +6501,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 var imgPreviewOverlayEl = document.createElement("div");
                 imgPreviewOverlayEl.id = "img-preview-overlay";
                 imgPreviewOverlayEl.classList.add("alan-btn__image-preview-overlay");
-                imgPreviewOverlayEl.style.zIndex = btnZIndex + 3;
+                if (isMobile()) {
+                    imgPreviewOverlayEl.classList.add("mobile");
+                }
+                imgPreviewOverlayEl.style.zIndex = uiState.btn.zIndex + 3;
                 if (parentEl) {
                     imgPreviewOverlayEl.setAttribute("data-img-index", parentEl.getAttribute("data-img-index"));
                     imgPreviewOverlayEl.setAttribute("data-msg-req-id", parentEl.getAttribute("data-msg-req-id"));
@@ -6089,7 +6676,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             }
             function getImageHtml(src) {
                 var imgNotFoundSrc = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAACldJREFUeNrs3Wtv03YbwGEoZRyebRLivA22aYhNQki82vf/Apu2Fdi6lh62MppTW0jTloYkz/20kpenFJo4dg72db1AiIMLrn+9/3Yd53yv1zsHTM55EYIIQYSACEGEgAhBhIAIQYSACEGEgAhBhIAIQYSACEGEgAhBhIAIQYSACEGEgAhBhIAIQYSACEGEgAhBhMBsRLi1tbW6umpfM4vu379/8+bNXD/E/Bj+G+12u9ls+nQyi+LozftDzNnLMFkiBBGCCAERgggBEYIIARGCCAERgggBEYIIARGCCAERggiBnM1P+b9vbm7uzp07Pk+MolKpdDodEaaP8OHDhw4jRrG1tTXNEVqOgghBhIAIQYSACEGEgAhBhIAIQYSACEGEgAhBhIAIQYSACEGEgAhBhIAIQYSACEGEgAhBhIAIQYRARubtgkEcHBy02+0LFy5cvXrV3kCE49Dr9ba3txuNRr1ef/v27f/tsvn5a9eu3bp1K36Mn9tXiDB7r169WltbO9Fe4t27d7UjMRjvHYmf2GmIMButVuv58+fx4yB/uNPpRKv//PPP999/f/36dXuPdFyY+VcsPn/++ecBC0wcHh4uLCz89ddfdiAiHEmlUomWUr+p8srKytLSkt2ICFN68+bN4uLiiBt5+fJlLE3tTEQ4tHa7/fTp0263O/qmlpeXo2e7FBEOJ07n4rwuk01FyS9evCjPrsvkKxdlj/Dg4CCWkRlu8PXr1/V6vSR7L86Em82mikQ4kjiLy/zL+d9//12GXbezsxNfv169eqUiEY6kWq1mvs04LYzzzGLvt06ns7i42Ov1KpVK6kvKiPB/35qP5Wjmm41Ds1arFXvXra6u7u/vH9cYHQpJhOnP33LacrHPlGK/9Z9IW5GKML08xuCx4ylRSHEK/ccff8S07/+K4xszIkzp3bt3OW25wOeEyUK0n2EoQsYkJt7Gxsb7vx6nhfl9RRNhkeX3EqSLFy+WYSHa/1suz4gwjStXruS05UuXLhVyIbq3t/eh33XfrAjT+PTTT3Pa8meffVaShWii1Wrld7VZhIUVqeS0brx27VpJFqKGoQhHcv78+Rs3bmS+2f8cKc9CNFGr1Qp/q5AIs/fVV19Fitlu8/79+6VaiPYPTJdnRJhmat29ezfb88xbt24VaSF6fI/ogH/eilSEaXz99ddZPbkwhup3332X+Wid7EJ0qIfuxKp1Z2fHQSXC4Vy6dOnRo0eZlPPtt98W6ZLM4AvRfu6eEWEaUc6DBw9G3Mjt27eLdDY47EI04fKMCFP68ssvf/jhh7m5lDvk3r178deLtEPW19eHffpjUu/m5qYjSoRp3Llz58mTJ5cvXx7qb8X5ZORXsFPBZrM5ypNUXZ4Z7hCyC/p9/vnnP/7448uXL2MOnHlHcozNu3fvfvPNNwW7U3TAb81/xP7+/vb2dsHuWBDhGNcGc3Oxtoy64jCqVqvx44kaY+LF4XX9+vUbN24U8h7R1AvRE8NQhCIcbb/Mz988cu7oCQ7J/SJR3SeffFLg//iIC9FEo9E4PDws9r4S4fhcuHCheDdk57QQ7d/U5uZmwW4eymvxZRdMp93d3fE/Wjdm4OgL0f4VaSY9i5AJiAXw0yPj7DCyz/a9pQ4ODuKM2mdThDNpfX09juCtra1nz56Np8PjhWjmH8v3KkQ4qwvR5GaxRqMxng5jBsbHzXyz8e//0BseI8LptbS01F9dHMfPnz/PtcPMF6KJOCd0K6kIZ0ys395/SES9Xs+vw5wWoomI0OUZEc6Mdru9urp66m/l12FOC9FELEfj5NYnV4SzYXl5+SOvP8ijw1arldNC9MR498kV4QyIVeiZz4aIDn///fesOoxVYq4L0URMwvzecUCEZHZitri4OMifrNVq0WEmZ1kxA8fzxjXxr/XiJhFOu42NjUEeZ5Z0GOvSETuMhej6+vrY/oPunhHhVNvf319bWxvqr4w4D8e2EE0cHh42Gg2faxFOqeXl5RQ9VKvV1B2ObSHar/8tDRHhFKlUKqlHRHSY4kUPY16IJnZ2dgr8to0inFWdTmdlZWXEhofqMP7k4uLi+F+fcc7dMyKcTi9evBj91sqhOtzY2Jjgu+pubm5OpH8Rcrrd3d2sJkN0OMjjCff29j50R854uDwjwilyfH0yw6v2MWQ+/p3G8V8RPZW7Z0Q4LWIGZn7HZnQYmU3nQjSxvb3t8owIJy/OA+NsMKeTrlPn4cQXooahCNPLY/22srLS6XTym7EnOpyShWj/VwqXZ0Q4xNop8we9NBqNvN/E70SHU7IQTbTb7Vqt5ugS4UBiCbe1tbWwsJBVh7Gd5eXl8Zxz/vnnn+eO7ombnoWoFempPHf0Y2PweIDET6LDx48fp367mMTa2trYLkscH+gTeXTimV6/fh2nqVevXnWYmYRnjMH+IH/77bcRj+Y47FK83d+IHU7VQtQwFGGaMZjY2dn59ddfR7mgMqn7xaZTnBjbGyIcdAz2L6JiHqbrMI6595/gVGbtdrtardoPIhx0DPZ3GPPwzHdNe/+AG8/1mNliRSrC4cZgIvqMeThUh7FB7yB96p7M8K0vRFiKMdh/9Aw+D2N4+pL/IV7pK8Khx2Ci2WxGh2fOt263u7S0ZK9+SJwW5nfzkAgLOwaH6nBjYyPXR+vOulhNuDwjwjRjMBGBfaTDg4ODiTxIYrZ4ub0IU47B/g5/+eWXUzuMhai11plin4//qVMiLMgYTLRarejw8PCw/xfr9bpXkRuGIsx9DPZ3GOvSpMMYgK7HDK5SqZR5ySDCUcfgiXl4/OCmtbU1b445uCgw75d3ibDgYzCxt7cX8zBWoWO+UbsAyvytVBFmMwb7O1xYWPC+C8Pa3d2d2hd8iHBmxiCGoQgnPwYZRbVaHfbOeBEag2Sp2+2W8/JM2SM0Bq1IRWgM8q9Wq1XClz6XOkJj0DAUoTHISbVarWwvgC5vhMbgdOp2u5ubmyI0Bpmkst3PXdIIjcFptre3F18lRWgMMkmlWpGWMUJjcPqV6vJM6SI0BmdCqS7PlC5CY3BWlOcbhuWK0BicIfv7+yW5PFOuCI1Bw1CExiBDqNfrJx6fJUJjkLHq9Xpl+MZ9WSI0BmdURFj4Z4WU5e2y4yz/iy++cEzPordv316+fFmEM0+BWI4CIgQRAiIEEQIiBBECIgQRAiIEEQIiBBGCCAERgggBEYIIgYmY9sdb9Hq9ZrPp88Qout2uCNPrdDo//fSTwwjLUUCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCQIQgQkCEIEJAhCBCECEgQhAhIEIQISBCECEgQhAhIEIQISBCECEgQhAhIEIQISBCECEgQhAhIEIQIZCx871ez14AEYIIARGCCAERgggBEYIIARGCCAERgggBEYIIARGCCAERgggBEYIIARGCCAERgggBEYIIARGCCAERgggBEYIIARHC7PqvAAMA/BkrMLAeft8AAAAASUVORK5CYII=";
-                return "<img class=\"alan-btn__chat-response-img alan-btn__chat-response-img-el\" src=\"".concat(src, "\" onerror=\"this.src = '").concat(imgNotFoundSrc, "'; this.classList.add('not-found');\" onload = \"console.info(this.naturalWidth,this.naturalHeight ); if(this.naturalWidth < this.naturalHeight){this.classList.add('img-vertical');}\"/>");
+                return "<img class=\"alan-btn__chat-response-img alan-btn__chat-response-img-el\" src=\"".concat(src, "\" onerror=\"this.src = '").concat(imgNotFoundSrc, "'; this.classList.add('not-found');\" onload = \"if(this.naturalWidth <= this.width && this.naturalHeight <= this.height){this.classList.add('img-none'); this.style.height = this.naturalHeight + 20 + 'px';this.style.minHeight = this.naturalHeight  + 20 + 'px'; this.style.maxHeight = this.naturalHeight  + 20 + 'px'; }\"/>");
             }
             function getYoutubeFrameHtml(src) {
                 return "<iframe class=\"alan-btn__chat-response-video\" width=\"560\" height=\"315\" src=\"".concat(src, "?autoplay=1&mute=1\" title=\"YouTube video player\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe>");
@@ -6128,12 +6715,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 return linksBlock;
             }
-            function buildLikesContent(msg) {
-                var likesBlock = "";
-                if (msg.hasLikes) {
-                    likesBlock = "<div class=\"alan-btn__chat-response-likes-wrapper\">\n                <span class=\"alan-btn__chat-response-like-btn\">&#128078;</span>\n                <span class=\"alan-btn__chat-response-dislike-btn\">&#128077;</span>\n            </div>";
-                }
-                return likesBlock;
+            function buildCommandsBlock(msg) {
+                return "<div class=\"alan-btn__chat-response-commands-wrapper\">\n            ".concat(buildCopyBtnContent(msg), "\n                <span class=\"alan-btn__chat-response-like-btn\">").concat(chatIcons.like, "</span>\n                <span class=\"alan-btn__chat-response-dislike-btn\">").concat(chatIcons.dislike, "</span>\n            </div>");
             }
             function buildMsgTextContent(msg) {
                 var _a;
@@ -6148,81 +6731,39 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 return result ? "<span class=\"alan-btn__chat-response-text-wrapper\">".concat(fixTargetForLinks(result), "</span>") : "";
             }
+            function buildCopyBtnContent(msg) {
+                var copyBtn = "<div class = \"alan-btn__chat-response__copy-btn\">".concat(chatIcons.copy).concat(chatIcons.copied, "</div>");
+                if (msg.initLoad)
+                    return copyBtn;
+                return msg.type === "response" && isFinalMessage(msg) ? copyBtn : "";
+            }
             function buildMsgContent(msg) {
-                return "".concat(buildImagesContent(msg)).concat(buildMsgTextContent(msg)).concat(buildLinksContent(msg)).concat(buildLikesContent(msg)).concat(buildMsgIncommingLoader(msg));
+                return "".concat(buildImagesContent(msg)).concat(buildMsgTextContent(msg)).concat(buildLinksContent(msg)).concat(buildCommandsBlock(msg)).concat(buildMsgIncommingLoader(msg));
             }
-            function highlightCode() {
-                if (window.hljs) {
+            loadHighlightJs(function () { return document.getElementById("chatMessages"); });
+            loadMathJax(textChatMessages.length, function (i2) { return getTextWrapperInMsgElByIndex(i2); });
+            document.addEventListener("click", function (e) {
+                var _a, _b, _c, _d;
+                var clickedEl = e.target;
+                clickedEl = clickedEl.closest(".alan-btn__chat-response__copy-btn");
+                if (clickedEl) {
+                    clickedEl.classList.add("alan-copy-btn-copied");
                     setTimeout(function () {
-                        var msgHolder = document.getElementById("chatMessages");
-                        if (msgHolder) {
-                            msgHolder.querySelectorAll("pre code:not(.alan-btn__hljs-processed)").forEach(function (el) {
-                                window.hljs.highlightElement(el);
-                                el.classList.add("alan-btn__hljs-processed");
-                            });
-                        }
-                    });
-                }
-            }
-            function loadHighlightJs() {
-                var script = document.createElement("script");
-                script.src = "https://studio.alan.app/js/hljs/highlight.min.js?v=1";
-                script.async = true;
-                script.onload = function () {
-                    highlightCode();
-                };
-                document.head.appendChild(script);
-                var link = document.createElement("link");
-                link.rel = "stylesheet";
-                link.href = "https://studio.alan.app/js/hljs/github.min.css?v=1";
-                document.getElementsByTagName("head")[0].appendChild(link);
-            }
-            loadHighlightJs();
-            function loadMathJax() {
-                window.MathJax = {
-                    startup: {
-                        pageReady: function () {
-                            return window.MathJax.startup.defaultPageReady();
-                        }
-                    },
-                    tex: {
-                        inlineMath: [["$", "$"], ["\\(", "\\)"]],
-                        processEscapes: true
+                        clickedEl.classList.remove("alan-copy-btn-copied");
+                    }, 2e3);
+                    var requestBubble = clickedEl.closest("[data-msg-index]");
+                    var msgInd = requestBubble.getAttribute("data-msg-index");
+                    var msg = textChatMessages[msgInd];
+                    var textToCopy = "";
+                    if (msg) {
+                        textToCopy = msg.text || "";
+                        copyTextToBuffer((((_a = msg.images) === null || _a === void 0 ? void 0 : _a.length) > 0 ? ((_b = msg.images) === null || _b === void 0 ? void 0 : _b.map(function (img) { return img.src; }).join("\n")) + "\n\n" : "") + textToCopy + (((_c = msg.links) === null || _c === void 0 ? void 0 : _c.length) > 0 ? "\n\nRead more:\n" + ((_d = msg.links) === null || _d === void 0 ? void 0 : _d.map(function (link) { return link.href; }).join("\n")) : ""));
                     }
-                };
-                var script = document.createElement("script");
-                script.src = "https://studio.alan.app/js/mathjax/tex-svg.js?v=1";
-                script.async = true;
-                script.setAttribute("id", "MathJax-script");
-                script.onload = function () {
-                    processFormulasInMsgs();
-                };
-                document.head.appendChild(script);
-            }
-            loadMathJax();
-            function processFormulas(msgInd) {
-                var MathJax = window.MathJax;
-                if (MathJax) {
-                    setTimeout(function () {
-                        var output = document.getElementById("msg-" + msgInd).querySelectorAll(".alan-btn__chat-response-text-wrapper")[0];
-                        if (output && MathJax.texReset) {
-                            MathJax.texReset();
-                            MathJax.typesetClear();
-                            MathJax.typesetPromise([output])["catch"](function (err) {
-                                console.error(err);
-                            });
-                        }
-                    });
                 }
-            }
-            function processFormulasInMsgs() {
-                for (var i2 = 0; i2 < textChatMessages.length; i2++) {
-                    processFormulas(i2);
-                }
-            }
+            }, false);
             function renderMessageInTextChat(msg, noAnimation, immidiateScroll) {
                 var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
-                if (!textChatIsAvailable)
+                if (!uiState.textChat.available)
                     return;
                 var innerMsgPart = "";
                 var msgHtml = "";
@@ -6255,10 +6796,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         else {
                             innerMsgPart = buildMsgContent(msg);
                         }
-                        msgHtml = "<div class=\"".concat(msg.type === "request" ? "alan-btn__chat-request" : "alan-btn__chat-response", " ").concat(((_f = msg.images) === null || _f === void 0 ? void 0 : _f.length) > 0 ? "with-images" : "", "\">").concat(innerMsgPart, "</div>");
+                        msgHtml = "<div class=\"alan-btn__chat-inner-msg ".concat(msg.type === "request" ? "alan-btn__chat-request" : "alan-btn__chat-response", " ").concat(((_f = msg.images) === null || _f === void 0 ? void 0 : _f.length) > 0 ? "with-images" : "", "\">").concat(innerMsgPart, "</div>");
                     }
                     if (msg.name === "loading") {
-                        msgHtml = "<div class=\"alan-btn__chat-response animated alan-incoming-msg\">".concat(getMsgLoader(), "</div>");
+                        msgHtml = "<div class=\"alan-btn__chat-inner-msg alan-btn__chat-response animated alan-incoming-msg\">".concat(getMsgLoader(), "</div>");
                     }
                 }
                 msg = __assign(__assign({}, msg), getMsgReadProp(msg, textChatIsHidden));
@@ -6266,12 +6807,15 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 if (isNew) {
                     var div = document.createElement("div");
                     div.id = "msg-" + msgInd;
+                    div.classList.add("alan-btn__chat-msg-holder");
+                    div.setAttribute("data-msg-index", msgInd);
                     if (msg.type === "chat") {
                         addPopupStyle(msg, div);
                     }
-                    div.innerHTML = msgHtml;
+                    var avatarHtml = "<div class=\"alan-btn__chat-avatar ".concat(msg.type, "\">") + (msg.type === "request" ? "<div class=\"alan-btn__chat-request-avatar\"></div>" : "<div class=\"alan-btn__chat-response-avatar\"></div>") + "</div>";
+                    div.innerHTML = (msg.type === "chat" ? "" : avatarHtml) + msgHtml;
                     msgHolder.appendChild(div);
-                    if (textChatIsAvailable && textChatIsHidden && msg.type === "response" && msg.read !== true) {
+                    if (uiState.textChat.available && textChatIsHidden && msg.type === "response" && msg.read !== true) {
                         unreadChatMsgCount++;
                     }
                     if (immidiateScroll !== true) {
@@ -6281,15 +6825,15 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         scrollTextChat(msgHolder);
                     }
                     if (((_g = msg.ctx) === null || _g === void 0 ? void 0 : _g.final) !== false) {
-                        processFormulas(msgInd);
-                        highlightCode();
+                        processFormulas(getTextWrapperInMsgElByIndex(msgInd));
+                        highlightCode(document.getElementById("chatMessages"));
                     }
                 }
                 else {
                     var msgEl = document.getElementById("msg-" + msgInd);
                     if (msgEl) {
                         if (replaceLoader) {
-                            var innerEl = msgEl.children[0];
+                            var innerEl = msgEl.querySelector(".alan-btn__chat-inner-msg");
                             if (innerEl) {
                                 innerEl.innerHTML = innerMsgPart;
                                 innerEl.classList.remove("alan-incoming-msg");
@@ -6300,12 +6844,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             }
                         }
                         else if (updateResponse && msg.type !== "chat") {
-                            var innerEl = msgEl.children[0];
+                            var innerEl = msgEl.querySelector(".alan-btn__chat-inner-msg");
                             var updatedMsg = textChatMessages[msgInd];
                             var imagesWrapper = innerEl.querySelector(".alan-btn__chat-response-imgs-wrapper");
                             if (((_j = updatedMsg.images) === null || _j === void 0 ? void 0 : _j.length) > 0 && !imagesWrapper) {
                                 innerEl.insertAdjacentHTML("afterbegin", buildImagesContent(updatedMsg));
-                                innerEl = msgEl.children[0];
+                                innerEl = msgEl.querySelector(".alan-btn__chat-inner-msg");
                             }
                             if (((_k = updatedMsg.images) === null || _k === void 0 ? void 0 : _k.length) > 1 && imagesWrapper) {
                                 imagesWrapper.querySelector(".alan-btn__chat-response-imgs-wrapper-right-arrow").classList.remove("invisible");
@@ -6320,7 +6864,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             }
                             innerEl.insertAdjacentHTML("beforeend", buildMsgTextContent(updatedMsg));
                             innerEl.insertAdjacentHTML("beforeend", buildLinksContent(updatedMsg));
-                            innerEl.insertAdjacentHTML("beforeend", buildLikesContent(updatedMsg));
+                            innerEl.insertAdjacentHTML("beforeend", buildCommandsBlock(msg));
                             innerEl.insertAdjacentHTML("beforeend", buildMsgIncommingLoader(msg));
                             setTimeout(function () {
                                 scrollTextChat(msgHolder, "smooth");
@@ -6331,12 +6875,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         }
                     }
                     if (((_o = msg.ctx) === null || _o === void 0 ? void 0 : _o.final) !== false) {
-                        processFormulas(msgInd);
-                        highlightCode();
+                        processFormulas(getTextWrapperInMsgElByIndex(msgInd));
+                        highlightCode(document.getElementById("chatMessages"));
                     }
                 }
                 saveMessageHistory();
-                if (textChatIsAvailable && textChatIsHidden) {
+                if (uiState.textChat.available && textChatIsHidden) {
                     showChatNotifications();
                 }
                 if (isFinalMessage(msg) && msg.type === "response" && textChatMessages.filter(function (m) { return !isFinalMessage(m); }).length === 0) {
@@ -6379,7 +6923,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             function clearChat() {
                 unreadChatMsgCount = 0;
                 textChatMessages = [];
-                if (textChatIsAvailable) {
+                if (uiState.textChat.available) {
                     var msgHolder = document.getElementById("chatMessages");
                     if (msgHolder) {
                         msgHolder.innerHTML = '<div class="alan-btn__chat-messages-empty-block"></div>';
@@ -6504,6 +7048,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }, 1e3);
+            function getTextWrapperInMsgElByIndex(msgInd) {
+                return document.getElementById("msg-" + msgInd).querySelectorAll(".alan-btn__chat-response-text-wrapper")[0];
+            }
             function addNewLine(textareaEl) {
                 var curText = textareaEl.value;
                 var newText;
@@ -6522,9 +7069,19 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 var input = e.target;
                 if (input.scrollWidth > input.clientWidth) {
                     textareaHolder.classList.add("show-gradient");
+                    if (input.scrollLeft === 0) {
+                        textareaHolder.classList.add("show-gradient-right");
+                        textareaHolder.classList.remove("show-gradient-left");
+                    }
+                    else {
+                        textareaHolder.classList.add("show-gradient-left");
+                        textareaHolder.classList.remove("show-gradient-right");
+                    }
                 }
                 else {
                     textareaHolder.classList.remove("show-gradient");
+                    textareaHolder.classList.remove("show-gradient-right");
+                    textareaHolder.classList.remove("show-gradient-left");
                 }
                 if (textareaHolder) {
                     if (input.value.length > 0) {
@@ -6689,7 +7246,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 return document.getElementById("chatTextarea");
             }
             function initTextChat() {
-                var _a, _b, _c;
+                var _a, _b, _c, _d, _e, _f;
                 var textareaDiv = document.getElementById("textarea-holder");
                 var chatTextarea = getChatTextareaEl();
                 var chatMicBtn = document.getElementById("chat-mic-btn");
@@ -6699,7 +7256,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 var headerTille = document.getElementById("chat-header-title");
                 if (!chatDiv.classList.contains("alan-btn__chat")) {
                     document.addEventListener("touchstart", keyboardScrollFixListenerForChat, { passive: false });
-                    chatDiv.classList.add("alan-btn__chat");
+                    chatDivWrapper.classList.add("alan-btn__chat");
                     var messagesDiv = document.createElement("div");
                     messagesDiv.id = "chatMessages";
                     messagesDiv.classList.add("alan-btn__chat-messages");
@@ -6718,34 +7275,34 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     var messagesEmptyDiv = document.createElement("div");
                     messagesEmptyDiv.classList.add("alan-btn__chat-messages-empty-block");
                     messagesDiv.appendChild(messagesEmptyDiv);
-                    headerDiv = document.createElement("div");
-                    headerDiv.id = "chat-header";
-                    headerDiv.classList.add("alan-btn__chat-header");
-                    var headerDivGr = document.createElement("div");
-                    headerDivGr.classList.add("alan-btn__chat-header-gradient");
-                    var clearChatBtn = document.createElement("div");
-                    clearChatBtn.id = "clear-chat-btn";
-                    clearChatBtn.classList.add("alan-btn__chat-header-clear-btn");
-                    clearChatBtn.innerHTML = "<svg width=\"19\" height=\"22\" viewBox=\"0 0 19 22\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M6.33333 3.16667V2.63889C6.33333 1.93906 6.612 1.26772 7.10706 0.772667C7.60106 0.277611 8.27239 0 8.97222 0H10.0278C10.7276 0 11.399 0.277611 11.894 0.772667C12.3891 1.26772 12.6667 1.93906 12.6667 2.63889V3.16667H17.9444C18.5271 3.16667 19 3.63956 19 4.22222C19 4.80489 18.5271 5.27778 17.9444 5.27778H16.8889V16.8889C16.8889 19.2206 14.9994 21.1111 12.6667 21.1111C10.7329 21.1111 8.26817 21.1111 6.33333 21.1111C4.00161 21.1111 2.11111 19.2206 2.11111 16.8889V5.27778H1.05556C0.472889 5.27778 0 4.80489 0 4.22222C0 3.63956 0.472889 3.16667 1.05556 3.16667H6.33333ZM14.7778 5.27778H4.22222V16.8889C4.22222 18.0553 5.168 19 6.33333 19H12.6667C13.8331 19 14.7778 18.0553 14.7778 16.8889V5.27778ZM10.5556 8.44445V15.8333C10.5556 16.416 11.0284 16.8889 11.6111 16.8889C12.1938 16.8889 12.6667 16.416 12.6667 15.8333V8.44445C12.6667 7.86178 12.1938 7.38889 11.6111 7.38889C11.0284 7.38889 10.5556 7.86178 10.5556 8.44445ZM6.33333 8.44445V15.8333C6.33333 16.416 6.80622 16.8889 7.38889 16.8889C7.97156 16.8889 8.44444 16.416 8.44444 15.8333V8.44445C8.44444 7.86178 7.97156 7.38889 7.38889 7.38889C6.80622 7.38889 6.33333 7.86178 6.33333 8.44445ZM10.5556 3.16667V2.63889C10.5556 2.4985 10.5007 2.36444 10.4014 2.26522C10.3022 2.16706 10.1682 2.11111 10.0278 2.11111C9.68261 2.11111 9.31739 2.11111 8.97222 2.11111C8.83289 2.11111 8.69884 2.16706 8.59962 2.26522C8.50039 2.36444 8.44444 2.4985 8.44444 2.63889V3.16667H10.5556Z\" fill=\"black\"/>\n                </svg>\n                ";
+                    headerDiv = createDiv({ id: "chat-header", "class": "alan-btn__chat-header" });
+                    var headerDivGr = createDiv({ "class": "alan-btn__chat-header-gradient" });
+                    var clearChatBtn = createDivWithSvg(chatIcons.clear, { id: "clear-chat-btn", "class": "alan-btn__chat-header-clear-btn" });
                     clearChatBtn.addEventListener("click", onClearChatClick);
-                    var leftResizer = document.createElement("div");
-                    leftResizer.classList.add("alan-btn__chat-header-left-resizer");
-                    leftResizer.innerHTML = "<svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13.7266 0.273364C14.0911 0.63786 14.0911 1.22881 13.7266 1.59331L1.59331 13.7266C1.22881 14.0911 0.63786 14.0911 0.273364 13.7266C-0.0911215 13.3622 -0.0911215 12.7712 0.273364 12.4067L12.4067 0.273364C12.7712 -0.0911215 13.3622 -0.0911215 13.7266 0.273364ZM13.7266 6.80672C14.0911 7.17119 14.0911 7.76217 13.7266 8.12664L8.12664 13.7266C7.76217 14.0911 7.17119 14.0911 6.80672 13.7266C6.44225 13.3622 6.44225 12.7712 6.80672 12.4067L12.4067 6.80672C12.7712 6.44225 13.3622 6.44225 13.7266 6.80672Z\" fill=\"#CCD4DD\"/>\n                </svg>\n                ";
-                    var rightResizer = document.createElement("div");
-                    rightResizer.classList.add("alan-btn__chat-header-right-resizer");
-                    rightResizer.innerHTML = "<svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13.7266 0.273364C14.0911 0.63786 14.0911 1.22881 13.7266 1.59331L1.59331 13.7266C1.22881 14.0911 0.63786 14.0911 0.273364 13.7266C-0.0911215 13.3622 -0.0911215 12.7712 0.273364 12.4067L12.4067 0.273364C12.7712 -0.0911215 13.3622 -0.0911215 13.7266 0.273364ZM13.7266 6.80672C14.0911 7.17119 14.0911 7.76217 13.7266 8.12664L8.12664 13.7266C7.76217 14.0911 7.17119 14.0911 6.80672 13.7266C6.44225 13.3622 6.44225 12.7712 6.80672 12.4067L12.4067 6.80672C12.7712 6.44225 13.3622 6.44225 13.7266 6.80672Z\" fill=\"#CCD4DD\"/>\n                </svg>\n                ";
+                    var leftResizer = createDivWithSvg(chatIcons.resizer.left, { "class": "alan-btn__chat-header-left-resizer" });
+                    var rightResizer = createDivWithSvg(chatIcons.resizer.right, { "class": "alan-btn__chat-header-right-resizer" });
                     headerTille = document.createElement("span");
                     headerTille.id = "chat-header-title";
                     headerTille.classList.add("alan-btn__chat-header-title");
+                    var headerLeftIconsHolder = createDiv({ "class": "alan-btn__chat-header-left-icons" });
+                    var headerRightIconsHolder = createDiv({ "class": "alan-btn__chat-header-right-icons" });
+                    var closeChatBtnImg = createDivWithSvg(chatIcons.closeChat, { "class": "alan-btn__close-chat-btn" });
+                    headerLeftIconsHolder.appendChild(closeChatBtnImg);
+                    closeChatBtnImg.addEventListener("click", closeTextChat);
+                    if (!isMobile()) {
+                        var expandCollapseChatBtnImg = document.createElement("div");
+                        expandCollapseChatBtnImg.classList.add("alan-btn__expand-collapse-chat-btn");
+                        expandCollapseChatBtnImg.innerHTML = "\n                    <svg class=\"alan-btn__chat-enter-full-screen-mode\" width=\"24px\" height=\"24px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M21.7092 2.29502C21.8041 2.3904 21.8757 2.50014 21.9241 2.61722C21.9727 2.73425 21.9996 2.8625 22 2.997L22 3V9C22 9.55228 21.5523 10 21 10C20.4477 10 20 9.55228 20 9V5.41421L14.7071 10.7071C14.3166 11.0976 13.6834 11.0976 13.2929 10.7071C12.9024 10.3166 12.9024 9.68342 13.2929 9.29289L18.5858 4H15C14.4477 4 14 3.55228 14 3C14 2.44772 14.4477 2 15 2H20.9998C21.2749 2 21.5242 2.11106 21.705 2.29078L21.7092 2.29502Z\" fill=\"#000000\"/>\n                    <path d=\"M10.7071 14.7071L5.41421 20H9C9.55228 20 10 20.4477 10 21C10 21.5523 9.55228 22 9 22H3.00069L2.997 22C2.74301 21.9992 2.48924 21.9023 2.29502 21.7092L2.29078 21.705C2.19595 21.6096 2.12432 21.4999 2.07588 21.3828C2.02699 21.2649 2 21.1356 2 21V15C2 14.4477 2.44772 14 3 14C3.55228 14 4 14.4477 4 15V18.5858L9.29289 13.2929C9.68342 12.9024 10.3166 12.9024 10.7071 13.2929C11.0976 13.6834 11.0976 14.3166 10.7071 14.7071Z\" fill=\"#000000\"/>\n                    </svg>\n    \n                    <svg class=\"alan-btn__chat-exit-full-screen-mode\" width=\"24px\" height=\"24px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path d=\"M21.7071 3.70711L16.4142 9H20C20.5523 9 21 9.44772 21 10C21 10.5523 20.5523 11 20 11H14.0007L13.997 11C13.743 10.9992 13.4892 10.9023 13.295 10.7092L13.2908 10.705C13.196 10.6096 13.1243 10.4999 13.0759 10.3828C13.0273 10.2657 13.0004 10.1375 13 10.003L13 10V4C13 3.44772 13.4477 3 14 3C14.5523 3 15 3.44772 15 4V7.58579L20.2929 2.29289C20.6834 1.90237 21.3166 1.90237 21.7071 2.29289C22.0976 2.68342 22.0976 3.31658 21.7071 3.70711Z\" fill=\"#000000\"/>\n                    <path d=\"M9 20C9 20.5523 9.44772 21 10 21C10.5523 21 11 20.5523 11 20V14.0007C11 13.9997 11 13.998 11 13.997C10.9992 13.7231 10.8883 13.4752 10.7092 13.295C10.7078 13.2936 10.7064 13.2922 10.705 13.2908C10.6096 13.196 10.4999 13.1243 10.3828 13.0759C10.2657 13.0273 10.1375 13.0004 10.003 13C10.002 13 10.001 13 10 13H4C3.44772 13 3 13.4477 3 14C3 14.5523 3.44772 15 4 15H7.58579L2.29289 20.2929C1.90237 20.6834 1.90237 21.3166 2.29289 21.7071C2.68342 22.0976 3.31658 22.0976 3.70711 21.7071L9 16.4142V20Z\" fill=\"#000000\"/>\n                    </svg>\n    \n                    ";
+                        headerLeftIconsHolder.appendChild(expandCollapseChatBtnImg);
+                        expandCollapseChatBtnImg.addEventListener("click", expandCollapseTextChat);
+                    }
+                    headerRightIconsHolder.appendChild(clearChatBtn);
+                    headerDiv.appendChild(headerLeftIconsHolder);
                     headerDiv.appendChild(headerTille);
+                    headerDiv.appendChild(headerRightIconsHolder);
                     headerDiv.appendChild(leftResizer);
                     headerDiv.appendChild(rightResizer);
-                    headerDiv.appendChild(clearChatBtn);
-                    var closeChatBtnImg = document.createElement("div");
-                    closeChatBtnImg.innerHTML = "\n                <svg width=\"17\" height=\"17\" viewBox=\"0 0 17 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M0.342029 15.0105C-0.113105 15.4658 -0.113035 16.2036 0.34217 16.6587C0.797374 17.1138 1.53533 17.1138 1.99046 16.6586L8.50015 10.1482L15.0104 16.658C15.4655 17.1131 16.2035 17.1131 16.6586 16.658C17.1138 16.2029 17.1138 15.4649 16.6586 15.0098L10.1483 8.49998L16.6582 1.98944C17.1132 1.53427 17.1132 0.796371 16.6579 0.341282C16.2028 -0.113819 15.4648 -0.113749 15.0097 0.341421L8.49991 6.85183L1.98966 0.341981C1.5345 -0.113143 0.796535 -0.113143 0.341377 0.341981C-0.113792 0.797116 -0.113792 1.53502 0.341377 1.99016L6.85187 8.5001L0.342029 15.0105Z\" fill=\"#080808\"/>\n</svg>\n";
-                    closeChatBtnImg.classList.add("alan-btn__close-chat-btn");
-                    headerDiv.appendChild(closeChatBtnImg);
-                    closeChatBtnImg.addEventListener("click", closeTextChat);
+                    fillSideBarContent(chatSideBar, { onClearChatClick: onClearChatClick, expandCollapseChatSidePanel: expandCollapseChatSidePanel, closeTextChat: closeTextChat });
                     textareaDiv = document.createElement("div");
                     textareaDiv.id = "textarea-holder";
                     textareaDiv.classList.add("alan-btn__chat-textarea-holder");
@@ -6757,16 +7314,19 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     chatTextarea.classList.add("alan-btn__chat-textarea");
                     chatTextarea.addEventListener("keydown", onChatTextAreaKeyDown);
                     chatTextarea.addEventListener("keyup", onChatTextAreaKeyUp);
-                    var textareaGradient = document.createElement("div");
-                    textareaGradient.classList.add("alan-btn__chat-textarea-gradient");
+                    var leftTextareaGradient = document.createElement("div");
+                    leftTextareaGradient.classList.add("alan-btn__chat-textarea-left-gradient");
+                    var rightTextareaGradient = document.createElement("div");
+                    rightTextareaGradient.classList.add("alan-btn__chat-textarea-right-gradient");
                     chatSendBtn = document.createElement("div");
                     chatSendBtn.id = "chat-send-btn";
                     chatSendBtn.classList.add("alan-btn__chat-send-btn");
                     chatSendBtn.addEventListener("click", sendMessageToTextChat);
-                    chatSendBtn.innerHTML = sendChatIcon;
+                    chatSendBtn.innerHTML = chatIcons.send;
                     textareaDiv.appendChild(chatTextarea);
                     textareaDiv.appendChild(chatSendBtn);
-                    textareaDiv.appendChild(textareaGradient);
+                    textareaDiv.appendChild(leftTextareaGradient);
+                    textareaDiv.appendChild(rightTextareaGradient);
                     textareaDiv.appendChild(textareaDivGr);
                     chatDiv.appendChild(headerDiv);
                     chatDiv.appendChild(messagesWrapperDiv);
@@ -6775,7 +7335,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     chatHolderDiv.classList.add("alan-btn__chat-holder");
                 }
                 if (headerTille) {
-                    var title = ((_a = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.header) === null || _a === void 0 ? void 0 : _a.label) || "Alan AI Copilot";
+                    var title = ((_b = (_a = uiState.textChat.options) === null || _a === void 0 ? void 0 : _a.header) === null || _b === void 0 ? void 0 : _b.label) || "Alan AI Assistant";
                     headerTille.innerText = title;
                     headerTille.setAttribute("title", title);
                 }
@@ -6800,8 +7360,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         }
                     }
                     manageUnmuteAlanIcon(unmuteAlanBtn, textToSpeachVoiceEnabled);
-                    if (textareaDiv) {
-                        textareaDiv.appendChild(unmuteAlanBtn);
+                    if (headerRightIconsHolder) {
+                        headerRightIconsHolder.appendChild(unmuteAlanBtn);
                     }
                 }
                 if (voiceEnabledInTextChat) {
@@ -6829,13 +7389,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             case PERMISSION_DENIED:
                             case NO_VOICE_SUPPORT:
                             case NOT_SECURE_ORIGIN:
-                                chatMicBtn.innerHTML = chatNoMicIcon;
+                                chatMicBtn.innerHTML = chatIcons.noMic;
                                 if (state === PERMISSION_DENIED) {
                                     chatMicBtn.classList.add("alan-btn__disabled");
                                 }
                                 break;
                             default:
-                                chatMicBtn.innerHTML = chatMicIcon;
+                                chatMicBtn.innerHTML = chatIcons.mic;
                                 break;
                         }
                         if (textareaDiv) {
@@ -6848,12 +7408,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         chatMicBtn.remove();
                     }
                     chatTextarea.setAttribute("placeholder", "Ask me anything...");
-                    chatTextarea.style.paddingTop = calculateTextareaTopPadding() + "px";
+                    chatTextarea.style.paddingTop = uiState.textChat.defaults.textarea.padding.top + "px";
                     chatHolderDiv.classList.remove("alan-text-chat__voice-enabled");
                 }
                 if (chatTextarea) {
-                    if ((_b = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _b === void 0 ? void 0 : _b.placeholder) {
-                        chatTextarea.setAttribute("placeholder", (_c = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.textarea) === null || _c === void 0 ? void 0 : _c.placeholder);
+                    if ((_d = (_c = uiState.textChat.options) === null || _c === void 0 ? void 0 : _c.textarea) === null || _d === void 0 ? void 0 : _d.placeholder) {
+                        chatTextarea.setAttribute("placeholder", (_f = (_e = uiState.textChat.options) === null || _e === void 0 ? void 0 : _e.textarea) === null || _f === void 0 ? void 0 : _f.placeholder);
                     }
                 }
             }
@@ -6909,7 +7469,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     rootEl.classList.remove("hide-alan-btn-when-text-chat-is-opened-immediately");
                     rootEl.classList.remove("text-chat-is-closing");
                     fixPopupScrollOnMobileForTextChat(false);
-                }, textChatAppearAnimationMs);
+                }, uiState.textChat.defaults.appearAnimationMs);
                 textChatIsHidden = true;
                 if (isLocalStorageAvailable) {
                     localStorage.removeItem(getOpenCloseTextChatLocalStorageKey());
@@ -6925,6 +7485,19 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             }
             function closeTextChat() {
                 hideTextChat();
+            }
+            function expandCollapseChatSidePanel() {
+                toogleChatSidePanel(chatHolderDiv);
+            }
+            function expandCollapseTextChat() {
+                if (!uiState.textChat.expanded) {
+                    uiState.textChat.expanded = true;
+                    openChatInFullScreen(chatHolderDiv);
+                }
+                else {
+                    uiState.textChat.expanded = false;
+                    chatHolderDiv.classList.remove("alan-btn_text-chat-full-screen");
+                }
             }
             function getVoiceEnabledFlagLocalStorageKey() {
                 return "alan-btn-text-chat__text-to-speach-voice-enabled__for-projectId-".concat(getProjectId());
@@ -6956,14 +7529,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
             }
             function manageUnmuteAlanIcon(iconEl, unmuted) {
-                var muteIconSvg = "\n            <svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <g clip-path=\"url(#clip0_185_822)\">\n                <path d=\"M2.96822 1.83729C2.5972 1.46626 2.04066 1.46626 1.66963 1.83729C1.2986 2.20832 1.2986 2.76486 1.66963 3.13589L16.5107 17.977C16.8818 18.348 17.4383 18.348 17.8093 17.977C18.1804 17.606 18.1804 17.0494 17.8093 16.6784L2.96822 1.83729Z\" fill=\"#171717\"/>\n                <path d=\"M14.2846 11.9477L15.5832 13.2463C17.0673 11.2984 16.9746 8.60848 15.4905 6.66059C15.2122 6.28956 14.5629 6.1968 14.1919 6.56783C13.8208 6.93886 13.7281 7.4954 14.0991 7.86643C15.1194 8.88675 15.1194 10.5564 14.2846 11.9477Z\" fill=\"#171717\"/>\n                <path d=\"M18.1804 9.90719C18.1804 11.3913 17.5311 12.8754 16.5107 13.9885L17.8093 15.2871C19.2007 13.803 19.9427 11.9478 20.0355 9.90719C20.0355 7.49551 18.8297 5.17659 16.8818 3.59972C16.5107 3.22869 15.7687 3.32145 15.5832 3.69248C15.3976 4.06351 15.3049 4.7128 15.6759 4.99107C17.2528 6.19691 18.1804 7.9593 18.1804 9.90719Z\" fill=\"#171717\"/>\n                <path d=\"M11.1308 15.6581L6.40023 12.4116C6.21471 12.3189 6.0292 12.2261 5.84368 12.2261H1.85514V7.77378H4.82336L2.96822 5.91864H0.927569C0.371028 5.91864 0 6.28967 0 6.84621V13.2464C0 13.803 0.371028 14.174 0.927569 14.174H5.56541L11.5019 18.2553C11.6874 18.3481 11.8729 18.4408 12.0584 18.4408C12.6149 18.4408 12.986 18.0698 12.986 17.5133V15.9364L11.1308 14.0812V15.6581Z\" fill=\"#171717\"/>\n                <path d=\"M11.1309 4.24897V8.7013L12.986 10.5564V2.48659C12.986 1.93005 12.615 1.55902 12.0584 1.55902C11.8729 1.55902 11.6874 1.65178 11.5019 1.74453L7.14233 4.71276L8.44093 6.01135L11.1309 4.24897Z\" fill=\"#171717\"/>\n                </g>\n                <defs>\n                <clipPath id=\"clip0_185_822\">\n                <rect width=\"20\" height=\"20\" fill=\"white\"/>\n                </clipPath>\n                </defs>\n                </svg>\n                ";
-                var unmuteIconSvg = "<svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <path d=\"M15.5556 6.64349C15.2778 6.27312 14.6296 6.18053 14.2593 6.5509C13.8889 6.92127 13.7963 7.47682 14.1667 7.84719C15.0926 9.14348 15.0926 10.9027 14.1667 12.199C13.8889 12.5694 13.8889 13.2175 14.2593 13.4953C14.4445 13.5879 14.6296 13.6805 14.8148 13.6805C15.0926 13.6805 15.3704 13.5879 15.5556 13.3101C17.037 11.3657 17.037 8.58793 15.5556 6.64349Z\" fill=\"#171717\"/>\n            <path d=\"M16.7593 3.68063C16.3889 3.31026 15.7408 3.40285 15.463 3.77322C15.1852 4.14359 15.1852 4.79174 15.5556 5.06952C17.1297 6.27322 18.0556 8.03247 18.0556 9.97691C18.0556 11.9213 17.1297 13.6806 15.6482 14.7917C15.2778 15.1621 15.1852 15.7176 15.5556 16.088C15.7408 16.2732 16.0186 16.4584 16.2963 16.4584C16.4815 16.4584 16.7593 16.3658 16.8519 16.2732C18.7963 14.7917 19.9074 12.4769 20 9.97691C19.9074 7.56951 18.7037 5.2547 16.7593 3.68063Z\" fill=\"#171717\"/>\n            <path d=\"M12.5 1.73615C12.2222 1.55096 11.8518 1.55096 11.574 1.73615L5.55554 5.9028H0.925923C0.370369 5.9028 0 6.27317 0 6.82872V13.2176C0 13.7731 0.370369 14.1435 0.925923 14.1435H5.55554L11.4814 18.2176C11.6666 18.3102 11.8518 18.4028 12.037 18.4028C12.5926 18.4028 12.9629 18.0324 12.9629 17.4768V2.56948C12.9629 2.19911 12.7777 1.92133 12.5 1.73615ZM11.1111 15.625L6.38887 12.3843C6.20368 12.2917 6.0185 12.1991 5.83331 12.1991H1.85185V7.75465H5.83331C6.0185 7.75465 6.20368 7.66205 6.38887 7.56946L11.1111 4.32873V15.625Z\" fill=\"#171717\"/>\n            </svg>\n            ";
                 if (iconEl) {
                     if (unmuted) {
-                        iconEl.innerHTML = unmuteIconSvg;
+                        iconEl.innerHTML = chatIcons.unmute;
                     }
                     else {
-                        iconEl.innerHTML = muteIconSvg;
+                        iconEl.innerHTML = chatIcons.mute;
                     }
                 }
             }
@@ -7165,7 +7736,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                 }
                 if (newState === LOW_VOLUME || newState === PERMISSION_DENIED || newState === NO_VOICE_SUPPORT || newState === NOT_SECURE_ORIGIN) {
-                    if (textChatIsAvailable) {
+                    if (uiState.textChat.available) {
                         applyStylesForDefaultState();
                     }
                     else {
@@ -7212,7 +7783,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     }
                 }
                 else if (newState === DISCONNECTED || newState === OFFLINE) {
-                    if (textChatIsAvailable) {
+                    if (uiState.textChat.available) {
                         applyStylesForDefaultState();
                     }
                     else {
@@ -7256,7 +7827,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     rootEl.classList.remove("alan-btn-offline");
                     rootEl.classList.remove("alan-btn-no-voice-support");
                 }
-                if (textChatIsAvailable) {
+                if (uiState.textChat.available) {
                     var simpleAlanBtn = document.getElementById("chat-mic-btn");
                     var sendBtn = document.getElementById("chat-send-btn");
                     var textChatEl = document.getElementById("alan-text-chat");
@@ -7264,7 +7835,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         switch (newState) {
                             case OFFLINE:
                             case DISCONNECTED:
-                                sendBtn.innerHTML = newState === OFFLINE ? noWiFiChatIcon : disconnectedChatIcon;
+                                sendBtn.innerHTML = newState === OFFLINE ? chatIcons.noWiFi : chatIcons.disconnected;
                                 textChatEl.classList.add("alan-btn__disconnected");
                                 break;
                             case LISTENING:
@@ -7276,7 +7847,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             default:
                                 textChatEl.classList.remove("alan-btn__mic-active");
                                 textChatEl.classList.remove("alan-btn__disconnected");
-                                sendBtn.innerHTML = sendChatIcon;
+                                sendBtn.innerHTML = chatIcons.send;
                                 break;
                         }
                         if (simpleAlanBtn) {
@@ -7291,7 +7862,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 case PERMISSION_DENIED:
                                 case NO_VOICE_SUPPORT:
                                 case NOT_SECURE_ORIGIN:
-                                    simpleAlanBtn.innerHTML = chatNoMicIcon;
+                                    simpleAlanBtn.innerHTML = chatIcons.noMic;
                                     if (state === PERMISSION_DENIED) {
                                         simpleAlanBtn.classList.add("alan-btn__disabled");
                                     }
@@ -7355,43 +7926,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 return "alan-btn-options-" + key;
             }
-            function isMobile() {
-                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                    return true;
-                }
-                return false;
-            }
-            function isIpadOS() {
-                return navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform);
-            }
-            function isOriginSecure() {
-                var isSecure = false;
-                var protocol2 = window.location.protocol;
-                var hostname = window.location.hostname;
-                if (protocol2 === "https:") {
-                    isSecure = true;
-                }
-                if (isFileProtocol()) {
-                    isSecure = true;
-                }
-                if (protocol2 === "http:" && (hostname.indexOf("localhost") > -1 || hostname.indexOf("127.0.0.1") > -1)) {
-                    isSecure = true;
-                }
-                return isSecure;
-            }
-            function isFileProtocol() {
-                var protocol2 = window.location.protocol;
-                return protocol2 === "file:";
-            }
-            function isAudioSupported() {
-                var available = false, fakeGetUserMedia, fakeContext;
-                fakeGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
-                fakeContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext;
-                if (fakeGetUserMedia && fakeContext) {
-                    available = true;
-                }
-                return available;
-            }
             function showBtn() {
                 rootEl.innerHTML = "";
                 recognisedTextHolder.appendChild(recognisedTextContent);
@@ -7417,10 +7951,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
             }
             function applyBtnOptions(webOptions) {
                 if (webOptions) {
-                    createAlanStyleSheet(webOptions);
+                    createAlanStyleSheet(options2, webOptions);
                 }
                 else {
-                    createAlanStyleSheet();
+                    createAlanStyleSheet(options2);
                 }
             }
             function applyLogoOptions(data) {
@@ -7431,12 +7965,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         replyStateBtnIconImg.src = data.web.logoUrl;
                     }
                     else {
-                        if (textChatIsAvailable) {
+                        if (uiState.textChat.available) {
                             if (data.web.logoTextChat) {
                                 defaultStateBtnIconImg.src = data.web.logoTextChat;
                             }
                             else {
-                                defaultStateBtnIconImg.src = alanLogoIconSrc;
+                                defaultStateBtnIconImg.src = btnIcons.alanLogoIconSrc;
                             }
                         }
                         else {
@@ -7444,7 +7978,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 defaultStateBtnIconImg.src = data.web.logoIdle;
                             }
                             else {
-                                defaultStateBtnIconImg.src = micIconSrc;
+                                defaultStateBtnIconImg.src = btnIcons.micIconSrc;
                             }
                             if (data.web.logoListen) {
                                 listenStateBtnIconImg.src = data.web.logoListen;
@@ -7531,7 +8065,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         dndFinalHorPos = isLeftAligned ? rootElPosX : window.innerWidth - rootElPosX - btnSize - (window.innerWidth - document.documentElement.clientWidth);
                     }
                     dndBtnLeftPos = rootElPosX;
-                    dndInitMousePos = [
+                    dndInitMousePos2 = [
                         posInfo.clientX,
                         posInfo.clientY
                     ];
@@ -7559,10 +8093,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         hideTextChat();
                         afterMouseMove = true;
                     }
-                    newLeftPos = dndBtnLeftPos + posInfo.clientX - dndInitMousePos[0];
-                    newTopPos = dndBtnTopPos + posInfo.clientY - dndInitMousePos[1];
-                    tempDeltaX = posInfo.clientX - dndInitMousePos[0];
-                    tempDeltaY = posInfo.clientY - dndInitMousePos[1];
+                    newLeftPos = dndBtnLeftPos + posInfo.clientX - dndInitMousePos2[0];
+                    newTopPos = dndBtnTopPos + posInfo.clientY - dndInitMousePos2[1];
+                    tempDeltaX = posInfo.clientX - dndInitMousePos2[0];
+                    tempDeltaY = posInfo.clientY - dndInitMousePos2[1];
                     rootEl.style.setProperty("left", correctXPos(newLeftPos) + "px", "important");
                     rootEl.style.setProperty("top", correctYPos(newTopPos) + "px", "important");
                     e.preventDefault();
@@ -7693,7 +8227,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 rootEl.classList.remove("alan-btn__page-scrolled");
             }, 300);
             function onPageScroll() {
-                if (!textChatIsAvailable || textChatIsAvailable && textChatIsHidden) {
+                if (!uiState.textChat.available || uiState.textChat.available && textChatIsHidden) {
                     rootEl.classList.add("alan-btn__page-scrolled");
                     if (!pageScrolled) {
                         pageScrolled = true;
@@ -7701,230 +8235,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 managePageScrollFlag({});
             }
-            var resizeInProcess = false;
-            var dndInitMousePos = [0, 0];
-            var chatHeight, chatWidth, typeBorderHor, typeBorderVert;
-            var chatInitLeftPos, chatInitRightPos, chatInitTopPos, chatInitBottomPos;
-            var chatTopPosBeforeResize;
-            var chatBottomPosBeforeResize;
-            var chatRightAligned, chatLeftAligned, chatTopAligned, chatBottomAligned;
             if (!isMobile()) {
                 chatHolderDiv.addEventListener("mousedown", onMouseDownForResizeTextChat);
                 chatHolderDiv.addEventListener("mousemove", onMouseHoverForResizeTextChat);
                 chatHolderDiv.addEventListener("mouseleave", onMouseHoverForResizeTextChat);
                 document.addEventListener("mouseup", onMouseUpForResizeTextChat, true);
                 document.addEventListener("mousemove", onMouseMoveForResizeTextChat, true);
-            }
-            function onMouseHoverForResizeTextChat(e) {
-                if (resizeInProcess)
-                    return;
-                var posInfo = e.touches ? e.touches[0] : e;
-                if (isMouseInHeader(posInfo)) {
-                    chatHolderDiv.classList.add("with-hover");
-                }
-                else {
-                    chatHolderDiv.classList.remove("with-hover");
-                }
-                typeBorderHor = getBorderType(posInfo).typeBorderHor;
-                typeBorderVert = getBorderType(posInfo).typeBorderVert;
-                chatHolderDiv.classList.remove("none-none");
-                chatHolderDiv.classList.remove("with-cursors");
-                chatHolderDiv.classList.remove("top-left");
-                chatHolderDiv.classList.remove("top-right");
-                chatHolderDiv.classList.remove("bottom-left");
-                chatHolderDiv.classList.remove("bottom-right");
-                chatHolderDiv.classList.remove("none-left");
-                chatHolderDiv.classList.remove("none-right");
-                chatHolderDiv.classList.remove("top-none");
-                chatHolderDiv.classList.remove("bottom-none");
-                chatHolderDiv.classList.add(typeBorderHor + "-" + typeBorderVert);
-                if (typeBorderHor !== "none" || typeBorderVert !== "none") {
-                    chatHolderDiv.classList.add("with-cursors");
-                }
-            }
-            function onMouseDownForResizeTextChat(e) {
-                resizeInProcess = true;
-                var posInfo = e.touches ? e.touches[0] : e;
-                dndInitMousePos = [
-                    posInfo.clientX,
-                    posInfo.clientY
-                ];
-                var chatRect = chatHolderDiv.getBoundingClientRect();
-                chatHeight = chatRect.height;
-                chatWidth = chatRect.width;
-                typeBorderHor = getBorderType(posInfo).typeBorderHor;
-                typeBorderVert = getBorderType(posInfo).typeBorderVert;
-                chatInitLeftPos = parseInt(chatHolderDiv.style.left);
-                chatInitRightPos = parseInt(chatHolderDiv.style.right);
-                chatInitTopPos = parseInt(chatHolderDiv.style.top);
-                chatInitBottomPos = parseInt(chatHolderDiv.style.bottom);
-                chatTopPosBeforeResize = chatRect.top;
-                chatBottomPosBeforeResize = chatRect.bottom;
-                chatRightAligned = chatHolderDiv.style.right;
-                chatLeftAligned = chatHolderDiv.style.left;
-                chatTopAligned = chatHolderDiv.style.top;
-                chatBottomAligned = chatHolderDiv.style.bottom;
-            }
-            function onMouseUpForResizeTextChat() {
-                resizeInProcess = false;
-            }
-            function onMouseMoveForResizeTextChat(e) {
-                if (!resizeInProcess)
-                    return;
-                var posInfo = e.touches ? e.touches[0] : e;
-                if (posInfo.clientX >= 0 && posInfo.clientY >= 0 && posInfo.clientX <= window.innerWidth && posInfo.clientY <= window.innerHeight) {
-                    resizeTextChat(posInfo);
-                }
-                else {
-                    resizeInProcess = false;
-                }
-            }
-            function resizeTextChat(posInfo) {
-                var tempDeltaX2 = posInfo.clientX - dndInitMousePos[0];
-                var tempDeltaY2 = posInfo.clientY - dndInitMousePos[1];
-                if (typeBorderHor === "bottom") {
-                    if (canResizeByHeight(typeBorderHor, tempDeltaY2)) {
-                        setChatHeight(chatHeight + tempDeltaY2);
-                        changeBottomPosIfNeeded(tempDeltaY2);
-                    }
-                }
-                else if (typeBorderHor === "top") {
-                    if (canResizeByHeight(typeBorderHor, tempDeltaY2)) {
-                        setChatHeight(chatHeight - tempDeltaY2);
-                        changeTopPosIfNeeded(tempDeltaY2);
-                    }
-                }
-                if (typeBorderVert === "right") {
-                    if (canResizeByWidth(typeBorderVert, tempDeltaX2)) {
-                        setChatWidth(chatWidth + tempDeltaX2);
-                        changeRightPosIfNeeded(tempDeltaX2);
-                    }
-                }
-                else if (typeBorderVert === "left") {
-                    if (canResizeByWidth(typeBorderVert, tempDeltaX2)) {
-                        setChatWidth(chatWidth - tempDeltaX2);
-                        changeLeftPosIfNeeded(tempDeltaX2);
-                    }
-                }
-            }
-            function canResizeByHeight(borderType, delta) {
-                var _a;
-                var minChatHeight = ((_a = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _a === void 0 ? void 0 : _a.minHeight) || defaultMinChatHeight;
-                var expanding = borderType === "bottom" && delta > 0 || borderType === "top" && delta < 0;
-                var h = borderType === "bottom" ? chatHeight + delta : chatHeight - delta;
-                var newBottomtPos = chatBottomPosBeforeResize - delta;
-                var newTopPos = chatTopPosBeforeResize + delta;
-                if (borderType === "bottom" && newBottomtPos <= 0 && h >= chatHeight) {
-                    return false;
-                }
-                if (borderType === "top" && newTopPos <= 0 && h >= chatHeight) {
-                    return false;
-                }
-                return expanding ? h >= minChatHeight : h > minChatHeight;
-            }
-            function canResizeByWidth(borderType, delta) {
-                var _a;
-                var minChatWidth = ((_a = textChatOptions === null || textChatOptions === void 0 ? void 0 : textChatOptions.popup) === null || _a === void 0 ? void 0 : _a.minWidth) || defaultMinChatWidth;
-                var expanding = borderType === "right" && delta > 0 || borderType === "left" && delta < 0;
-                var w = borderType === "right" ? chatWidth + delta : chatWidth - delta;
-                var newRightPos = chatInitRightPos - delta;
-                var newLeftPos = chatInitLeftPos + delta;
-                if (borderType === "right" && newRightPos <= 0 && w >= chatWidth) {
-                    return false;
-                }
-                if (borderType === "left" && newLeftPos <= 0 && w >= chatWidth) {
-                    return false;
-                }
-                return expanding ? w >= minChatWidth : w > minChatWidth;
-            }
-            function setChatHeight(h) {
-                chatHolderDiv.style.height = h + "px";
-                saveTextChatSizeAfterResize("height", h);
-            }
-            function setChatWidth(w) {
-                chatHolderDiv.style.width = w + "px";
-                if (w < 300) {
-                    chatHolderDiv.classList.add("alan-chat-small");
-                }
-                else {
-                    chatHolderDiv.classList.remove("alan-chat-small");
-                }
-                saveTextChatSizeAfterResize("width", w);
-            }
-            function changeBottomPosIfNeeded(delta) {
-                if (chatBottomAligned) {
-                    saveTextChatPositionAfterResize("bottom", chatInitBottomPos - delta);
-                }
-            }
-            function changeTopPosIfNeeded(delta) {
-                if (chatTopAligned) {
-                    saveTextChatPositionAfterResize("top", chatInitTopPos + delta);
-                }
-            }
-            function changeRightPosIfNeeded(delta) {
-                if (chatRightAligned) {
-                    saveTextChatPositionAfterResize("right", chatInitRightPos - delta);
-                }
-            }
-            function changeLeftPosIfNeeded(delta) {
-                if (chatLeftAligned) {
-                    saveTextChatPositionAfterResize("left", chatInitLeftPos + delta);
-                }
-            }
-            function getKeyForSavingTextChatPositionAfterResize(prop) {
-                return "alan-btn-text-chat-pos-".concat(prop, "-").concat(getProjectId());
-            }
-            function saveTextChatPositionAfterResize(prop, val) {
-                if (val < 0)
-                    return;
-                chatHolderDiv.style[prop] = val + "px";
-                if (isLocalStorageAvailable) {
-                    localStorage.setItem(getKeyForSavingTextChatPositionAfterResize(prop), val);
-                }
-            }
-            function getTextChatSizeAfterResize(prop) {
-                if (isLocalStorageAvailable) {
-                    return localStorage.getItem(getKeyForSavingTextChatPositionAfterResize(prop));
-                }
-                return null;
-            }
-            function saveTextChatSizeAfterResize(prop, val) {
-                if (isLocalStorageAvailable) {
-                    localStorage.setItem(getKeyForSavingTextChatPositionAfterResize(prop), val);
-                }
-            }
-            function getTextChatPositionAfterResize(prop) {
-                if (isLocalStorageAvailable) {
-                    return localStorage.getItem(getKeyForSavingTextChatPositionAfterResize(prop));
-                }
-                return null;
-            }
-            function isMouseInHeader(posInfo) {
-                if (chatHolderDiv.getBoundingClientRect().top < posInfo.clientY && posInfo.clientY < chatHolderDiv.getBoundingClientRect().top + 60 && chatHolderDiv.getBoundingClientRect().left < posInfo.clientX && posInfo.clientX < chatHolderDiv.getBoundingClientRect().right) {
-                    return true;
-                }
-                return false;
-            }
-            function getBorderType(posInfo) {
-                if (Math.abs(chatHolderDiv.getBoundingClientRect().bottom - posInfo.clientY) < 10) {
-                    typeBorderHor = "bottom";
-                }
-                else if (Math.abs(chatHolderDiv.getBoundingClientRect().top - posInfo.clientY) < 10) {
-                    typeBorderHor = "top";
-                }
-                else {
-                    typeBorderHor = "none";
-                }
-                if (Math.abs(chatHolderDiv.getBoundingClientRect().left - posInfo.clientX) < 10) {
-                    typeBorderVert = "left";
-                }
-                else if (Math.abs(chatHolderDiv.getBoundingClientRect().right - posInfo.clientX) < 10) {
-                    typeBorderVert = "right";
-                }
-                else {
-                    typeBorderVert = "none";
-                }
-                return { typeBorderHor: typeBorderHor, typeBorderVert: typeBorderVert };
             }
             return btnInstance;
         }
