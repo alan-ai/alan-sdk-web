@@ -1,6 +1,6 @@
 # Alan AI: Generative AI SDK for Web
 
-[Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
+[Alan AI](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
 [![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
@@ -8,14 +8,14 @@
 [![CircleCI](https://circleci.com/gh/alan-ai/alan-sdk-web.svg?style=shield)](https://circleci.com/gh/alan-ai/alan-sdk-web)
 
 
-Quickly build a generative AI assistant using  the Alan AI Platform.
+Quickly build a generative AI assistant with Alan AI.
 
-<img src="https://storage.googleapis.com/alan-public-images/github/alan-git.png" height="400px" align="right"/>
+<img src="https://storage.googleapis.com/alan-public-images/github/alan-git.png" height="300px" align="right"/>
 
 
 ## Unified Brain
 
-Alan AI is a comprehensive AI platform that acts as a 'unified brain' for your enterprise. It interconnect enterprise applications, APIs, static and dynamic data sources to streamline your enterprise workflows.
+Alan AI is a comprehensive AI solution that acts as a 'unified brain' for your enterprise. It interconnect enterprise applications, APIs, static and dynamic data sources to streamline your enterprise workflows.
 
 Alan AI offers all necessary tools to design, embed and host generative AI assistants:
 
@@ -30,12 +30,12 @@ Alan AI's lightweight SDKs to quickly embed a generative AI assistant to your ap
 
 Alan AI's backend powered by the latest AI advancements - LLMs, generative AI and semantic search technologies. Alan AI provisions and handles the infrastructure required to maintain your generative AI assistants and perform all the data processing tasks.
 
-To get more details on how Alan AI works, see <a href="https://alan.app/platform" target="_blank">Alan AI Platform</a>.
+To get more details on how Alan AI works, see <a href="https://alan.app" target="_blank">Alan AI</a>.
 
 ## Why Alan AI?
 
 * **No or minimum changes to your UI**: To create a conversational experience, you only need to get the Alan AI SDK and drop it to your app.
-* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components - the Alan AI Platform does the bulk of the work.
+* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components - Alan AI does the bulk of the work.
 * **On-the-fly updates**: All changes to the dialogs become available immediately.
 * **Dialog testing and analytics**: Alan AI Studio provides advanced tools for testing your dialog flows and getting the conversational analytics data on users' interactions, all in the same console.
 
@@ -74,7 +74,7 @@ To launch the app, follow the instructions in the README file inside the example
 
 ## Other platforms
 
-You may also want to try Alan AI SDKs for the following platforms:
+You may also want to try Alan AI SDKs for the following platforms and frameworks:
 
 * <a href="https://github.com/alan-ai/alan-sdk-ios" target="_blank">iOS</a>
 * <a href="https://github.com/alan-ai/alan-sdk-android" target="_blank">Android</a>
