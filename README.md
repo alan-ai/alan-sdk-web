@@ -8,27 +8,27 @@
 [![CircleCI](https://circleci.com/gh/alan-ai/alan-sdk-web.svg?style=shield)](https://circleci.com/gh/alan-ai/alan-sdk-web)
 
 
-Quickly build a generative AI assistant with Alan AI.
+Quickly build a Generative AI Assistant with Alan AI.
 
-<img src="https://storage.googleapis.com/alan-public-images/github/alan-git.png" height="300px" align="right"/>
+<img src="https://storage.googleapis.com/alan-public-images/github/alan-git.png" height="400px" align="right"/>
 
 
 ## Unified Brain
 
-Alan AI is a comprehensive AI solution that acts as a 'unified brain' for your enterprise. It interconnect enterprise applications, APIs, static and dynamic data sources to streamline your enterprise workflows.
+Alan AI is a comprehensive AI solution that acts as a 'unified brain' for your enterprise. It interconnects enterprise applications, APIs, static and dynamic data sources to streamline your enterprise workflows.
 
-Alan AI offers all necessary tools to design, embed and host generative AI assistants:
+Alan AI offers all necessary tools to design, embed and host Generative AI Assistants:
 
 #### Alan AI Studio
-A powerful web-based IDE where you can write, test and debug dialog scenarios for your generative AI assistant.
+A powerful web-based IDE where you can write, test and debug dialog scenarios for your Generative AI Assistant.
 
 #### Alan AI SDKs
 
-Alan AI's lightweight SDKs to quickly embed a generative AI assistant to your app.
+Alan AI's lightweight SDKs to quickly embed a Generative AI Assistant to your app.
 
 #### Alan AI Cloud
 
-Alan AI's backend powered by the latest AI advancements - LLMs, generative AI and semantic search technologies. Alan AI provisions and handles the infrastructure required to maintain your generative AI assistants and perform all the data processing tasks.
+Alan AI's backend powered by the latest AI advancements - LLMs, generative AI and semantic search technologies. Alan AI provisions and handles the infrastructure required to maintain your Generative AI Assistants and perform all the data processing tasks.
 
 To get more details on how Alan AI works, see <a href="https://alan.app" target="_blank">Alan AI</a>.
 
@@ -42,10 +42,10 @@ To get more details on how Alan AI works, see <a href="https://alan.app" target=
 
 ## How to start
 
-To create a generative AI assistant for your web app:
+To create a Generative AI Assistant for your web app:
 
 1. <a href="https://studio.alan.app/register" target="_blank">Sign up for Alan AI Studio</a> to build dialog scripts in JavaScript and test them.
-2. Use the Alan AI SDK for Web to embed a generative AI assistant to your app or website. For details, see Alan AI documentation for the necessary framework:
+2. Use the Alan AI SDK for Web to embed a Generative AI Assistant to your app or website. For details, see Alan AI documentation for the necessary framework:
 
     * <a href="https://alan.app/docs/client-api/web/vanilla" target="_blank">JavaScript</a>
 	* <a href="https://alan.app/docs/client-api/web/react" target="_blank">React</a>
@@ -60,7 +60,7 @@ To create a generative AI assistant for your web app:
 * <a href="https://www.npmjs.com/package/@alan-ai/alan-sdk-web" target="_blank">Alan AI package</a>
 * <a href="https://github.com/alan-ai/alan-sdk-web/releases" target="_blank">Alan AI SDK for Web releases</a>
 
-## AI assistant examples
+## AI Assistant examples
 
 In the [Examples](https://github.com/alan-ai/alan-sdk-web/tree/master/examples) folder, you can find example web apps created with:
 
