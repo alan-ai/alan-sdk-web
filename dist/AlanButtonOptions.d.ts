@@ -10,6 +10,7 @@ export interface AlanButtonOptions {
     keepDialogSession?: boolean;
     showOverlayOnMicPermissionPrompt?: boolean;
     zIndex?: number;
+    host?: string;
     onCommand?: (commandData: object) => void;
     onEvent?: (event: object) => void;
     onButtonState?: (state: string) => void;
