@@ -10,6 +10,9 @@ export interface AlanButton {
     sendText: (text: string) => void;
     textChat: {
         setAudioOutputEnabled: (value: boolean) => void,
-        isAudioOutputEnabled: () => boolean
+        isAudioOutputEnabled: () => boolean,
+        setFullScreenMode: (value: boolean) => void,
+        close: () => void,
+        clear: () => void,
     };
 }
