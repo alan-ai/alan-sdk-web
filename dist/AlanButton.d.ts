@@ -8,6 +8,10 @@ export interface AlanButton {
     isActive: () => boolean;
     remove: () => void;
     sendText: (text: string) => void;
+    theme: {
+        setTheme: (theme: 'light' | 'dark') => void;
+        getTheme: () => string,
+    };
     textChat: {
         setAudioOutputEnabled: (value: boolean) => void,
         isAudioOutputEnabled: () => boolean,
