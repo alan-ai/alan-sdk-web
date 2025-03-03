@@ -12,6 +12,10 @@ export interface AlanButton {
         setTheme: (theme: 'light' | 'dark') => void;
         getTheme: () => string,
     };
+    userInfo: {
+        setId: (userId: string) => void;
+        getId: () => string,
+    };
     textChat: {
         setAudioOutputEnabled: (value: boolean) => void,
         isAudioOutputEnabled: () => boolean,
