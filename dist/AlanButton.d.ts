@@ -21,6 +21,7 @@ export interface AlanButton {
         isAudioOutputEnabled: () => boolean,
         setFullScreenMode: (value: boolean) => void,
         close: () => void,
+        open: () => void,
         clear: () => void,
     };
 }
