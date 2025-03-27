@@ -1,6 +1,6 @@
 {
   "name": "@alan-ai/alan-sdk-web",
-  "version": "1.8.80",
+  "version": "1.8.81",
   "description": "Alan Web SDK: a lightweight JavaScript library for adding a voice experience to your website or web application",
   "keywords": [
     "alan sdk web",
@@ -27,6 +27,9 @@
   "files": [
     "dist"
   ],
+  "dependencies": {
+    "crypto-js": "4.2.0"
+  },
   "license": "MIT",
   "repository": "https://github.com/alan-ai/alan-sdk-web"
 }
