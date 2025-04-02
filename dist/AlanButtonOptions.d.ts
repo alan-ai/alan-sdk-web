@@ -16,7 +16,7 @@ export interface AlanButtonOptions {
     onEvent?: (event: object) => void;
     onButtonState?: (state: string) => void;
     onConnectionStatus?: (status: string) => void;
-    textChat: {
+    textChat?: {
         onClose?: () => void;
         onMinimize?: () => void;
     }
