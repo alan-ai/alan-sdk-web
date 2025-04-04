@@ -1,6 +1,7 @@
 export interface AlanButtonOptions {
     key: string;
     rootEl?: HTMLElement | undefined;
+    chatEl?: HTMLElement | undefined;
     right?: number | string;
     bottom?: number | string;
     left?: number | string;
@@ -17,7 +18,11 @@ export interface AlanButtonOptions {
     onButtonState?: (state: string) => void;
     onConnectionStatus?: (status: string) => void;
     textChat?: {
+        closeDelay?: number;
+        showBtnIfChatOpen?: boolean;
+        openByDefault?: boolean;
         onClose?: () => void;
         onMinimize?: () => void;
+        onOpen?: () => void;
     }
 }
