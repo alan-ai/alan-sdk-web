@@ -1,44 +1,25 @@
-# Alan AI: Generative AI SDK for Web
+# The Self-Coding System for Your App &mdash; Alan AI SDK for Android
 
-[Alan AI](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
+[Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
 
 [![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/alan-ai/alan-sdk-web)](https://github.com/alan-ai/alan-sdk-web/releases)
 [![CircleCI](https://circleci.com/gh/alan-ai/alan-sdk-web.svg?style=shield)](https://circleci.com/gh/alan-ai/alan-sdk-web)
 
+## The Intelligent App Platform
 
-Quickly build a Generative AI Agent with Alan AI.
+Alan AI is transforming enterprise software with a new approach, **Application-Level AI**. Instead of relying on manual development or isolated AI tools, we embed an intelligent layer into your application that builds features on demand.
 
-<img src="https://storage.googleapis.com/alan-public-images/github/alan-git.png" height="400px" align="right"/>
+Powered by our proprietary **Three-Layer AI (3LAI)** architecture, our system generates both business logic and UI in real time—no developers needed. It works across your entire app stack: the user interface, business logic, and data management.
 
+The **Intelligent App Platform** lets companies integrate AI-driven interfaces into their existing apps in days, not months.
 
-## Unified Brain
+It creates a safe and validated environment from your app’s APIs, GUIs, and documentation, enabling accurate, context-aware code generation. At runtime, the AI acts like a self-coding engine—instantly creating new features based on user needs.
 
-Alan AI is a comprehensive AI solution that acts as a 'unified brain' for your enterprise. It interconnects enterprise applications, APIs, static and dynamic data sources to streamline your enterprise workflows.
+With Alan AI, your software becomes truly adaptive—responding, evolving, and scaling automatically.
 
-Alan AI offers all necessary tools to design, embed and host Generative AI Agents:
-
-#### Alan AI Studio
-A powerful web-based IDE where you can write, test and debug dialog scenarios for your Generative AI Agent.
-
-#### Alan AI SDKs
-
-Alan AI's lightweight SDKs to quickly embed a Generative AI Agent to your app.
-
-#### Alan AI Cloud
-
-Alan AI's backend powered by the latest AI advancements - LLMs, generative AI and semantic search technologies. Alan AI provisions and handles the infrastructure required to maintain your Generative AI Agent and perform all the data processing tasks.
-
-To get more details on how Alan AI works, see <a href="https://alan.app" target="_blank">Alan AI</a>.
-
-## Why Alan AI?
-
-* **No or minimum changes to your UI**: To create a conversational experience, you only need to get the Alan AI SDK and drop it to your app.
-* **Serverless environment**: No need to plan for, deploy and maintain any infrastructure or speech components - Alan AI does the bulk of the work.
-* **On-the-fly updates**: All changes to the dialogs become available immediately.
-* **Dialog testing and analytics**: Alan AI Studio provides advanced tools for testing your dialog flows and getting the conversational analytics data on users' interactions, all in the same console.
-
+This repository contains the **Alan AI SDK for Web**, enabling you to embed Alan's intelligent layer into your Web applications.
 
 ## How to start
 
