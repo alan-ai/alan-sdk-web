@@ -5,7 +5,7 @@
 
 [![npm](https://img.shields.io/npm/v/@alan-ai/alan-sdk-web.svg)](https://www.npmjs.com/package/@alan-ai/alan-sdk-web)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/alan-ai/alan-sdk-web)](https://github.com/alan-ai/alan-sdk-web/releases)
-[![CircleCI](https://circleci.com/gh/alan-ai/alan-sdk-web.svg?style=shield)](https://circleci.com/gh/alan-ai/alan-sdk-web)
+
 
 ## The Intelligent App Platform
 
