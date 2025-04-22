@@ -1,4 +1,4 @@
-# The Self-Coding System for Your App &mdash; Alan AI SDK for Android
+# The Self-Coding System for Your App &mdash; Alan AI SDK for Web
 
 [Alan AI Platform](https://alan.app/) • [Alan AI Studio](https://studio.alan.app/register) • [Docs](https://alan.app/docs) • [FAQ](https://alan.app/docs/usage/additional/faq) •
 [Blog](https://alan.app/blog/) • [Twitter](https://twitter.com/alanvoiceai)
