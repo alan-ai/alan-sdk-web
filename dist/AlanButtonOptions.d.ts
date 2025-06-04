@@ -24,5 +24,6 @@ export interface AlanButtonOptions {
         onClose?: () => void;
         onMinimize?: () => void;
         onOpen?: () => void;
+        headerElement?: HTMLDivElement;
     }
 }

@@ -24,5 +24,6 @@ export interface AlanButton {
         minimize: () => void,
         open: () => void,
         clear: () => void,
+        export: () => Promise<void>
     };
 }
