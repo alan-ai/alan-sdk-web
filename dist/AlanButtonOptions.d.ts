@@ -12,7 +12,7 @@ export interface AlanButtonOptions {
     showOverlayOnMicPermissionPrompt?: boolean;
     zIndex?: number;
     host?: string;
-    mode?: 'inlined' | undefined;
+    mode?: 'inlined' | 'docked-left' | 'docked-right' | undefined;
     onCommand?: (commandData: object) => void;
     onEvent?: (event: object) => void;
     onButtonState?: (state: string) => void;
