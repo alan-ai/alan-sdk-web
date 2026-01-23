@@ -26,5 +26,11 @@ export interface AlanButtonOptions {
         onOpen?: () => void;
         headerElement?: HTMLDivElement;
         footerInfoElement?: HTMLDivElement;
+        resources?: {
+            css?: string[];
+        };
+        markdownStyles?: {
+            mode?: 'default' | 'custom';
+        }
     }
 }
