@@ -6,6 +6,7 @@ export interface AlanButton {
     activate: () => Promise<void>;
     deactivate: () => void;
     isActive: () => boolean;
+    isModelReady: () => boolean;
     remove: () => void;
     sendText: (text: string) => void;
     theme: {
