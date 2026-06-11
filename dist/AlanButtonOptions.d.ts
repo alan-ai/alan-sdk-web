@@ -37,6 +37,13 @@ export interface AlanButtonOptions {
             today: string;
             yesterday: string;
             other: string;
-        }
+        },
+        statusMessages?: {
+            response: {
+                stopped?: string;
+                unknown?: string;
+                endedAfterReconnect?: string;
+            }
+        };
     }
 }
