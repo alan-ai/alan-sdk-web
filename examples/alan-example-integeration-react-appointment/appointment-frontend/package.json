@@ -13,7 +13,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^0.25.0",
     "google-maps-react": "^2.0.6",
-    "moment": "^2.29.1",
+    "moment": "^2.29.4",
     "react": "^17.0.2",
     "react-calendar": "^3.6.0",
     "react-device-detect": "^2.1.2",
