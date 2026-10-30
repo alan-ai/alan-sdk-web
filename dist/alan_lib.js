@@ -100137,7 +100137,7 @@ if (window.parent && window.parent !== window && !window.showAlanDebugInfo) {
   // alan_btn/alan_btn.ts
   (function(ns) {
     const uiState10 = getUIState();
-    const version2 = "alan-version.1.8.144".replace("alan-version.", "");
+    const version2 = "alan-version.1.8.145".replace("alan-version.", "");
     uiState10.lib.version = version2;
     window.alanLib = { version: version2 };
     if (window.alanBtn) {
